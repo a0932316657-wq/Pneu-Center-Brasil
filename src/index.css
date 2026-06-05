@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom branding colors */
+  --color-brand-blue: #0b2545;
+  --color-brand-accent: #f5a623; /* Laranja/Amarelo automotivo premium */
+  --color-brand-dark: #0d1b2a;
+}

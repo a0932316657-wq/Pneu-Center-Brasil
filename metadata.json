@@ -1,0 +1,6 @@
+{
+  "name": "Pneu Center Brasil",
+  "description": "Catálogo digital de pneus automotivos multimarcas com atendimento especializado e direcionamento para conversa direta no WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
