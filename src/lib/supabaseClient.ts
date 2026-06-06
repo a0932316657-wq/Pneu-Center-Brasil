@@ -13,6 +13,10 @@ function getSupabaseUrl(): string {
   if (typeof process !== 'undefined' && process.env?.SUPABASE_URL) {
     return process.env.SUPABASE_URL;
   }
+  // fallback for development only
+  if (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) {
+    return process.env.VITE_SUPABASE_URL;
+  }
   return '';
 }
 
@@ -29,6 +33,10 @@ function getSupabaseKey(): string {
   if (typeof process !== 'undefined' && process.env?.SUPABASE_KEY) {
     return process.env.SUPABASE_KEY;
   }
+  // fallback for development only
+  if (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_KEY) {
+    return process.env.VITE_SUPABASE_KEY;
+  }
   return '';
 }
 
@@ -42,7 +50,9 @@ const hasPlaceholderUrl = (val: string): boolean => {
     v.includes('placeholder.supabase') || 
     v.includes('placeholder_supabase') || 
     v.includes('sua-url-supabase') || 
-    v.includes('your-supabase-url');
+    v.includes('your-supabase-url') ||
+    v.includes('your-project.supabase') ||
+    v.includes('placeholder.co');
 };
 
 const hasPlaceholderKey = (val: string): boolean => {

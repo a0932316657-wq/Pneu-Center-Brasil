@@ -9,6 +9,12 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || process.env.SUPABASE_URL || ''),
       'process.env.SUPABASE_KEY': JSON.stringify(env.SUPABASE_KEY || process.env.SUPABASE_KEY || ''),
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(
+        env.VITE_SUPABASE_URL || env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
+      ),
+      'import.meta.env.VITE_SUPABASE_KEY': JSON.stringify(
+        env.VITE_SUPABASE_KEY || env.SUPABASE_KEY || process.env.VITE_SUPABASE_KEY || process.env.SUPABASE_KEY || ''
+      ),
     },
     plugins: [react(), tailwindcss()],
     resolve: {
