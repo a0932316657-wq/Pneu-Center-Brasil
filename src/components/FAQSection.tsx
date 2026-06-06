@@ -4,16 +4,18 @@ import { motion, AnimatePresence } from 'motion/react';
 import { FAQS } from '../data';
 
 export default function FAQSection() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [openIndexes, setOpenIndexes] = useState<number[]>(FAQS.map((_, i) => i));
 
   const toggleFAQ = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
+    setOpenIndexes((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
   };
 
   return (
     <div id="faq-accordion-holder" className="space-y-4 max-w-3xl mx-auto">
       {FAQS.map((faq, index) => {
-        const isOpen = openIndex === index;
+        const isOpen = openIndexes.includes(index);
         return (
           <div
             key={index}
