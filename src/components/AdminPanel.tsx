@@ -12,6 +12,8 @@ import {
   AlertCircle, 
   Database,
   Upload,
+  Download,
+  FileSpreadsheet,
   X,
   Plus,
   Eye,
@@ -76,7 +78,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Dashboard navigation tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'marcas' | 'cards-do-aro'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'marcas' | 'cards-do-aro' | 'import-export'>('overview');
   
   // App states loaded from store
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -94,6 +96,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     slogan: ''
   });
   const [currentLogo, setCurrentLogo] = useState<string | null>(null);
+
+  // CSV Import / Export states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [parsedData, setParsedData] = useState<{ headers: string[]; rows: string[][] } | null>(null);
+  const [errorsList, setErrorsList] = useState<string[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [reports, setReports] = useState<{ created: number; updated: number; total: number } | null>(null);
 
   // Editing / managing brand state forms
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
@@ -772,6 +782,419 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   };
 
   // ==========================================
+  // CSV IMPORT AND EXPORT METHODS
+  // ==========================================
+  const parseCSV = (text: string): { headers: string[]; rows: string[][] } => {
+    const lines: string[][] = [];
+    let row: string[] = [];
+    let inQuotes = false;
+    let currentValue = '';
+
+    // Auto-detect delimiter - look at first line
+    const firstLine = text.split('\n')[0] || '';
+    const delimiter = firstLine.includes(';') ? ';' : ',';
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          currentValue += '"';
+          i++; // skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        row.push(currentValue.trim());
+        currentValue = '';
+      } else if ((char === '\r' || char === '\n') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') {
+          i++; // skip LF
+        }
+        row.push(currentValue.trim());
+        if (row.length > 1 || (row.length === 1 && row[0] !== '')) {
+          lines.push(row);
+        }
+        row = [];
+        currentValue = '';
+      } else {
+        currentValue += char;
+      }
+    }
+
+    if (currentValue !== '' || row.length > 0) {
+      row.push(currentValue.trim());
+      if (row.length > 1 || (row.length === 1 && row[0] !== '')) {
+        lines.push(row);
+      }
+    }
+
+    if (lines.length === 0) {
+      return { headers: [], rows: [] };
+    }
+
+    const headers = lines[0].map(h => h.toLowerCase().trim().replace(/^["']|["']$/g, ''));
+    const dataRows = lines.slice(1);
+
+    return { headers, rows: dataRows };
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = [
+      'name',
+      'brand',
+      'measure',
+      'rim',
+      'category',
+      'application',
+      'short_description',
+      'full_description',
+      'technical_specs',
+      'price',
+      'show_price',
+      'availability_status',
+      'main_image_url',
+      'featured',
+      'active'
+    ];
+    
+    const sampleData = [
+      'Pneu Pirelli Cinturato P1 175/70 R13',
+      'Pirelli',
+      '175/70 R13',
+      '13',
+      'Carro de passeio',
+      'Uso urbano e rodoviário diário con conforto',
+      'Pneu Aro 13 ideal para carros de passeio compactos',
+      'Oferece ótima durabilidade, frenagem segura em pista molhada e excelente custo-benefício para rodar na cidade ou estrada.',
+      '["Desenho: Simétrico", "Aderência (Traction): A", "Temperatura (Temperature): B"]',
+      '379.90',
+      'true',
+      'Disponível',
+      '',
+      'false',
+      'true'
+    ];
+
+    const csvContent = [
+      headers.join(';'),
+      sampleData.map(val => `"${val.replace(/"/g, '""')}"`).join(';')
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'modelo_importacao_pneus.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerFeedback('Modelo CSV baixado! Preencha e salve como .csv para importação.');
+  };
+
+  const handleExportCatalog = () => {
+    const headers = [
+      'name',
+      'brand',
+      'measure',
+      'rim',
+      'category',
+      'application',
+      'short_description',
+      'full_description',
+      'technical_specs',
+      'price',
+      'show_price',
+      'availability_status',
+      'main_image_url',
+      'featured',
+      'active'
+    ];
+
+    const rows = productsList.map(p => {
+      return [
+        p.name || '',
+        p.brand || '',
+        p.measure || '',
+        (p.rim || '').toString(),
+        p.category || '',
+        p.application || '',
+        p.shortDesc || '',
+        p.fullDesc || '',
+        JSON.stringify(p.specs || []),
+        p.price != null ? p.price.toString() : '',
+        p.priceStatus === 'exibir' ? 'true' : 'false',
+        p.status || 'Em estoque',
+        p.image || '',
+        p.featured ? 'true' : 'false',
+        p.active !== false ? 'true' : 'false'
+      ].map(val => `"${val.replace(/"/g, '""')}"`).join(';');
+    });
+
+    const csvContent = [headers.join(';'), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'catalogo_produtos_exportado.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    triggerFeedback(`Catálogo exportado com sucesso! ${productsList.length} produtos incluídos.`);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setParsedData(null);
+      setErrorsList([]);
+      setReports(null);
+    }
+  };
+
+  const handleParseAndValidate = () => {
+    if (!selectedFile) {
+      triggerFeedback('Por favor, selecione primeiro um arquivo de formato .csv!', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) {
+        setErrorsList(['Erro ao ler o conteúdo do arquivo CSV. Certifique-se de que o arquivo não está corrompido.']);
+        return;
+      }
+
+      try {
+        const parsed = parseCSV(text);
+        if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+          setErrorsList(['Arquivo vazio ou cabeçalho incorreto. Verifique o modelo CSV.']);
+          return;
+        }
+
+        const requiredHeaders = ['name', 'brand', 'measure', 'rim'];
+        const missingHeaders = requiredHeaders.filter(req => !parsed.headers.includes(req));
+
+        if (missingHeaders.length > 0) {
+          setErrorsList([`Inconsistência nos cabeçalhos: Colunas essenciais faltando: [${missingHeaders.join(', ')}]. Utilize o modelo de exportação.`]);
+          return;
+        }
+
+        const colIndices: Record<string, number> = {};
+        parsed.headers.forEach((h, index) => {
+          colIndices[h] = index;
+        });
+
+        const validationErrors: string[] = [];
+        const validRows: string[][] = [];
+
+        parsed.rows.forEach((row, rowIndex) => {
+          const humanRow = rowIndex + 2;
+
+          if (row.length === 0 || (row.length === 1 && row[0] === '')) {
+            return;
+          }
+
+          const name = row[colIndices['name']] || '';
+          const brand = row[colIndices['brand']] || '';
+          const measure = row[colIndices['measure']] || '';
+          const rimStr = row[colIndices['rim']] || '';
+          const priceStr = row[colIndices['price']] || '';
+
+          if (!name.trim()) {
+            validationErrors.push(`Linha ${humanRow}: O nome do produto de pneu está vazio.`);
+          }
+          if (!brand.trim()) {
+            validationErrors.push(`Linha ${humanRow}: A marca/fabricante está vazia.`);
+          }
+          if (!measure.trim()) {
+            validationErrors.push(`Linha ${humanRow}: A especificação de medida está vazia.`);
+          }
+          
+          if (!rimStr.trim()) {
+            validationErrors.push(`Linha ${humanRow}: O número do Aro está vazio.`);
+          } else {
+            const parsedRim = Number(rimStr);
+            if (isNaN(parsedRim) || parsedRim < 10 || parsedRim > 35) {
+              validationErrors.push(`Linha ${humanRow}: O Aro "${rimStr}" é inválido (deve ser um inteiro entre 10 e 35).`);
+            }
+          }
+
+          if (priceStr.trim()) {
+            const cleanedPrice = priceStr.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+            const parsedPrice = Number(cleanedPrice);
+            if (isNaN(parsedPrice)) {
+              validationErrors.push(`Linha ${humanRow}: Preço de pneu "${priceStr}" não pôde ser convertido em número.`);
+            }
+          }
+
+          validRows.push(row);
+        });
+
+        if (validationErrors.length > 0) {
+          setErrorsList(validationErrors);
+          triggerFeedback('Validação falhou. Verifique os erros listados.', 'error');
+        } else {
+          setParsedData(parsed);
+          setErrorsList([]);
+          triggerFeedback(`Validação concluída com sucesso! ${validRows.length} linhas de produtos estruturadas e prontas.`);
+        }
+      } catch (err: any) {
+        console.error(err);
+        setErrorsList([`Falha fatal no processamento do arquivo: ${err.message || err}`]);
+      }
+    };
+    reader.readAsText(selectedFile);
+  };
+
+  const handleImportData = async () => {
+    if (!parsedData || parsedData.rows.length === 0) return;
+
+    if (!(await checkAuth())) return;
+
+    setIsImporting(true);
+    setReports(null);
+    setImportProgress({ current: 0, total: parsedData.rows.length });
+
+    const colIndices: Record<string, number> = {};
+    parsedData.headers.forEach((h, index) => {
+      colIndices[h] = index;
+    });
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    
+    // Refresh local lists
+    const existingProducts = getProducts();
+    const existingMap = new Map<string, Product>();
+    for (const p of existingProducts) {
+      existingMap.set(p.name.trim().toLowerCase(), p);
+    }
+
+    const currentBrands = getBrands();
+    const activeBrandNamesSet = new Set(currentBrands.map(b => b.name.trim().toLowerCase()));
+
+    try {
+      for (let i = 0; i < parsedData.rows.length; i++) {
+        const row = parsedData.rows[i];
+        setImportProgress({ current: i + 1, total: parsedData.rows.length });
+
+        const name = (row[colIndices['name']] || '').trim();
+        if (!name) continue;
+
+        const brand = (row[colIndices['brand']] || '').trim();
+        const measure = (row[colIndices['measure']] || '').trim();
+        const rim = Number(row[colIndices['rim']]) || 15;
+        const category = (row[colIndices['category']] || 'Carro de passeio').trim();
+        const application = (row[colIndices['application']] || '').trim();
+        const shortDesc = (row[colIndices['short_description']] || '').trim();
+        const fullDesc = (row[colIndices['full_description']] || '').trim();
+        const availabilityStatus = (row[colIndices['availability_status']] || 'Em estoque').trim();
+        const mainImageUrl = (row[colIndices['main_image_url']] || '').trim();
+        const featuredStr = (row[colIndices['featured']] || '').trim().toLowerCase();
+        const activeStr = (row[colIndices['active']] || '').trim().toLowerCase();
+        const priceStr = (row[colIndices['price']] || '').trim();
+        const showPriceStr = (row[colIndices['show_price']] || '').trim().toLowerCase();
+        
+        const technicalSpecsStr = (row[colIndices['technical_specs']] || '').trim();
+
+        if (brand && !activeBrandNamesSet.has(brand.toLowerCase())) {
+          try {
+            const newBrandObj: Brand = {
+              id: 'brand_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 4),
+              name: brand,
+              logo: null,
+              active: true
+            };
+            await saveBrandDb(newBrandObj);
+            activeBrandNamesSet.add(brand.toLowerCase());
+          } catch (brandErr) {
+            console.error('Error auto-registering brand:', brandErr);
+          }
+        }
+
+        let specs: string[] = [];
+        if (technicalSpecsStr) {
+          try {
+            if (technicalSpecsStr.startsWith('[') && technicalSpecsStr.endsWith(']')) {
+              specs = JSON.parse(technicalSpecsStr);
+            } else {
+              specs = technicalSpecsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            }
+          } catch (specErr) {
+            specs = [technicalSpecsStr];
+          }
+        }
+
+        let price: number | undefined = undefined;
+        if (priceStr) {
+          const cleanedPrice = priceStr.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+          const parsedPrice = Number(cleanedPrice);
+          if (!isNaN(parsedPrice)) {
+            price = parsedPrice;
+          }
+        }
+
+        const priceStatus = showPriceStr === 'false' ? 'sob_consulta' : 'exibir';
+
+        const existingProd = existingMap.get(name.toLowerCase());
+        
+        const productData: Product = {
+          id: existingProd ? existingProd.id : 'temp_prod_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 4),
+          name,
+          brand,
+          measure,
+          rim,
+          category,
+          application,
+          specs,
+          status: availabilityStatus,
+          image: mainImageUrl,
+          shortDesc,
+          fullDesc,
+          price,
+          priceStatus,
+          featured: featuredStr === 'true',
+          active: activeStr !== 'false'
+        };
+
+        await saveProductDb(productData);
+
+        if (existingProd) {
+          updatedCount++;
+        } else {
+          createdCount++;
+        }
+      }
+
+      setReports({
+        created: createdCount,
+        updated: updatedCount,
+        total: parsedData.rows.length
+      });
+      
+      triggerFeedback(`Importação concluída com sucesso! ${createdCount} criados e ${updatedCount} atualizados.`);
+      
+      setProductsList(getProducts());
+      setBrandsList(getBrands());
+      onRefreshPublicData();
+      
+      setSelectedFile(null);
+      setParsedData(null);
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro durante a importação: ${err.message || err}`, 'error');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // ==========================================
   // RIM CARD MANAGEMENT METHODS
   // ==========================================
   const handleSaveRimCard = async (e: React.FormEvent) => {
@@ -1050,6 +1473,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               { id: 'overview', label: 'Visão Geral', icon: TrendingUp },
               { id: 'products', label: 'Produtos', icon: Layers },
               { id: 'add-product', label: 'Adicionar Produto', icon: PlusCircle, onClick: () => initProductForm(null) },
+              { id: 'import-export', label: 'Importar / Exportar', icon: FileSpreadsheet },
               { id: 'marcas', label: 'Marcas', icon: Award },
               { id: 'cards-do-aro', label: 'Cards de Aro', icon: Database },
               { id: 'logo-identity', label: 'Logo e Identidade', icon: ImageIcon },
@@ -2627,6 +3051,177 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               </div>
 
             </div>
+          </motion.div>
+        )}
+
+        {/* TAB 8: CSV IMPORT & EXPORT */}
+        {activeTab === 'import-export' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6 animate-fade-in text-slate-800"
+          >
+            <div>
+              <h1 className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight">Importar e Exportar Catálogo</h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Gerencie todos os seus pneus em lote através de arquivos CSV. Atualize preços, aros, descrições e crie novos produtos instantaneamente sem complicação manual.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* CARD 1: DOWNLOAD PATTERN AND CATALOG EXPORT */}
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                <div>
+                  <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-2 border-b border-slate-100 pb-2 uppercase tracking-wide">
+                    <Download className="h-4.5 w-4.5 text-orange-500" />
+                    Exportações e Arquivo de Modelo
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Baixe o arquivo de modelo pré-formatado ou extraia o catálogo atualizado do seu site em formato padrão Excel/CSV.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2.5">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">1. Modelo de Cadastro Padrão</h4>
+                    <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
+                      O arquivo modelo contém todas as 15 colunas obrigatórias e opcionais pré-configuradas. Use-o para preencher e organizar os pneus de acordo com o nosso motor de importação.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleDownloadTemplate}
+                      className="inline-flex items-center gap-2 rounded-lg bg-orange-650 hover:bg-orange-600 text-white text-[10px] font-bold uppercase transition-all tracking-wider px-4 py-2 cursor-pointer shadow-xs"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Baixar Modelo CSV
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2.5">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">2. Backup do Catálogo Atual</h4>
+                    <p className="text-[11px] text-slate-500 leading-relaxed font-sans">
+                      Deseja atualizar dados em lote? Exporte o catálogo atual, faça todas as correções de preços, descrições ou novas medidas de forma prática no Google Planilhas ou Excel, e depois envie novamente.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleExportCatalog}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-850 hover:bg-slate-800 text-white text-[10px] font-bold uppercase transition-all tracking-wider px-4 py-2 cursor-pointer shadow-xs"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Exportar Todos ({productsList.length}) Pneus
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 2: FILE LOADER */}
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                <div>
+                  <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-2 border-b border-slate-100 pb-2 uppercase tracking-wide">
+                    <Upload className="h-4.5 w-4.5 text-blue-500" />
+                    Enviar e Importar Planilha CSV
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Carregue seu arquivo de extensão CSV e o motor irá varrer linha a linha atualizando pneus existentes e adicionando os novos em massa.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-slate-200 hover:border-orange-400 rounded-xl p-6 text-center cursor-pointer transition-all bg-slate-50 hover:bg-slate-50/80 relative">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="space-y-2 flex flex-col items-center justify-center">
+                      <Upload className="h-8 w-8 text-slate-400" />
+                      <div className="text-xs font-bold text-slate-700 select-none">
+                        {selectedFile ? selectedFile.name : 'Vincule seu arquivo para iniciar...'}
+                      </div>
+                      <p className="text-[10px] text-slate-400 select-none">Tamanho máximo: 10MB. Extensão: .csv</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleParseAndValidate}
+                      disabled={!selectedFile || isImporting}
+                      className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-850 font-bold text-xs uppercase py-3 rounded-lg transition-all cursor-pointer disabled:opacity-50 text-center"
+                    >
+                      Analisar e Validar Dados
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImportData}
+                      disabled={!parsedData || isImporting || errorsList.length > 0}
+                      className="flex-1 bg-orange-650 hover:bg-orange-600 text-white font-bold text-xs uppercase py-3 rounded-lg transition-all cursor-pointer disabled:opacity-50 text-center shadow-md shadow-orange-650/15"
+                    >
+                      {isImporting ? 'Cadastrando...' : 'Confirmar Importação'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* ERROR REPORT LOG OR CONFIRMATION DIALS */}
+            {(reports || errorsList.length > 0 || isImporting) && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4 font-sans">
+                <h3 className="font-sans font-bold text-slate-800 text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
+                  <span>Relatório de Execução & Diagnóstico</span>
+                  {isImporting && (
+                    <span className="text-xs text-amber-600 animate-pulse font-mono font-bold">
+                      Processando e gravando linha {importProgress.current} de {importProgress.total}...
+                    </span>
+                  )}
+                </h3>
+
+                {isImporting && (
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-orange-500 h-full transition-all duration-300"
+                      style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                    />
+                  </div>
+                )}
+
+                {/* Validation Errors Panel */}
+                {errorsList.length > 0 && (
+                  <div className="rounded-xl border border-rose-250 bg-rose-50 p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-rose-700 font-bold text-xs font-sans">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                      <span>Inconsistências Encontradas - Correção Requerida antes de prosseguir:</span>
+                    </div>
+                    <ul className="text-[11px] text-rose-600 font-mono space-y-1 list-disc list-inside max-h-48 overflow-y-auto">
+                      {errorsList.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Success Report Panel */}
+                {reports && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-lg border border-emerald-250 bg-emerald-50 p-4 text-center">
+                      <span className="text-[10px] text-emerald-700 uppercase tracking-widest block font-bold mb-1">Novos Pneus Gravados</span>
+                      <p className="text-2xl font-black text-emerald-850">{reports.created}</p>
+                    </div>
+                    <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-center">
+                      <span className="text-[10px] text-indigo-700 uppercase tracking-widest block font-bold mb-1">Pneus Atualizados</span>
+                      <p className="text-2xl font-black text-indigo-850">{reports.updated}</p>
+                    </div>
+                    <div className="rounded-lg border border-amber-250 bg-amber-50 p-4 text-center">
+                      <span className="text-[10px] text-amber-700 uppercase tracking-widest block font-bold mb-1">Total de Linhas</span>
+                      <p className="text-2xl font-black text-amber-800">{reports.total}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
 

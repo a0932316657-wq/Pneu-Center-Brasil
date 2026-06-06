@@ -359,20 +359,31 @@ export function getBrands(): Brand[] {
     const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
     const stored = localStorage.getItem(BRANDS_STORE_KEY);
     
-    if (isSupabaseConnected) {
-      if (stored) {
-        const parsed = JSON.parse(stored) as Brand[];
-        const filtered = parsed.filter(b => isBrandIdReal(b.id));
-        return filtered.length > 0 ? filtered : DEFAULT_BRANDS;
-      }
-      return DEFAULT_BRANDS;
-    } else {
-      if (!stored) {
-        localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(DEFAULT_BRANDS));
-        return DEFAULT_BRANDS;
-      }
-      return JSON.parse(stored) as Brand[];
+    let parsed: Brand[] = [];
+    if (stored) {
+      parsed = JSON.parse(stored) as Brand[];
     }
+    
+    // In local mode, if there are brands in localStorage, we can use them directly
+    if (!isSupabaseConnected) {
+      if (parsed.length === 0) return DEFAULT_BRANDS;
+      return parsed;
+    }
+    
+    // In database mode, we extract real database rows and merge with default list
+    const dbBrands = parsed.filter(b => isBrandIdReal(b.id));
+    
+    const mergedMap = new Map<string, Brand>();
+    // First insert defaults
+    for (const b of DEFAULT_BRANDS) {
+      mergedMap.set(b.name.toLowerCase().trim(), b);
+    }
+    // Then overwrite with database brands (if they have the same name) or add new custom brands
+    for (const b of dbBrands) {
+      mergedMap.set(b.name.toLowerCase().trim(), b);
+    }
+    
+    return Array.from(mergedMap.values());
   } catch (error) {
     console.error('Error reading brands from localStorage', error);
     return DEFAULT_BRANDS;
@@ -395,20 +406,31 @@ export function getRimCards(): RimCard[] {
     const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
     const stored = localStorage.getItem(RIM_CARDS_STORE_KEY);
     
-    if (isSupabaseConnected) {
-      if (stored) {
-        const parsed = JSON.parse(stored) as RimCard[];
-        const filtered = parsed.filter(r => isRimCardIdReal(r.id));
-        return filtered.length > 0 ? filtered : DEFAULT_RIM_CARDS;
-      }
-      return DEFAULT_RIM_CARDS;
-    } else {
-      if (!stored) {
-        localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(DEFAULT_RIM_CARDS));
-        return DEFAULT_RIM_CARDS;
-      }
-      return JSON.parse(stored) as RimCard[];
+    let parsed: RimCard[] = [];
+    if (stored) {
+      parsed = JSON.parse(stored) as RimCard[];
     }
+    
+    // In local mode, if there are rim cards in localStorage, we use them directly
+    if (!isSupabaseConnected) {
+      if (parsed.length === 0) return DEFAULT_RIM_CARDS;
+      return parsed;
+    }
+    
+    // In database mode, extract real database rim records and merge with default presets
+    const dbRimCards = parsed.filter(r => isRimCardIdReal(r.id));
+    
+    const mergedMap = new Map<number, RimCard>();
+    // First, insert defaults
+    for (const r of DEFAULT_RIM_CARDS) {
+      mergedMap.set(r.rim, r);
+    }
+    // Then, override with database ones or insert brand-new ones
+    for (const r of dbRimCards) {
+      mergedMap.set(r.rim, r);
+    }
+    
+    return Array.from(mergedMap.values()).sort((a, b) => a.rim - b.rim);
   } catch (error) {
     console.error('Error reading rim cards from localStorage', error);
     return DEFAULT_RIM_CARDS;
@@ -500,46 +522,48 @@ export async function syncFromSupabase(): Promise<void> {
  */
 
 export async function saveProductDb(product: Product): Promise<Product> {
+  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
   const payload = buildProductPayload(product);
   let resultRow: any = null;
 
-  // Since Supabase uses UUID for products, check if it's a valid UUID
-  const isIdReal = product.id && isValidUUID(product.id);
+  if (isSupabaseConnected) {
+    // Since Supabase uses UUID for products, check if it's a valid UUID
+    const isIdReal = product.id && isValidUUID(product.id);
 
-  if (isIdReal) {
-    // Try updating first
-    const { data, error } = await supabase
-      .from('products')
-      .update(payload)
-      .eq('id', product.id)
-      .select();
+    if (isIdReal) {
+      // Try updating first
+      const { data, error } = await supabase
+        .from('products')
+        .update(payload)
+        .eq('id', product.id)
+        .select();
 
-    if (!error && data && data.length > 0) {
-      resultRow = data[0];
-    } else {
-      console.warn('Direct update failed, checking if upsert is possible:', error);
+      if (!error && data && data.length > 0) {
+        resultRow = data[0];
+      } else {
+        console.warn('Direct update failed, checking if upsert is possible:', error);
+      }
+    }
+
+    // If no success (e.g. inserting new record), insert without 'id' to let DB generate PK
+    if (!resultRow) {
+      const { data, error } = await supabase
+        .from('products')
+        .insert(payload)
+        .select();
+
+      if (error) {
+        console.error('Error inserting product in Supabase:', error);
+        throw new Error(`Erro ao cadastrar produto no Supabase: ${error.message}`);
+      }
+      resultRow = data?.[0];
     }
   }
 
-  // If no success (e.g. inserting new record), insert without 'id' to let DB generate PK
-  if (!resultRow) {
-    const { data, error } = await supabase
-      .from('products')
-      .insert(payload)
-      .select();
-
-    if (error) {
-      console.error('Error inserting product in Supabase:', error);
-      throw new Error(`Erro ao cadastrar produto no Supabase: ${error.message}`);
-    }
-    resultRow = data?.[0];
-  }
-
-  if (!resultRow) {
-    throw new Error('Supabase retornou um resultado nulo ao salvar produto.');
-  }
-
-  const mapped = mapProductFromRow(resultRow);
+  const mapped = resultRow ? mapProductFromRow(resultRow) : {
+    ...product,
+    id: isValidUUID(product.id) ? product.id : 'prod_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 4)
+  };
   
   // Update local storage instantly to reflect changes immediately
   const currentLocal = getProducts().filter(p => p.id !== product.id && p.id !== mapped.id);
@@ -549,14 +573,15 @@ export async function saveProductDb(product: Product): Promise<Product> {
 }
 
 export async function deleteProductDb(id: string): Promise<void> {
-  if (isValidUUID(id)) {
+  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
+  if (isSupabaseConnected && isValidUUID(id)) {
     const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) {
       console.error('Failed to delete product from Supabase:', error);
       throw new Error(`Erro ao deletar produto do Supabase: ${error.message}`);
     }
   } else {
-    console.log('ID is not a valid UUID, skipping Supabase delete (treating as local/demo product):', id);
+    console.log('ID is not a valid UUID or offline, skipping Supabase delete (treating as local/demo product):', id);
   }
 
   // Update local cache immediately
