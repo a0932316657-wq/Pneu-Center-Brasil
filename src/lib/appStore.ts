@@ -101,7 +101,7 @@ export function clearDemoProducts(): void {
 export function isBrandIdReal(id: string): boolean {
   if (!id) return false;
   const s = id.toString();
-  if (s.startsWith('b') || s.startsWith('brand_')) return false;
+  if (/^b\d+$/.test(s) || s.startsWith('brand_') || s.startsWith('temp_')) return false;
   return true;
 }
 
@@ -111,7 +111,7 @@ export function isBrandIdReal(id: string): boolean {
 export function isRimCardIdReal(id: string): boolean {
   if (!id) return false;
   const s = id.toString();
-  if (s.startsWith('r') || s.startsWith('rim_')) return false;
+  if (/^r\d+$/.test(s) || s.startsWith('rim_') || s.startsWith('temp_')) return false;
   return true;
 }
 
@@ -362,9 +362,10 @@ export function getBrands(): Brand[] {
     if (isSupabaseConnected) {
       if (stored) {
         const parsed = JSON.parse(stored) as Brand[];
-        return parsed.filter(b => isBrandIdReal(b.id));
+        const filtered = parsed.filter(b => isBrandIdReal(b.id));
+        return filtered.length > 0 ? filtered : DEFAULT_BRANDS;
       }
-      return [];
+      return DEFAULT_BRANDS;
     } else {
       if (!stored) {
         localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(DEFAULT_BRANDS));
@@ -397,9 +398,10 @@ export function getRimCards(): RimCard[] {
     if (isSupabaseConnected) {
       if (stored) {
         const parsed = JSON.parse(stored) as RimCard[];
-        return parsed.filter(r => isRimCardIdReal(r.id));
+        const filtered = parsed.filter(r => isRimCardIdReal(r.id));
+        return filtered.length > 0 ? filtered : DEFAULT_RIM_CARDS;
       }
-      return [];
+      return DEFAULT_RIM_CARDS;
     } else {
       if (!stored) {
         localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(DEFAULT_RIM_CARDS));

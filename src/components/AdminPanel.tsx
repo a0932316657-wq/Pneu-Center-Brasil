@@ -1473,13 +1473,17 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                         <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                           <button
                             onClick={() => toggleProductActive(prod)}
-                            className="flex-1 py-2 font-bold text-[10px] uppercase border rounded hover:bg-slate-50 select-none block text-center cursor-pointer"
+                            className={`flex-1 py-2 font-bold text-[10px] uppercase border rounded select-none block text-center cursor-pointer transition-all ${
+                              prod.active !== false
+                                ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800'
+                                : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-250 text-emerald-800'
+                            }`}
                           >
                             {prod.active !== false ? 'Desativar' : 'Ativar'}
                           </button>
                           <button
                             onClick={() => initProductForm(prod)}
-                            className="flex-1 py-2 font-bold text-[10px] uppercase bg-slate-50 hover:bg-slate-100 border text-slate-800 rounded select-none block text-center cursor-pointer"
+                            className="flex-1 py-2 font-bold text-[10px] uppercase bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded select-none block text-center cursor-pointer transition-all"
                           >
                             Editar
                           </button>
