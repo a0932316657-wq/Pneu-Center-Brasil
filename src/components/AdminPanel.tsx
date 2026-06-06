@@ -143,9 +143,56 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isSavingRim, setIsSavingRim] = useState(false);
   const [isSavingLogo, setIsSavingLogo] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({ type: 'idle', message: '' });
 
   // Delete Confirmation ID Modal
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Computes for Unsaved changes warnings
+  const hasUnsavedBrandChanges = editingBrand ? (
+    brandName.trim() !== editingBrand.name ||
+    brandLogo !== editingBrand.logo ||
+    brandActive !== editingBrand.active
+  ) : (
+    brandName.trim() !== '' || brandLogo !== null
+  );
+
+  const hasUnsavedRimCardChanges = editingRimCard ? (
+    rimCardName.trim() !== editingRimCard.name ||
+    Number(rimCardNumber) !== editingRimCard.rim ||
+    rimCardImage !== editingRimCard.image ||
+    rimCardDesc.trim() !== editingRimCard.description ||
+    rimCardActive !== editingRimCard.active
+  ) : (
+    rimCardName.trim() !== '' ||
+    (rimCardImage !== '' && rimCardImage !== 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=400') ||
+    rimCardDesc.trim() !== ''
+  );
+
+  const hasUnsavedProductChanges = editingProduct ? (
+    prodName.trim() !== editingProduct.name ||
+    prodBrand !== editingProduct.brand ||
+    prodMeasure.trim() !== editingProduct.measure ||
+    Number(prodRim) !== editingProduct.rim ||
+    prodCategory !== editingProduct.category ||
+    prodApplication.trim() !== editingProduct.application ||
+    prodStatus !== editingProduct.status ||
+    prodImage !== editingProduct.image ||
+    prodShortDesc.trim() !== (editingProduct.shortDesc || '') ||
+    prodFullDesc.trim() !== (editingProduct.fullDesc || '') ||
+    prodPrice !== (editingProduct.price !== undefined ? editingProduct.price.toString() : '') ||
+    prodPriceStatus !== editingProduct.priceStatus ||
+    prodIsFeatured !== (editingProduct.featured === true) ||
+    prodIsActive !== (editingProduct.active !== false)
+  ) : (
+    prodName.trim() !== '' ||
+    prodMeasure.trim() !== '' ||
+    prodPrice !== '' ||
+    prodImage !== '' ||
+    prodShortDesc.trim() !== '' ||
+    prodFullDesc.trim() !== ''
+  );
 
   // Load persistence states on mount and configure initial sessions
   useEffect(() => {
@@ -298,6 +345,73 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         return false;
       }
       return true;
+    }
+  };
+
+  // Test Supabase connection (tables, storage, session)
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
+    setConnectionStatus({ type: 'idle', message: 'Iniciando testes de conectividade...' });
+    
+    try {
+      if (isSupabaseUrlAbsent || isSupabaseKeyAbsent) {
+        setConnectionStatus({
+          type: 'error',
+          message: 'Falha crítica: As chaves do Supabase (VITE_SUPABASE_URL e VITE_SUPABASE_KEY) não estão preenchidas no ambiente atual.'
+        });
+        setIsTestingConnection(false);
+        return;
+      }
+
+      const authOk = await checkAuth();
+      if (!authOk) {
+        setConnectionStatus({
+          type: 'error',
+          message: 'Falha de Autenticação: Sua sessão administrativa local ou no Supabase está corrompida. Desconecte e faça login novamente.'
+        });
+        setIsTestingConnection(false);
+        return;
+      }
+
+      // Step 1: Query site_settings
+      const { error: errSettings } = await supabase.from('site_settings').select('id').limit(1);
+      if (errSettings) throw new Error(`Banco conectado, mas a tabela 'site_settings' está inacessível: ${errSettings.message}`);
+
+      // Step 2: Query brands
+      const { error: errBrands } = await supabase.from('brands').select('id').limit(1);
+      if (errBrands) throw new Error(`Banco conectado, mas a tabela 'brands' está inacessível: ${errBrands.message}`);
+
+      // Step 3: Query rim_cards
+      const { error: errRims } = await supabase.from('rim_cards').select('id').limit(1);
+      if (errRims) throw new Error(`Banco conectado, mas a tabela 'rim_cards' está inacessível: ${errRims.message}`);
+
+      // Step 4: Query products
+      const { error: errProducts } = await supabase.from('products').select('id').limit(1);
+      if (errProducts) throw new Error(`Banco conectado, mas a tabela 'products' está inacessível: ${errProducts.message}`);
+
+      // Step 5: Test Storage buckets lists
+      const { data: buckets, error: errBucket } = await supabase.storage.listBuckets();
+      if (errBucket) {
+        throw new Error(`Falha ao acessar o serviço de armazenamento de mídias (Storage): ${errBucket.message}`);
+      }
+      
+      const hasBucket = buckets ? buckets.some(b => b.name === 'pneu-center') : false;
+      if (!hasBucket) {
+        throw new Error(`O bucket de fotos 'pneu-center' não está criado no seu Storage do Supabase. Crie-o como público para salvar as logos e fotos.`);
+      }
+
+      setConnectionStatus({
+        type: 'success',
+        message: 'Conectado com sucesso! Comunicação de dados ao Supabase, tabelas de controle e bucket de arquivos públicos de mídia testados e operacionais.'
+      });
+    } catch (err: any) {
+      console.error('Supabase connection diagnostics failed:', err);
+      setConnectionStatus({
+        type: 'error',
+        message: `Falha no Diagnóstico: ${err.message || err}`
+      });
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
@@ -1087,7 +1201,36 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   <Trash2 className="h-4 w-4 text-red-600" />
                   <span>Limpar produtos de demonstração / localStorage</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={isTestingConnection}
+                  className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs uppercase px-4 py-2 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  <Database className={`h-4 w-4 text-teal-650 ${isTestingConnection ? 'animate-spin' : ''}`} />
+                  <span>{isTestingConnection ? 'Verificando...' : 'Testar Conexão Supabase'}</span>
+                </button>
               </div>
+
+              {connectionStatus.type !== 'idle' && (
+                <div className={`mt-3 rounded-lg p-3 text-xs font-sans font-bold leading-relaxed border ${
+                  connectionStatus.type === 'success' 
+                    ? 'bg-teal-50 border-teal-250 text-teal-800' 
+                    : 'bg-rose-50 border-rose-250 text-rose-700'
+                }`}>
+                  <div className="flex items-start gap-2.5">
+                    <div className="shrink-0 mt-0.5">
+                      {connectionStatus.type === 'success' ? (
+                        <div className="h-2 w-2 rounded-full bg-teal-500 animate-ping inline-block mr-1.5" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-rose-500" />
+                      )}
+                    </div>
+                    <span>{connectionStatus.message}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Recent activities overview or Quick Links */}
@@ -1757,6 +1900,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                 </div>
               </div>
 
+              {/* Product Unsaved Warning */}
+              {hasUnsavedProductChanges && (
+                <div className="text-xs font-sans font-bold text-amber-600 flex items-center gap-1.5 bg-amber-50 border border-amber-250 rounded-xl p-3 animate-pulse">
+                  <AlertCircle className="h-4.5 w-4.5 text-amber-550 shrink-0" />
+                  <span>Você tem alterações não salvas no formulário deste pneu</span>
+                </div>
+              )}
+
               {/* Action Buttons footer */}
               <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
                 <button
@@ -1768,9 +1919,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3 text-xs font-bold uppercase cursor-pointer shadow-md shadow-orange-600/10"
+                  disabled={isSavingProduct}
+                  className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3 text-xs font-bold uppercase cursor-pointer shadow-md shadow-orange-600/10 disabled:opacity-50"
                 >
-                  {editingProduct ? 'Salvar Alterações' : 'Cadastrar Pneu'}
+                  {isSavingProduct ? 'Salvando...' : (editingProduct ? 'Salvar Alterações' : 'Cadastrar Pneu')}
                 </button>
               </div>
 
@@ -2132,7 +2284,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       type="checkbox"
                       id="brandActive"
                       checked={brandActive}
-                      onChange={(e) => setBrandActive(e.checked)}
+                      onChange={(e) => setBrandActive(e.target.checked)}
                       className="rounded border-slate-200 text-orange-550 focus:ring-orange-500 h-4 w-4"
                     />
                     <label htmlFor="brandActive" className="text-xs font-bold text-slate-600 cursor-pointer select-none">
@@ -2140,13 +2292,22 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     </label>
                   </div>
 
+                  {/* Brand Unsaved Warning */}
+                  {hasUnsavedBrandChanges && (
+                    <div className="text-[11px] font-sans font-bold text-amber-600 flex items-center gap-1.5 bg-amber-50 border border-amber-250 rounded-lg p-2 animate-pulse">
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-550 shrink-0" />
+                      <span>Alterações não salvas</span>
+                    </div>
+                  )}
+
                   {/* Actions Buttons */}
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                     <button
                       type="submit"
-                      className="flex-1 bg-orange-600 hover:bg-orange-500 text-slate-950 font-bold text-xs py-2.5 rounded-lg uppercase transition-all tracking-wider cursor-pointer"
+                      disabled={isSavingBrand}
+                      className="flex-1 bg-orange-600 hover:bg-orange-500 text-slate-950 font-bold text-xs py-2.5 rounded-lg uppercase transition-all tracking-wider cursor-pointer disabled:opacity-50"
                     >
-                      {editingBrand ? 'Salvar Edição' : 'Cadastrar'}
+                      {isSavingBrand ? 'Salvando...' : (editingBrand ? 'Salvar Alterações' : 'Cadastrar')}
                     </button>
                     {editingBrand && (
                       <button
@@ -2359,13 +2520,22 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     </label>
                   </div>
 
+                  {/* Rim Card Unsaved Warning */}
+                  {hasUnsavedRimCardChanges && (
+                    <div className="text-[11px] font-sans font-bold text-amber-600 flex items-center gap-1.5 bg-amber-50 border border-amber-250 rounded-lg p-2 animate-pulse">
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-550 shrink-0" />
+                      <span>Alterações não salvas</span>
+                    </div>
+                  )}
+
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                     <button
                       type="submit"
-                      className="flex-1 bg-orange-650 hover:bg-orange-600 text-white font-bold text-xs py-2.5 rounded-lg uppercase tracking-wider transition-all cursor-pointer"
+                      disabled={isSavingRim}
+                      className="flex-1 bg-orange-650 hover:bg-orange-600 text-white font-bold text-xs py-2.5 rounded-lg uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
                     >
-                      {editingRimCard ? 'Salvar Edição' : 'Cadastrar'}
+                      {isSavingRim ? 'Salvando...' : (editingRimCard ? 'Salvar Alterações' : 'Cadastrar')}
                     </button>
                     {editingRimCard && (
                       <button

@@ -95,6 +95,26 @@ export function clearDemoProducts(): void {
  * ------------------------------------------------------------------------
  */
 
+/**
+ * Helper to identify real vs demo brand IDs
+ */
+export function isBrandIdReal(id: string): boolean {
+  if (!id) return false;
+  const s = id.toString();
+  if (s.startsWith('b') || s.startsWith('brand_')) return false;
+  return true;
+}
+
+/**
+ * Helper to identify real vs demo rim card IDs
+ */
+export function isRimCardIdReal(id: string): boolean {
+  if (!id) return false;
+  const s = id.toString();
+  if (s.startsWith('r') || s.startsWith('rim_')) return false;
+  return true;
+}
+
 function mapProductFromRow(row: any): Product {
   return {
     id: row.id?.toString() || '',
@@ -104,59 +124,45 @@ function mapProductFromRow(row: any): Product {
     rim: Number(row.rim) || 15,
     category: row.category || 'Carro de passeio',
     application: row.application || '',
-    specs: Array.isArray(row.specs) ? row.specs : (typeof row.specs === 'string' ? JSON.parse(row.specs) : []),
-    status: row.status || 'Em estoque',
+    specs: Array.isArray(row.technical_specs) ? row.technical_specs : (Array.isArray(row.specs) ? row.specs : (typeof row.technical_specs === 'string' ? JSON.parse(row.technical_specs) : (typeof row.specs === 'string' ? JSON.parse(row.specs) : []))),
+    status: row.availability_status || row.status || 'Em estoque',
     image: row.main_image_url || row.image || '',
-    shortDesc: row.short_desc || row.shortDesc || row.shortdesc || '',
-    fullDesc: row.full_desc || row.fullDesc || row.fulldesc || '',
+    shortDesc: row.short_description || row.short_desc || row.shortDesc || row.shortdesc || '',
+    fullDesc: row.full_description || row.full_desc || row.fullDesc || row.fulldesc || '',
     price: row.price != null ? Number(row.price) : undefined,
-    priceStatus: row.price_status || row.priceStatus || row.pricestatus || 'sob_consulta',
-    gallery: Array.isArray(row.gallery) ? row.gallery : (typeof row.gallery === 'string' ? JSON.parse(row.gallery) : []),
+    priceStatus: row.show_price === false ? 'sob_consulta' : (row.price_status || row.priceStatus || row.pricestatus || 'sob_consulta'),
+    gallery: Array.isArray(row.gallery_images) ? row.gallery_images : (Array.isArray(row.gallery) ? row.gallery : (typeof row.gallery_images === 'string' ? JSON.parse(row.gallery_images) : (typeof row.gallery === 'string' ? JSON.parse(row.gallery) : []))),
     featured: !!row.featured,
     active: row.active !== false
   };
 }
 
 function buildProductPayload(p: Product): any {
-  const payload: any = {
+  return {
     name: p.name,
     brand: p.brand,
     measure: p.measure,
     rim: p.rim,
     category: p.category,
     application: p.application,
-    specs: p.specs,
-    status: p.status,
+    technical_specs: p.specs || [],
+    availability_status: p.status || 'Em estoque',
     featured: !!p.featured,
     active: p.active !== false,
-    price: p.price
+    price: p.price,
+    show_price: p.priceStatus === 'exibir',
+    main_image_url: p.image || '',
+    short_description: p.shortDesc || '',
+    full_description: p.fullDesc || '',
+    gallery_images: p.gallery || []
   };
-
-  // Convert image and main_image_url column names
-  payload.main_image_url = p.image;
-  payload.image = p.image;
-
-  // Set description snake_case and camelCase forms
-  payload.short_desc = p.shortDesc || '';
-  payload.shortDesc = p.shortDesc || '';
-  payload.full_desc = p.fullDesc || '';
-  payload.fullDesc = p.fullDesc || '';
-
-  // Set price status
-  payload.price_status = p.priceStatus || 'sob_consulta';
-  payload.priceStatus = p.priceStatus || 'sob_consulta';
-
-  // Set gallery payload
-  payload.gallery = p.gallery || [];
-
-  return payload;
 }
 
 function mapBrandFromRow(row: any): Brand {
   return {
     id: row.id?.toString() || '',
     name: row.name || '',
-    logo: row.logo || row.logo_url || null,
+    logo: row.logo_url || row.logo || null,
     active: row.active !== false
   };
 }
@@ -164,9 +170,9 @@ function mapBrandFromRow(row: any): Brand {
 function mapRimCardFromRow(row: any): RimCard {
   return {
     id: row.id?.toString() || '',
-    name: row.name || '',
+    name: row.title || row.name || '',
     rim: Number(row.rim) || 15,
-    image: row.image || row.image_url || '',
+    image: row.image_url || row.image || '',
     description: row.description || '',
     active: row.active !== false
   };
@@ -350,12 +356,22 @@ export function removeLogo(): void {
 export function getBrands(): Brand[] {
   if (typeof window === 'undefined') return DEFAULT_BRANDS;
   try {
+    const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
     const stored = localStorage.getItem(BRANDS_STORE_KEY);
-    if (!stored) {
-      localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(DEFAULT_BRANDS));
-      return DEFAULT_BRANDS;
+    
+    if (isSupabaseConnected) {
+      if (stored) {
+        const parsed = JSON.parse(stored) as Brand[];
+        return parsed.filter(b => isBrandIdReal(b.id));
+      }
+      return [];
+    } else {
+      if (!stored) {
+        localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(DEFAULT_BRANDS));
+        return DEFAULT_BRANDS;
+      }
+      return JSON.parse(stored) as Brand[];
     }
-    return JSON.parse(stored) as Brand[];
   } catch (error) {
     console.error('Error reading brands from localStorage', error);
     return DEFAULT_BRANDS;
@@ -375,12 +391,22 @@ export function saveBrands(brands: Brand[]): void {
 export function getRimCards(): RimCard[] {
   if (typeof window === 'undefined') return DEFAULT_RIM_CARDS;
   try {
+    const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
     const stored = localStorage.getItem(RIM_CARDS_STORE_KEY);
-    if (!stored) {
-      localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(DEFAULT_RIM_CARDS));
-      return DEFAULT_RIM_CARDS;
+    
+    if (isSupabaseConnected) {
+      if (stored) {
+        const parsed = JSON.parse(stored) as RimCard[];
+        return parsed.filter(r => isRimCardIdReal(r.id));
+      }
+      return [];
+    } else {
+      if (!stored) {
+        localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(DEFAULT_RIM_CARDS));
+        return DEFAULT_RIM_CARDS;
+      }
+      return JSON.parse(stored) as RimCard[];
     }
-    return JSON.parse(stored) as RimCard[];
   } catch (error) {
     console.error('Error reading rim cards from localStorage', error);
     return DEFAULT_RIM_CARDS;
@@ -539,12 +565,12 @@ export async function deleteProductDb(id: string): Promise<void> {
 export async function saveBrandDb(brand: Brand): Promise<Brand> {
   const payload: any = {
     name: brand.name,
-    logo: brand.logo,
+    logo_url: brand.logo,
     active: brand.active
   };
 
   let resultRow: any = null;
-  const isIdReal = brand.id && !brand.id.startsWith('brand_');
+  const isIdReal = isBrandIdReal(brand.id);
   const numericId = isIdReal && !isNaN(Number(brand.id)) ? Number(brand.id) : null;
   const brandIdToUse = numericId !== null ? numericId : brand.id;
 
@@ -586,13 +612,15 @@ export async function saveBrandDb(brand: Brand): Promise<Brand> {
 }
 
 export async function deleteBrandDb(id: string): Promise<void> {
-  const numericId = !isNaN(Number(id)) ? Number(id) : null;
-  const idValue = numericId !== null ? numericId : id;
+  if (isBrandIdReal(id)) {
+    const numericId = !isNaN(Number(id)) ? Number(id) : null;
+    const idValue = numericId !== null ? numericId : id;
 
-  const { error } = await supabase.from('brands').delete().eq('id', idValue);
-  if (error) {
-    console.error('Error deleting brand:', error);
-    throw new Error(`Erro ao deletar marca do Supabase: ${error.message}`);
+    const { error } = await supabase.from('brands').delete().eq('id', idValue);
+    if (error) {
+      console.error('Error deleting brand:', error);
+      throw new Error(`Erro ao deletar marca do Supabase: ${error.message}`);
+    }
   }
 
   const updated = getBrands().filter(b => b.id !== id);
@@ -601,15 +629,15 @@ export async function deleteBrandDb(id: string): Promise<void> {
 
 export async function saveRimCardDb(card: RimCard): Promise<RimCard> {
   const payload: any = {
-    name: card.name,
+    title: card.name,
     rim: card.rim,
-    image: card.image,
+    image_url: card.image,
     description: card.description,
     active: card.active
   };
 
   let resultRow: any = null;
-  const isIdReal = card.id && !card.id.startsWith('rim_');
+  const isIdReal = isRimCardIdReal(card.id);
   const numericId = isIdReal && !isNaN(Number(card.id)) ? Number(card.id) : null;
   const cardIdToUse = numericId !== null ? numericId : card.id;
 
@@ -651,13 +679,15 @@ export async function saveRimCardDb(card: RimCard): Promise<RimCard> {
 }
 
 export async function deleteRimCardDb(id: string): Promise<void> {
-  const numericId = !isNaN(Number(id)) ? Number(id) : null;
-  const idValue = numericId !== null ? numericId : id;
+  if (isRimCardIdReal(id)) {
+    const numericId = !isNaN(Number(id)) ? Number(id) : null;
+    const idValue = numericId !== null ? numericId : id;
 
-  const { error } = await supabase.from('rim_cards').delete().eq('id', idValue);
-  if (error) {
-    console.error('Error deleting rim card:', error);
-    throw new Error(`Erro ao deletar card de aro do Supabase: ${error.message}`);
+    const { error } = await supabase.from('rim_cards').delete().eq('id', idValue);
+    if (error) {
+      console.error('Error deleting rim card:', error);
+      throw new Error(`Erro ao deletar card de aro do Supabase: ${error.message}`);
+    }
   }
 
   const updated = getRimCards().filter(r => r.id !== id);
