@@ -13,7 +13,7 @@ interface ProductCardProps {
 export default function ProductCard({ product, onViewDetails }: ProductCardProps) {
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Avoid triggering onViewDetails
-    const msg = getProductMessage(product.name, product.measure, product.price, product.priceStatus);
+    const msg = getProductMessage(product.name, product.measure);
     openWhatsAppChat(msg);
   };
 

@@ -94,18 +94,148 @@ export default function App() {
     return { path: 'home' };
   };
 
+  // Refs to always access the latest state inside popstate callback
+  const selectedRimRef = React.useRef(selectedRim);
+  const selectedBrandRef = React.useRef(selectedBrand);
+  useEffect(() => { selectedRimRef.current = selectedRim; }, [selectedRim]);
+  useEffect(() => { selectedBrandRef.current = selectedBrand; }, [selectedBrand]);
+
+  const smoothScrollTo = (elementId: string) => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return true;
+    }
+    return false;
+  };
+
+  const filterByRim = (rim: string, push = true) => {
+    setSelectedRim(rim);
+    if (push) {
+      window.history.pushState({
+        path: 'catalogo',
+        selectedRim: rim,
+        selectedBrand: selectedBrandRef.current
+      }, '', '#/catalogo');
+      setRouteState({ path: 'catalogo' });
+    }
+  };
+
+  const filterByBrand = (brand: string, push = true) => {
+    setSelectedBrand(brand);
+    if (push) {
+      window.history.pushState({
+        path: 'catalogo',
+        selectedRim: selectedRimRef.current,
+        selectedBrand: brand
+      }, '', '#/catalogo');
+      setRouteState({ path: 'catalogo' });
+    }
+  };
+
   // Nav helper function that pushes correct browser history
   const navigateTo = (route: AppRoute, productId?: string) => {
+    const currentRim = selectedRimRef.current;
+    const currentBrand = selectedBrandRef.current;
+
+    if (route === 'marcas') {
+      if (routeState.path === 'home') {
+        smoothScrollTo('marcas-section');
+        window.history.pushState({ path: 'home', hash: 'marcas', selectedRim: currentRim, selectedBrand: currentBrand }, '', '#marcas');
+      } else {
+        window.history.pushState({ path: 'home', hash: 'marcas', selectedRim: currentRim, selectedBrand: currentBrand }, '', '#marcas');
+        setRouteState({ path: 'home' });
+        setTimeout(() => smoothScrollTo('marcas-section'), 120);
+      }
+      return;
+    }
+
+    if (route === 'sobre') {
+      if (routeState.path === 'home') {
+        smoothScrollTo('sobre-section');
+        window.history.pushState({ path: 'home', hash: 'sobre', selectedRim: currentRim, selectedBrand: currentBrand }, '', '#sobre');
+      } else {
+        window.history.pushState({ path: 'home', hash: 'sobre', selectedRim: currentRim, selectedBrand: currentBrand }, '', '#sobre');
+        setRouteState({ path: 'home' });
+        setTimeout(() => smoothScrollTo('sobre-section'), 120);
+      }
+      return;
+    }
+
+    if (route === 'contato') {
+      window.history.pushState({ path: 'contato', selectedRim: currentRim, selectedBrand: currentBrand }, '', '#/contato');
+      setRouteState({ path: 'contato' });
+      return;
+    }
+
+    if (route === 'home') {
+      window.history.pushState({ path: 'home', selectedRim: currentRim, selectedBrand: currentBrand }, '', '#/');
+      setRouteState({ path: 'home' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (route === 'catalogo') {
+      window.history.pushState({ path: 'catalogo', selectedRim: currentRim, selectedBrand: currentBrand }, '', '#/catalogo');
+      setRouteState({ path: 'catalogo' });
+      return;
+    }
+
+    if (route === 'produto' && productId) {
+      window.history.pushState({ path: 'produto', productId, selectedRim: currentRim, selectedBrand: currentBrand }, '', `#/produto/${productId}`);
+      setRouteState({ path: 'produto', productId });
+      return;
+    }
+
     let hash = `#/${route}`;
-    if (route === 'home') hash = '#/';
-    if (route === 'produto' && productId) hash = `#/${route}/${productId}`;
-    window.location.hash = hash;
+    window.history.pushState({ path: route, selectedRim: currentRim, selectedBrand: currentBrand }, '', hash);
+    setRouteState({ path: route });
   };
 
   // Setup hash and store listeners on load
   useEffect(() => {
+    // Initial state replacement
+    const initRoute = parseHash();
+    if (!window.history.state) {
+      window.history.replaceState({
+        path: initRoute.path,
+        productId: initRoute.productId,
+        selectedRim: selectedRimRef.current,
+        selectedBrand: selectedBrandRef.current
+      }, '');
+    }
+
     const handleHashChange = () => {
-      setRouteState(parseHash());
+      // Re-parse hash if state POP didn't handle it (for standard external bookmarking/hash URLs)
+      const parsed = parseHash();
+      setRouteState((prev) => {
+        if (prev.path === parsed.path && prev.productId === parsed.productId) return prev;
+        return parsed;
+      });
+    };
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state;
+      if (state) {
+        setSelectedRim(state.selectedRim || 'Todos');
+        setSelectedBrand(state.selectedBrand || 'Todas');
+        setRouteState({ path: state.path, productId: state.productId });
+
+        if (state.path === 'home') {
+          if (state.hash === 'marcas') {
+            setTimeout(() => smoothScrollTo('marcas-section'), 80);
+          } else if (state.hash === 'aros') {
+            setTimeout(() => smoothScrollTo('aros-section'), 80);
+          } else if (state.hash === 'sobre') {
+            setTimeout(() => smoothScrollTo('sobre-section'), 80);
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }
+      } else {
+        const parsed = parseHash();
+        setRouteState(parsed);
+      }
     };
 
     const handleProductsChange = () => {
@@ -120,25 +250,38 @@ export default function App() {
       setRimCards(getRimCards());
     };
 
-    // Parse initially
-    setRouteState(parseHash());
+    // Parse initial hash scrolls
+    const initialHash = window.location.hash;
+    if (initialHash === '#marcas') {
+      setTimeout(() => smoothScrollTo('marcas-section'), 250);
+    } else if (initialHash === '#aros') {
+      setTimeout(() => smoothScrollTo('aros-section'), 250);
+    } else if (initialHash === '#sobre') {
+      setTimeout(() => smoothScrollTo('sobre-section'), 250);
+    }
 
     window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('pneu_center_products_updated', handleProductsChange);
     window.addEventListener('pneu_center_brands_updated', handleBrandsChange);
     window.addEventListener('pneu_center_rimcards_updated', handleRimCardsChange);
     
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('pneu_center_products_updated', handleProductsChange);
       window.removeEventListener('pneu_center_brands_updated', handleBrandsChange);
       window.removeEventListener('pneu_center_rimcards_updated', handleRimCardsChange);
     };
   }, []);
 
-  // Guarantee page scrolls back to top during dynamic route shiftings
+  // Guarantee page scrolls back to top during dynamic route shiftings (except on landing page anchor links)
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    const hash = window.location.hash;
+    const isSectionHash = ['#marcas', '#aros', '#sobre', '#contato'].includes(hash);
+    if (!isSectionHash) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   }, [routeState]);
 
   // Catalog item filtering logic (excludes inactive items)
@@ -329,8 +472,7 @@ export default function App() {
                       <button
                         key={brand.id}
                         onClick={() => {
-                          setSelectedBrand(brand.name);
-                          navigateTo('catalogo');
+                          filterByBrand(brand.name);
                         }}
                         className="group flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-orange-500/5 border border-slate-200 hover:border-orange-500 rounded-2xl w-24 sm:w-28 h-24 sm:h-28 transition-all duration-300 hover:shadow-md cursor-pointer shrink-0"
                       >
@@ -369,8 +511,7 @@ export default function App() {
                       <button
                         key={card.id}
                         onClick={() => {
-                          setSelectedRim(`Aro ${card.rim}`);
-                          navigateTo('catalogo');
+                          filterByRim(`Aro ${card.rim}`);
                         }}
                         className="group relative h-40 rounded-2xl overflow-hidden border border-slate-200 shadow-sm cursor-pointer hover:shadow-lg transition-all duration-300 flex flex-col justify-end p-4 text-left w-full"
                       >
@@ -593,7 +734,7 @@ export default function App() {
                   <div className="md:col-span-3">
                     <select
                       value={selectedBrand}
-                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      onChange={(e) => filterByBrand(e.target.value)}
                       className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs sm:text-sm text-slate-800 outline-none focus:border-orange-500 transition-all font-sans cursor-pointer"
                     >
                       <option value="Todas">Fabricante: Todos</option>
@@ -610,7 +751,7 @@ export default function App() {
                   <div className="md:col-span-3">
                     <select
                       value={selectedRim}
-                      onChange={(e) => setSelectedRim(e.target.value)}
+                      onChange={(e) => filterByRim(e.target.value)}
                       className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs sm:text-sm text-slate-800 outline-none focus:border-orange-500 transition-all font-sans cursor-pointer"
                     >
                       <option value="Todos">Diâmetro: Todos</option>
@@ -737,8 +878,7 @@ export default function App() {
                   <div
                     key={brand.id}
                     onClick={() => {
-                      setSelectedBrand(brand.name);
-                      navigateTo('catalogo');
+                      filterByBrand(brand.name);
                     }}
                     className="group rounded-xl border border-slate-200 bg-white p-6 flex flex-col items-center justify-center gap-2 text-center transition-all hover:border-orange-550 hover:bg-slate-50 hover:shadow-md duration-300 cursor-pointer"
                   >

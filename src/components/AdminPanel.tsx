@@ -45,8 +45,19 @@ import {
   getRimCards,
   saveRimCards,
   Brand,
-  RimCard
+  RimCard,
+  saveProductDb,
+  deleteProductDb,
+  saveBrandDb,
+  deleteBrandDb,
+  saveRimCardDb,
+  deleteRimCardDb,
+  saveSettingsDb,
+  saveLogoDb,
+  removeLogoDb,
+  syncFromSupabase
 } from '../lib/appStore';
+import { supabase, uploadFile } from '../lib/supabaseClient';
 import { BRANDS } from '../data';
 
 interface AdminPanelProps {
@@ -57,9 +68,11 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {} }: AdminPanelProps) {
   // Session authentication states
+  const [email, setEmail] = useState('contato.pneucenterbrasil@gmail.com');
   const [password, setPassword] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Dashboard navigation tab state
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'marcas' | 'cards-do-aro'>('overview');
@@ -122,16 +135,38 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   // Status notification messaging
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Loading/saving spinners
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isSavingBrand, setIsSavingBrand] = useState(false);
+  const [isSavingRim, setIsSavingRim] = useState(false);
+  const [isSavingLogo, setIsSavingLogo] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
   // Delete Confirmation ID Modal
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Load persistence states on mount and configure initial sessions
   useEffect(() => {
-    // Check if password has been saved already in session
-    const authSession = localStorage.getItem('pneu_center_admin_session');
-    if (authSession === 'authenticated_117711') {
-      setIsLoggedIn(true);
-    }
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setIsLoggedIn(true);
+        } else {
+          const authSession = localStorage.getItem('pneu_center_admin_session');
+          if (authSession === 'authenticated_117711') {
+            setIsLoggedIn(true);
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao checar sessao do Supabase:', err);
+        const authSession = localStorage.getItem('pneu_center_admin_session');
+        if (authSession === 'authenticated_117711') {
+          setIsLoggedIn(true);
+        }
+      }
+    };
+    checkSession();
 
     setProductsList(getProducts());
     setSiteSettings(getSettings());
@@ -147,20 +182,50 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     }, 5000);
   };
 
-  // Handle password submission challenge. Required secret: 117711
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // Handle login challenge using Supabase Auth with hardcoded credentials and local backup
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '117711') {
-      localStorage.setItem('pneu_center_admin_session', 'authenticated_117711');
-      setIsLoggedIn(true);
-      setLoginError('');
-      triggerFeedback('Login efetuado com sucesso!');
-    } else {
-      setLoginError('Senha incorreta. Tente novamente.');
+    setIsLoggingIn(true);
+    setLoginError('');
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim()
+      });
+
+      if (error) {
+        // Safe robust fallback for local review / sandbox sessions
+        if (email.trim() === 'contato.pneucenterbrasil@gmail.com' && password.trim() === '117711') {
+          localStorage.setItem('pneu_center_admin_session', 'authenticated_117711');
+          setIsLoggedIn(true);
+          triggerFeedback('Painel Administrativo liberado (Credenciais locais corretas)!');
+        } else {
+          setLoginError(error.message || 'Senha incorreta ou erro de login no Supabase Auth.');
+        }
+      } else {
+        setIsLoggedIn(true);
+        triggerFeedback('Login efetuado com sucesso via Supabase Auth!');
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (email.trim() === 'contato.pneucenterbrasil@gmail.com' && password.trim() === '117711') {
+        localStorage.setItem('pneu_center_admin_session', 'authenticated_117711');
+        setIsLoggedIn(true);
+        triggerFeedback('Painel Administrativo liberado (Modo local/offline de seguranca)!');
+      } else {
+        setLoginError('Falha no servico de autenticacao do Supabase.');
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Erro ao sair do Supabase Auth:', e);
+    }
     localStorage.removeItem('pneu_center_admin_session');
     setIsLoggedIn(false);
     setPassword('');
@@ -209,36 +274,43 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     }
   };
 
-  // Handle local mobile gallery upload or camera capture for main product image
+  // Upload main image to Supabase storage bucket pneu-center under products/ folder
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsUploadingImage(true);
     try {
-      const base64 = await compressImage(file);
-      setProdImage(base64);
-      triggerFeedback('Imagem selecionada e otimizada com sucesso.');
-    } catch (err) {
+      const url = await uploadFile('pneu-center', 'products', file);
+      setProdImage(url);
+      triggerFeedback('Imagem do produto salva com sucesso no bucket pneu-center/products!');
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao carregar ou otimizar imagem.', 'error');
+      triggerFeedback('Erro ao realizar upload do produto no Supabase Storage.', 'error');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
+  // Upload product gallery images into Supabase storage
   const handleGalleryAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    setIsUploadingImage(true);
     try {
-      const newImages: string[] = [];
+      const newUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
-        const base64 = await compressImage(files[i]);
-        newImages.push(base64);
+        const url = await uploadFile('pneu-center', 'products', files[i]);
+        newUrls.push(url);
       }
-      setProdGallery([...prodGallery, ...newImages]);
-      triggerFeedback(`${newImages.length} foto(s) adicionada(s) à prévia técnica.`);
+      setProdGallery([...prodGallery, ...newUrls]);
+      triggerFeedback(`${newUrls.length} foto(s) adicionada(s) e hospedada(s) com sucesso.`);
     } catch (err) {
       console.error(err);
-      triggerFeedback('Erro ao adicionar foto à galeria.', 'error');
+      triggerFeedback('Erro ao fazer upload das fotos da galeria.', 'error');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -248,7 +320,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   };
 
   // Save product logic (Supports BOTH edit or creation fallback)
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!prodName.trim()) {
@@ -260,88 +332,103 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       return;
     }
 
-    const priceNum = parseFloat(prodPrice);
-    const parsedPrice = isNaN(priceNum) ? undefined : priceNum;
+    setIsSavingProduct(true);
+    try {
+      const priceNum = parseFloat(prodPrice);
+      const parsedPrice = isNaN(priceNum) ? undefined : priceNum;
 
-    // Split specs from multi-line text input
-    const parsedSpecs = prodSpecsText
-      ? prodSpecsText.split('\n').map(s => s.trim()).filter(s => s.length > 0)
-      : [
-          `Medida: ${prodMeasure}`,
-          `Aro: ${prodRim}`,
-          `Categoria: ${prodCategory}`,
-          `Marca: ${prodBrand}`,
-          `Aplicação: ${prodApplication || 'veículos de passeio'}`
-        ];
+      // Split specs from multi-line text input
+      const parsedSpecs = prodSpecsText
+        ? prodSpecsText.split('\n').map(s => s.trim()).filter(s => s.length > 0)
+        : [
+            `Medida: ${prodMeasure}`,
+            `Aro: ${prodRim}`,
+            `Categoria: ${prodCategory}`,
+            `Marca: ${prodBrand}`,
+            `Aplicação: ${prodApplication || 'veículos de passeio'}`
+          ];
 
-    // default custom tire placeholder if none provided
-    const finalImage = prodImage || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
+      const finalImage = prodImage || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
 
-    const cleanProduct: Product = {
-      id: editingProduct ? editingProduct.id : Date.now().toString(),
-      name: prodName.trim(),
-      brand: prodBrand,
-      measure: prodMeasure.trim(),
-      rim: Number(prodRim),
-      category: prodCategory,
-      application: prodApplication.trim() || 'veículos de passeio',
-      specs: parsedSpecs,
-      status: prodStatus,
-      image: finalImage,
-      shortDesc: prodShortDesc.trim(),
-      fullDesc: prodFullDesc.trim(),
-      price: parsedPrice,
-      priceStatus: prodPriceStatus,
-      gallery: prodGallery,
-      featured: prodIsFeatured,
-      active: prodIsActive
-    };
+      const cleanProduct: Product = {
+        id: editingProduct ? editingProduct.id : 'temp_' + Date.now().toString(),
+        name: prodName.trim(),
+        brand: prodBrand,
+        measure: prodMeasure.trim(),
+        rim: Number(prodRim),
+        category: prodCategory,
+        application: prodApplication.trim() || 'veículos de passeio',
+        specs: parsedSpecs,
+        status: prodStatus,
+        image: finalImage,
+        shortDesc: prodShortDesc.trim(),
+        fullDesc: prodFullDesc.trim(),
+        price: parsedPrice,
+        priceStatus: prodPriceStatus,
+        gallery: prodGallery,
+        featured: prodIsFeatured,
+        active: prodIsActive
+      };
 
-    let updatedList: Product[] = [];
-    if (editingProduct) {
-      updatedList = productsList.map(p => p.id === editingProduct.id ? cleanProduct : p);
-      triggerFeedback('Produto atualizado com sucesso!');
-    } else {
-      updatedList = [cleanProduct, ...productsList];
-      triggerFeedback('Produto cadastrado com sucesso!');
+      await saveProductDb(cleanProduct);
+      await syncFromSupabase();
+      
+      setProductsList(getProducts());
+      triggerFeedback(editingProduct ? 'Produto atualizado com sucesso no Supabase!' : 'Produto cadastrado com sucesso no Supabase!');
+      onRefreshPublicData();
+      setActiveTab('products');
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback('Erro ao salvar produto no Supabase.', 'error');
+    } finally {
+      setIsSavingProduct(false);
     }
-
-    saveProducts(updatedList);
-    setProductsList(updatedList);
-    onRefreshPublicData();
-    setActiveTab('products');
   };
 
   // Toggle active/inactive state quickly from products list
-  const toggleProductActive = (target: Product) => {
-    const updated = productsList.map(p => {
-      if (p.id === target.id) {
-        return { ...p, active: p.active === false ? true : false };
-      }
-      return p;
-    });
-    saveProducts(updated);
-    setProductsList(updated);
-    onRefreshPublicData();
-    triggerFeedback(`Status do pneu "${target.name}" modificado.`);
+  const toggleProductActive = async (target: Product) => {
+    try {
+      const nextActive = target.active === false ? true : false;
+      const updatedProduct = { ...target, active: nextActive };
+      
+      await saveProductDb(updatedProduct);
+      await syncFromSupabase();
+      
+      setProductsList(getProducts());
+      onRefreshPublicData();
+      triggerFeedback(`Status do pneu "${target.name}" modificado no Supabase.`);
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao sincronizar modificação de status no Supabase.', 'error');
+    }
   };
 
   // Handle product deletion
-  const handleDeleteProduct = (id: string) => {
-    const updated = productsList.filter(p => p.id !== id);
-    saveProducts(updated);
-    setProductsList(updated);
-    setConfirmDeleteId(null);
-    onRefreshPublicData();
-    triggerFeedback('Produto excluído com sucesso!');
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      await deleteProductDb(id);
+      await syncFromSupabase();
+      
+      setProductsList(getProducts());
+      setConfirmDeleteId(null);
+      onRefreshPublicData();
+      triggerFeedback('Produto excluído com sucesso do Supabase!');
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao remover produto do Supabase.', 'error');
+    }
   };
 
   // Profile and basic global details overrides
-  const handleSaveSettingsSubmit = (e: React.FormEvent) => {
+  const handleSaveSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveSettings(siteSettings);
-    onRefreshPublicData();
-    triggerFeedback('Configurações de rede corporativa atualizadas!');
+    try {
+      saveSettings(siteSettings);
+      triggerFeedback('Configurações de rede corporativa salvas com sucesso!');
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao salvar configurações.', 'error');
+    }
   };
 
   // Logo file selections & overrides
@@ -349,69 +436,90 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsUploadingImage(true);
     try {
-      const base64 = await compressImage(file, 400, 400, 0.9);
-      setTempLogo(base64);
-      triggerFeedback('Nova prévia de logo carregada. Clique em Salvar para fixar.');
+      // Upload directly into Supabase Storage under bucket pneu-center/logo/
+      const publicUrl = await uploadFile('pneu-center', 'logo', file);
+      setTempLogo(publicUrl);
+      triggerFeedback('Nova logo de alta definição enviada. Clique em Salvar para fixar.');
     } catch (err) {
       console.error(err);
-      triggerFeedback('Erro ao processar imagem de logo.', 'error');
+      triggerFeedback('Erro ao realizar upload da logo instituição.', 'error');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
-  const handleSaveLogo = () => {
+  const handleSaveLogo = async () => {
     if (tempLogo) {
-      saveLogo(tempLogo);
-      setCurrentLogo(tempLogo);
-      setTempLogo(null);
-      onRefreshPublicData();
-      triggerFeedback('Logo institucional atualizada com sucesso!');
+      setIsSavingLogo(true);
+      try {
+        await saveLogoDb(tempLogo);
+        setCurrentLogo(tempLogo);
+        setTempLogo(null);
+        await syncFromSupabase();
+        onRefreshPublicData();
+        triggerFeedback('Logo institucional atualizada com sucesso!');
+      } catch (err) {
+        console.error(err);
+        triggerFeedback('Erro ao salvar nova logo no Supabase.', 'error');
+      } finally {
+        setIsSavingLogo(false);
+      }
     }
   };
 
-  const handleRemoveLogo = () => {
-    removeLogo();
-    setCurrentLogo(null);
-    setTempLogo(null);
-    onRefreshPublicData();
-    triggerFeedback('Logo removida. Voltando a exibir o texto nominal da empresa.');
+  const handleRemoveLogo = async () => {
+    try {
+      await removeLogoDb();
+      setCurrentLogo(null);
+      setTempLogo(null);
+      await syncFromSupabase();
+      onRefreshPublicData();
+      triggerFeedback('Logo removida. Voltando a exibir o texto nominal da empresa.');
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao deletar logo institucional.', 'error');
+    }
   };
 
   // ==========================================
   // BRAND MANAGEMENT METHODS
   // ==========================================
-  const handleSaveBrand = (e: React.FormEvent) => {
+  const handleSaveBrand = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!brandName.trim()) {
       triggerFeedback('O nome da marca é obrigatório.', 'error');
       return;
     }
 
-    const cleanBrand: Brand = {
-      id: editingBrand ? editingBrand.id : 'brand_' + Date.now().toString(),
-      name: brandName.trim(),
-      logo: brandLogo,
-      active: brandActive
-    };
+    setIsSavingBrand(true);
+    try {
+      const cleanBrand: Brand = {
+        id: editingBrand ? editingBrand.id : 'brand_' + Date.now().toString(),
+        name: brandName.trim(),
+        logo: brandLogo,
+        active: brandActive
+      };
 
-    let updatedBrands: Brand[] = [];
-    if (editingBrand) {
-      updatedBrands = brandsList.map(b => b.id === editingBrand.id ? cleanBrand : b);
-      triggerFeedback('Marca atualizada com sucesso!');
-    } else {
-      updatedBrands = [...brandsList, cleanBrand];
-      triggerFeedback('Marca adicionada com sucesso!');
+      await saveBrandDb(cleanBrand);
+      await syncFromSupabase();
+      
+      setBrandsList(getBrands());
+      triggerFeedback(editingBrand ? 'Marca atualizada com sucesso no Supabase!' : 'Marca adicionada com sucesso no Supabase!');
+      onRefreshPublicData();
+      
+      // Clear form
+      setEditingBrand(null);
+      setBrandName('');
+      setBrandLogo(null);
+      setBrandActive(true);
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao salvar marca no Supabase.', 'error');
+    } finally {
+      setIsSavingBrand(false);
     }
-
-    saveBrands(updatedBrands);
-    setBrandsList(updatedBrands);
-    onRefreshPublicData();
-    
-    // Clear form
-    setEditingBrand(null);
-    setBrandName('');
-    setBrandLogo(null);
-    setBrandActive(true);
   };
 
   const initBrandEdit = (brand: Brand) => {
@@ -421,75 +529,94 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setBrandActive(brand.active);
   };
 
-  const handleDeleteBrand = (id: string) => {
-    const updated = brandsList.filter(b => b.id !== id);
-    saveBrands(updated);
-    setBrandsList(updated);
-    onRefreshPublicData();
-    triggerFeedback('Marca removida com sucesso!');
+  const handleDeleteBrand = async (id: string) => {
+    try {
+      await deleteBrandDb(id);
+      await syncFromSupabase();
+      
+      setBrandsList(getBrands());
+      onRefreshPublicData();
+      triggerFeedback('Marca removida com sucesso!');
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao excluir marca do Supabase.', 'error');
+    }
   };
 
-  const toggleBrandActive = (brand: Brand) => {
-    const updated = brandsList.map(b => b.id === brand.id ? { ...b, active: !b.active } : b);
-    saveBrands(updated);
-    setBrandsList(updated);
-    onRefreshPublicData();
-    triggerFeedback(`Marca "${brand.name}" foi ${!brand.active ? 'ativada' : 'desativada'}.`);
+  const toggleBrandActive = async (brand: Brand) => {
+    try {
+      const updated = { ...brand, active: !brand.active };
+      await saveBrandDb(updated);
+      await syncFromSupabase();
+      
+      setBrandsList(getBrands());
+      onRefreshPublicData();
+      triggerFeedback(`Marca "${brand.name}" foi ${!brand.active ? 'ativada' : 'desativada'} no Supabase.`);
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao atualizar status da marca no Supabase.', 'error');
+    }
   };
 
   const handleBrandLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsUploadingImage(true);
     try {
-      const base64 = await compressImage(file, 200, 200, 0.8);
-      setBrandLogo(base64);
-      triggerFeedback('Logo da marca carregada com sucesso.');
+      // Upload directly into Supabase Storage bucket pneu-center/brands/
+      const publicUrl = await uploadFile('pneu-center', 'brands', file);
+      setBrandLogo(publicUrl);
+      triggerFeedback('Logo da marca enviado com sucesso para o bucket pneu-center/brands.');
     } catch (err) {
       console.error(err);
-      triggerFeedback('Erro ao carregar imagem da marca.', 'error');
+      triggerFeedback('Erro ao realizar upload do logo da marca.', 'error');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
   // ==========================================
   // RIM CARD MANAGEMENT METHODS
   // ==========================================
-  const handleSaveRimCard = (e: React.FormEvent) => {
+  const handleSaveRimCard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rimCardName.trim()) {
       triggerFeedback('O nome do aro é obrigatório (ex: Aro 15).', 'error');
       return;
     }
 
-    const cleanRimCard: RimCard = {
-      id: editingRimCard ? editingRimCard.id : 'rim_' + Date.now().toString(),
-      name: rimCardName.trim(),
-      rim: Number(rimCardNumber),
-      image: rimCardImage || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=400',
-      description: rimCardDesc.trim(),
-      active: rimCardActive
-    };
+    setIsSavingRim(true);
+    try {
+      const cleanRimCard: RimCard = {
+        id: editingRimCard ? editingRimCard.id : 'rim_' + Date.now().toString(),
+        name: rimCardName.trim(),
+        rim: Number(rimCardNumber),
+        image: rimCardImage || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=400',
+        description: rimCardDesc.trim(),
+        active: rimCardActive
+      };
 
-    let updatedRims: RimCard[] = [];
-    if (editingRimCard) {
-      updatedRims = rimCardsList.map(r => r.id === editingRimCard.id ? cleanRimCard : r);
-      triggerFeedback('Card de Aro atualizado com sucesso!');
-    } else {
-      updatedRims = [...rimCardsList, cleanRimCard];
-      triggerFeedback('Card de Aro adicionado com sucesso!');
+      await saveRimCardDb(cleanRimCard);
+      await syncFromSupabase();
+      
+      setRimCardsList(getRimCards());
+      onRefreshPublicData();
+      triggerFeedback(editingRimCard ? 'Card de Aro atualizado com sucesso no Supabase!' : 'Card de Aro adicionado com sucesso no Supabase!');
+
+      // Clear form
+      setEditingRimCard(null);
+      setRimCardName('');
+      setRimCardNumber(15);
+      setRimCardImage('');
+      setRimCardDesc('');
+      setRimCardActive(true);
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao salvar card de aro no Supabase.', 'error');
+    } finally {
+      setIsSavingRim(false);
     }
-
-    saveRimCards(updatedRims);
-    setRimCardsList(updatedRims);
-    onRefreshPublicData();
-
-    // Clear form
-    setEditingRimCard(null);
-    setRimCardName('');
-    setRimCardNumber(15);
-    setRimCardImage('');
-    setRimCardDesc('');
-    setRimCardActive(true);
   };
 
   const initRimCardEdit = (card: RimCard) => {
@@ -501,33 +628,50 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setRimCardActive(card.active);
   };
 
-  const handleDeleteRimCard = (id: string) => {
-    const updated = rimCardsList.filter(r => r.id !== id);
-    saveRimCards(updated);
-    setRimCardsList(updated);
-    onRefreshPublicData();
-    triggerFeedback('Card de Aro removido!');
+  const handleDeleteRimCard = async (id: string) => {
+    try {
+      await deleteRimCardDb(id);
+      await syncFromSupabase();
+      
+      setRimCardsList(getRimCards());
+      onRefreshPublicData();
+      triggerFeedback('Card de Aro removido com sucesso!');
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao excluir card de aro no Supabase.', 'error');
+    }
   };
 
-  const toggleRimCardActive = (card: RimCard) => {
-    const updated = rimCardsList.map(r => r.id === card.id ? { ...r, active: !r.active } : r);
-    saveRimCards(updated);
-    setRimCardsList(updated);
-    onRefreshPublicData();
-    triggerFeedback(`Card "${card.name}" foi ${!card.active ? 'ativado' : 'desativado'}.`);
+  const toggleRimCardActive = async (card: RimCard) => {
+    try {
+      const updated = { ...card, active: !card.active };
+      await saveRimCardDb(updated);
+      await syncFromSupabase();
+      
+      setRimCardsList(getRimCards());
+      onRefreshPublicData();
+      triggerFeedback(`Card de Aro "${card.name}" foi ${!card.active ? 'ativada' : 'desativada'} no Supabase.`);
+    } catch (err) {
+      console.error(err);
+      triggerFeedback('Erro ao atualizar status do aro no Supabase.', 'error');
+    }
   };
 
   const handleRimCardImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsUploadingImage(true);
     try {
-      const base64 = await compressImage(file, 400, 400, 0.8);
-      setRimCardImage(base64);
-      triggerFeedback('Imagem do aro carregada com sucesso.');
+      // Upload directly into Supabase Storage bucket pneu-center/rims/
+      const publicUrl = await uploadFile('pneu-center', 'rims', file);
+      setRimCardImage(publicUrl);
+      triggerFeedback('Imagem do aro enviada com sucesso para o bucket pneu-center/rims.');
     } catch (err) {
       console.error(err);
-      triggerFeedback('Erro ao carregar imagem do aro.', 'error');
+      triggerFeedback('Erro ao enviar imagem do aro para o Supabase Storage.', 'error');
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -566,6 +710,20 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <div>
+                <label htmlFor="email" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  E-mail do Administrador
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  id="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="exemplo@gmail.com"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-sans mb-3"
+                />
+
                 <label htmlFor="password" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                   Senha de Administrador
                 </label>
@@ -598,9 +756,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 font-bold text-xs uppercase px-4 py-3.5 transition-all text-center shadow-md shadow-orange-600/10 cursor-pointer"
+                  disabled={isLoggingIn}
+                  className="w-1/2 rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 font-bold text-xs uppercase px-4 py-3.5 transition-all text-center shadow-md shadow-orange-600/10 cursor-pointer disabled:opacity-50"
                 >
-                  Confirmar
+                  {isLoggingIn ? 'Entrando...' : 'Confirmar'}
                 </button>
               </div>
             </form>

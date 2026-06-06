@@ -11,7 +11,7 @@ interface ProductDetailsProps {
 
 export default function ProductDetails({ product, onBackToCatalog }: ProductDetailsProps) {
   const handleWhatsAppClick = () => {
-    const msg = getProductMessage(product.name, product.measure, product.price, product.priceStatus);
+    const msg = getProductMessage(product.name, product.measure);
     openWhatsAppChat(msg);
   };
 

@@ -2,11 +2,12 @@ import { getSettings } from './appStore';
 
 /**
  * Handles professional, direct WhatsApp opening logic.
- * Tries opening deep link on mobile devices with an 800ms fallback,
+ * Tries opening deep link on mobile devices with an 1000ms fallback,
  * and launches WhatsApp Web on desktop.
  */
 export function openWhatsAppChat(message: string) {
   const settings = getSettings();
+  // Using the requested number 5511995946993, falling back to database setting if customized
   const phone = settings.whatsappRaw || '5511995946993';
   const encodedText = encodeURIComponent(message);
   const deepLink = `whatsapp://send?phone=${phone}&text=${encodedText}`;
@@ -27,40 +28,34 @@ export function openWhatsAppChat(message: string) {
 
     window.addEventListener('blur', handleBlur);
 
-    // Try deep link
+    // Try deep link directly for native application
     window.location.href = deepLink;
 
-    // Wait 800ms, if window did not blur, fall back to web link
+    // Wait 1000ms, if window did not blur (app didn't launch), fall back to HTTPS wa.me
     setTimeout(() => {
       window.removeEventListener('blur', handleBlur);
       if (!windowBlurred) {
-        window.open(webUrl, '_blank', 'noopener,noreferrer');
+        window.location.href = webUrl;
       }
-    }, 800);
+    }, 1000);
   } else {
-    // Desktop: Open in new tab
+    // Desktop: Open in new window/tab
     window.open(webUrl, '_blank', 'noopener,noreferrer');
   }
 }
 
 /**
  * Generates a polite, clear starting message for tire products catalog inquiries.
- * Supports products with or without prices.
+ * Matches exactly the user's requested template:
+ * Olá, vim pelo site Pneu Center Brasil e gostaria de tirar dúvidas sobre o [NOME DO PRODUTO]. Medida: [MEDIDA]. Quero saber mais sobre entrega e condições comerciais.
  */
-export function getProductMessage(productName: string, measure: string, price?: number, priceStatus?: 'exibir' | 'sob_consulta'): string {
-  const settings = getSettings();
-  const siteName = settings.commercialName || 'Pneu Center Brasil';
-  
-  if (priceStatus === 'exibir' && price !== undefined) {
-    const formattedPrice = price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return `Olá, vim pelo site ${siteName} e gostaria de tirar dúvidas sobre o ${productName} no valor de R$ ${formattedPrice}. Quero consultar disponibilidade, entrega e condições de pagamento.`;
-  }
-  return `Olá, vim pelo site ${siteName} e gostaria de tirar dúvidas sobre o ${productName}. Quero consultar disponibilidade, entrega e condições de pagamento.`;
+export function getProductMessage(productName: string, measure: string): string {
+  return `Olá, vim pelo site Pneu Center Brasil e gostaria de tirar dúvidas sobre o ${productName}. Medida: ${measure}. Quero saber mais sobre entrega e condições comerciais.`;
 }
 
 /**
  * Standard generic contact message.
  */
 export const DEFAULT_WHATSAPP_MESSAGE = 
-  'Olá, gostaria de falar com a equipe de atendimento da Pneu Center Brasil para consultar disponibilidade, tirar dúvidas sobre medidas de pneus e condições de entrega.';
+  'Olá, vim pelo site Pneu Center Brasil e gostaria de tirar dúvidas sobre pneus. Quero saber mais sobre entrega e condições comerciais.';
 
