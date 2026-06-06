@@ -64,7 +64,7 @@ function compressImageIfNeeded(file: File): Promise<File | Blob> {
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        // Compress to JPEG with 0.75 quality (highly optimized file size)
+        // Compress to JPEG with 0.80 quality (highly optimized file size requested in Problem 8)
         canvas.toBlob(
           (blob) => {
             if (blob) {
@@ -79,7 +79,7 @@ function compressImageIfNeeded(file: File): Promise<File | Blob> {
             }
           },
           'image/jpeg',
-          0.75
+          0.80
         );
       };
       img.onerror = () => resolve(file);
@@ -98,7 +98,19 @@ function compressImageIfNeeded(file: File): Promise<File | Blob> {
  */
 export async function uploadFile(bucketName: string, folder: string, file: File): Promise<string> {
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Supabase não configurado. Por favor, configure as Variáveis de Ambiente.');
+    throw new Error('Supabase não configurado. Por favor, adicione as credenciais SUPABASE_URL e SUPABASE_KEY.');
+  }
+
+  // 1. Validar Tipo (JPG, JPEG, PNG, WEBP)
+  const allowedExtensions = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!allowedExtensions.includes(file.type.toLowerCase())) {
+    throw new Error('Tipo de imagem não permitido. Escolha JPG, JPEG, PNG ou WEBP.');
+  }
+
+  // 2. Validar tamanho máximo: 5MB Original
+  const maxSize_5MB = 5 * 1024 * 1024;
+  if (file.size > maxSize_5MB) {
+    throw new Error(`Arquivo muito grande! O limite de upload é de 5MB. Sua foto possui ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
   }
 
   // Compress the image in-browser first to make the application super-light
@@ -123,6 +135,7 @@ export async function uploadFile(bucketName: string, folder: string, file: File)
   const cleanFolder = folder.replace(/^\/+|\/+$/g, '');
   const filePath = cleanFolder ? `${cleanFolder}/${fileName}` : fileName;
 
+  // Perform upload
   const { data, error } = await supabase.storage
     .from(bucketName)
     .upload(filePath, fileToUpload, {
@@ -131,14 +144,20 @@ export async function uploadFile(bucketName: string, folder: string, file: File)
     });
 
   if (error) {
-    console.error('Erro no upload do Supabase Storage:', error);
-    throw error;
+    console.error(`Erro no upload para o Storage [Bucket: ${bucketName}, Path: ${filePath}]:`, error);
+    throw new Error(
+      `Não foi possível enviar a imagem para a pasta "${folder}/". Verifique se o bucket "${bucketName}" está criado publicamente e as regras de políticas dão permissão de upload ao usuário.`
+    );
   }
 
   // Retrieve public URL
   const { data: urlData } = supabase.storage
     .from(bucketName)
     .getPublicUrl(filePath);
+
+  if (!urlData || !urlData.publicUrl) {
+    throw new Error('Erro ao obter a URL pública para o arquivo de imagem enviado.');
+  }
 
   return urlData.publicUrl;
 }

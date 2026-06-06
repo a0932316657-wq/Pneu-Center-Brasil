@@ -136,6 +136,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Loading/saving spinners
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isSavingBrand, setIsSavingBrand] = useState(false);
   const [isSavingRim, setIsSavingRim] = useState(false);
@@ -274,19 +275,46 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     }
   };
 
+  // Session check tool to guarantee actions run against authentic credentials
+  const checkAuth = async (): Promise<boolean> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const localSession = localStorage.getItem('pneu_center_admin_session');
+        if (localSession !== 'authenticated_117711') {
+          setIsLoggedIn(false);
+          triggerFeedback('Sessão expirada. Faça login novamente.', 'error');
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      console.warn('Erro ao verificar sessão do Supabase:', e);
+      const localSession = localStorage.getItem('pneu_center_admin_session');
+      if (localSession !== 'authenticated_117711') {
+        setIsLoggedIn(false);
+        triggerFeedback('Sessão expirada. Faça login novamente.', 'error');
+        return false;
+      }
+      return true;
+    }
+  };
+
   // Upload main image to Supabase storage bucket pneu-center under products/ folder
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!(await checkAuth())) return;
+
     setIsUploadingImage(true);
     try {
       const url = await uploadFile('pneu-center', 'products', file);
       setProdImage(url);
-      triggerFeedback('Imagem do produto salva com sucesso no bucket pneu-center/products!');
+      triggerFeedback('Imagem do pneu enviada com sucesso!');
     } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao realizar upload do produto no Supabase Storage.', 'error');
+      triggerFeedback(`Falha no upload do pneu: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingImage(false);
     }
@@ -297,6 +325,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    if (!(await checkAuth())) return;
+
     setIsUploadingImage(true);
     try {
       const newUrls: string[] = [];
@@ -305,10 +335,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         newUrls.push(url);
       }
       setProdGallery([...prodGallery, ...newUrls]);
-      triggerFeedback(`${newUrls.length} foto(s) adicionada(s) e hospedada(s) com sucesso.`);
-    } catch (err) {
+      triggerFeedback(`${newUrls.length} imagem(ns) enviada(s) com sucesso para a galeria!`);
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao fazer upload das fotos da galeria.', 'error');
+      triggerFeedback(`Erro no upload da galeria: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingImage(false);
     }
@@ -316,7 +346,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
   const handleRemoveGalleryImage = (indexToRemove: number) => {
     setProdGallery(prodGallery.filter((_, idx) => idx !== indexToRemove));
-    triggerFeedback('Foto removida da prévia.');
+    triggerFeedback('Imagem removida da visualização prévia.');
   };
 
   // Save product logic (Supports BOTH edit or creation fallback)
@@ -331,6 +361,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       triggerFeedback('A medida do pneu é obrigatória.', 'error');
       return;
     }
+
+    if (!(await checkAuth())) return;
 
     setIsSavingProduct(true);
     try {
@@ -371,15 +403,18 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       };
 
       await saveProductDb(cleanProduct);
-      await syncFromSupabase();
       
+      // Fetch latest states from local storage instantly
       setProductsList(getProducts());
-      triggerFeedback(editingProduct ? 'Produto atualizado com sucesso no Supabase!' : 'Produto cadastrado com sucesso no Supabase!');
+      triggerFeedback(editingProduct ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!');
       onRefreshPublicData();
       setActiveTab('products');
+
+      // Trigger background synchronization silently
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
     } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao salvar produto no Supabase.', 'error');
+      triggerFeedback(`Erro ao salvar produto: ${err.message || err}`, 'error');
     } finally {
       setIsSavingProduct(false);
     }
@@ -387,47 +422,78 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
   // Toggle active/inactive state quickly from products list
   const toggleProductActive = async (target: Product) => {
+    if (!(await checkAuth())) return;
+
     try {
-      const nextActive = target.active === false ? true : false;
+      const nextActive = target.active === false;
       const updatedProduct = { ...target, active: nextActive };
       
       await saveProductDb(updatedProduct);
-      await syncFromSupabase();
-      
       setProductsList(getProducts());
       onRefreshPublicData();
-      triggerFeedback(`Status do pneu "${target.name}" modificado no Supabase.`);
-    } catch (err) {
+      triggerFeedback(`Pneu "${target.name}" foi ${nextActive ? 'ativado' : 'desativado'} com sucesso!`);
+      
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao sincronizar modificação de status no Supabase.', 'error');
+      triggerFeedback(`Erro ao alterar status: ${err.message || err}`, 'error');
     }
   };
 
-  // Handle product deletion
-  const handleDeleteProduct = async (id: string) => {
+  const handleProductActiveToggleDb = async (id: string, activeStatus: boolean) => {
+    if (!(await checkAuth())) return;
+
+    setIsDeletingProduct(true);
+    try {
+      const target = productsList.find(p => p.id === id);
+      if (target) {
+        const updatedProduct = { ...target, active: activeStatus };
+        await saveProductDb(updatedProduct);
+        setProductsList(getProducts());
+        onRefreshPublicData();
+        triggerFeedback(`Pneu "${target.name}" foi ${activeStatus ? 'ativado' : 'desativado'} com sucesso!`);
+      }
+      setConfirmDeleteId(null);
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao atualizar status: ${err.message || err}`, 'error');
+    } finally {
+      setIsDeletingProduct(false);
+    }
+  };
+
+  const handleProductDeleteDb = async (id: string) => {
+    if (!(await checkAuth())) return;
+
+    setIsDeletingProduct(true);
     try {
       await deleteProductDb(id);
-      await syncFromSupabase();
-      
       setProductsList(getProducts());
-      setConfirmDeleteId(null);
       onRefreshPublicData();
-      triggerFeedback('Produto excluído com sucesso do Supabase!');
-    } catch (err) {
+      triggerFeedback('Pneu excluído definitivamente com sucesso!');
+      setConfirmDeleteId(null);
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao remover produto do Supabase.', 'error');
+      triggerFeedback(`Erro ao deletar produto definitivamente: ${err.message || err}`, 'error');
+    } finally {
+      setIsDeletingProduct(false);
     }
   };
 
   // Profile and basic global details overrides
   const handleSaveSettingsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!(await checkAuth())) return;
+
     try {
       saveSettings(siteSettings);
-      triggerFeedback('Configurações de rede corporativa salvas com sucesso!');
-    } catch (err) {
+      triggerFeedback('Configurações salvas com sucesso!');
+      onRefreshPublicData();
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao salvar configurações.', 'error');
+      triggerFeedback(`Erro ao salvar configurações: ${err.message || err}`, 'error');
     }
   };
 
@@ -436,15 +502,16 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!(await checkAuth())) return;
+
     setIsUploadingImage(true);
     try {
-      // Upload directly into Supabase Storage under bucket pneu-center/logo/
       const publicUrl = await uploadFile('pneu-center', 'logo', file);
       setTempLogo(publicUrl);
-      triggerFeedback('Nova logo de alta definição enviada. Clique em Salvar para fixar.');
-    } catch (err) {
+      triggerFeedback('Nova logo enviada! Clique no botão Salvar abaixo para aplicar.');
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao realizar upload da logo instituição.', 'error');
+      triggerFeedback(`Erro ao subir logo: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingImage(false);
     }
@@ -452,17 +519,20 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
   const handleSaveLogo = async () => {
     if (tempLogo) {
+      if (!(await checkAuth())) return;
+
       setIsSavingLogo(true);
       try {
         await saveLogoDb(tempLogo);
         setCurrentLogo(tempLogo);
         setTempLogo(null);
-        await syncFromSupabase();
-        onRefreshPublicData();
         triggerFeedback('Logo institucional atualizada com sucesso!');
-      } catch (err) {
+        onRefreshPublicData();
+
+        syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+      } catch (err: any) {
         console.error(err);
-        triggerFeedback('Erro ao salvar nova logo no Supabase.', 'error');
+        triggerFeedback(`Erro ao salvar logo: ${err.message || err}`, 'error');
       } finally {
         setIsSavingLogo(false);
       }
@@ -470,16 +540,19 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   };
 
   const handleRemoveLogo = async () => {
+    if (!(await checkAuth())) return;
+
     try {
       await removeLogoDb();
       setCurrentLogo(null);
       setTempLogo(null);
-      await syncFromSupabase();
+      triggerFeedback('Logo institucional removida de Supabase.');
       onRefreshPublicData();
-      triggerFeedback('Logo removida. Voltando a exibir o texto nominal da empresa.');
-    } catch (err) {
+
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao deletar logo institucional.', 'error');
+      triggerFeedback(`Erro ao remover logo: ${err.message || err}`, 'error');
     }
   };
 
@@ -493,6 +566,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       return;
     }
 
+    if (!(await checkAuth())) return;
+
     setIsSavingBrand(true);
     try {
       const cleanBrand: Brand = {
@@ -503,10 +578,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       };
 
       await saveBrandDb(cleanBrand);
-      await syncFromSupabase();
-      
       setBrandsList(getBrands());
-      triggerFeedback(editingBrand ? 'Marca atualizada com sucesso no Supabase!' : 'Marca adicionada com sucesso no Supabase!');
+      triggerFeedback(editingBrand ? 'Marca atualizada com sucesso!' : 'Marca cadastrada com sucesso!');
       onRefreshPublicData();
       
       // Clear form
@@ -514,9 +587,11 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       setBrandName('');
       setBrandLogo(null);
       setBrandActive(true);
-    } catch (err) {
+
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao salvar marca no Supabase.', 'error');
+      triggerFeedback(`Erro ao salvar marca: ${err.message || err}`, 'error');
     } finally {
       setIsSavingBrand(false);
     }
@@ -530,31 +605,35 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   };
 
   const handleDeleteBrand = async (id: string) => {
+    if (!(await checkAuth())) return;
+
     try {
       await deleteBrandDb(id);
-      await syncFromSupabase();
-      
       setBrandsList(getBrands());
       onRefreshPublicData();
-      triggerFeedback('Marca removida com sucesso!');
-    } catch (err) {
+      triggerFeedback('Marca removida definitivamente!');
+      
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao excluir marca do Supabase.', 'error');
+      triggerFeedback(`Erro ao excluir marca: ${err.message || err}`, 'error');
     }
   };
 
   const toggleBrandActive = async (brand: Brand) => {
+    if (!(await checkAuth())) return;
+
     try {
       const updated = { ...brand, active: !brand.active };
       await saveBrandDb(updated);
-      await syncFromSupabase();
-      
       setBrandsList(getBrands());
       onRefreshPublicData();
-      triggerFeedback(`Marca "${brand.name}" foi ${!brand.active ? 'ativada' : 'desativada'} no Supabase.`);
-    } catch (err) {
+      triggerFeedback(`Marca "${brand.name}" foi ${!brand.active ? 'ativada' : 'desativada'}!`);
+      
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao atualizar status da marca no Supabase.', 'error');
+      triggerFeedback(`Erro ao alterar status da marca: ${err.message || err}`, 'error');
     }
   };
 
@@ -562,15 +641,16 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!(await checkAuth())) return;
+
     setIsUploadingImage(true);
     try {
-      // Upload directly into Supabase Storage bucket pneu-center/brands/
       const publicUrl = await uploadFile('pneu-center', 'brands', file);
       setBrandLogo(publicUrl);
-      triggerFeedback('Logo da marca enviado com sucesso para o bucket pneu-center/brands.');
-    } catch (err) {
+      triggerFeedback('Logo da marca enviado com sucesso!');
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao realizar upload do logo da marca.', 'error');
+      triggerFeedback(`Erro no upload da logo da marca: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingImage(false);
     }
@@ -586,6 +666,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       return;
     }
 
+    if (!(await checkAuth())) return;
+
     setIsSavingRim(true);
     try {
       const cleanRimCard: RimCard = {
@@ -598,11 +680,9 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       };
 
       await saveRimCardDb(cleanRimCard);
-      await syncFromSupabase();
-      
       setRimCardsList(getRimCards());
       onRefreshPublicData();
-      triggerFeedback(editingRimCard ? 'Card de Aro atualizado com sucesso no Supabase!' : 'Card de Aro adicionado com sucesso no Supabase!');
+      triggerFeedback(editingRimCard ? 'Card de Aro atualizado com sucesso!' : 'Card de Aro cadastrado com sucesso!');
 
       // Clear form
       setEditingRimCard(null);
@@ -611,9 +691,11 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       setRimCardImage('');
       setRimCardDesc('');
       setRimCardActive(true);
-    } catch (err) {
+
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao salvar card de aro no Supabase.', 'error');
+      triggerFeedback(`Erro ao salvar card de aro: ${err.message || err}`, 'error');
     } finally {
       setIsSavingRim(false);
     }
@@ -629,31 +711,35 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   };
 
   const handleDeleteRimCard = async (id: string) => {
+    if (!(await checkAuth())) return;
+
     try {
       await deleteRimCardDb(id);
-      await syncFromSupabase();
-      
       setRimCardsList(getRimCards());
       onRefreshPublicData();
-      triggerFeedback('Card de Aro removido com sucesso!');
-    } catch (err) {
+      triggerFeedback('Card de Aro excluído definitivamente!');
+      
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao excluir card de aro no Supabase.', 'error');
+      triggerFeedback(`Erro ao excluir card de aro: ${err.message || err}`, 'error');
     }
   };
 
   const toggleRimCardActive = async (card: RimCard) => {
+    if (!(await checkAuth())) return;
+
     try {
       const updated = { ...card, active: !card.active };
       await saveRimCardDb(updated);
-      await syncFromSupabase();
-      
       setRimCardsList(getRimCards());
       onRefreshPublicData();
-      triggerFeedback(`Card de Aro "${card.name}" foi ${!card.active ? 'ativada' : 'desativada'} no Supabase.`);
-    } catch (err) {
+      triggerFeedback(`Card de Aro "${card.name}" foi ${!card.active ? 'ativado' : 'desativado'}!`);
+      
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao atualizar status do aro no Supabase.', 'error');
+      triggerFeedback(`Erro ao alterar status do aro: ${err.message || err}`, 'error');
     }
   };
 
@@ -661,15 +747,16 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!(await checkAuth())) return;
+
     setIsUploadingImage(true);
     try {
-      // Upload directly into Supabase Storage bucket pneu-center/rims/
       const publicUrl = await uploadFile('pneu-center', 'rims', file);
       setRimCardImage(publicUrl);
-      triggerFeedback('Imagem do aro enviada com sucesso para o bucket pneu-center/rims.');
-    } catch (err) {
+      triggerFeedback('Imagem do card de aro enviada com sucesso!');
+    } catch (err: any) {
       console.error(err);
-      triggerFeedback('Erro ao enviar imagem do aro para o Supabase Storage.', 'error');
+      triggerFeedback(`Erro no upload da imagem do aro: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingImage(false);
     }
@@ -1178,20 +1265,37 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       <h3 className="font-sans font-extrabold text-slate-800 text-lg uppercase tracking-tight">Confirmar Exclusão</h3>
                     </div>
                     <p className="text-sm text-slate-500 leading-relaxed font-sans">
-                      Tem certeza que deseja excluir este produto do catálogo? Esta ação é permanente e removerá o pneu selecionado do catálogo público.
+                      Deseja desativar este pneu temporariamente ou excluí-lo definitivamente do banco de dados?
                     </p>
-                    <div className="flex justify-end gap-3 pt-3">
+                    <div className="flex flex-col sm:flex-row justify-end gap-2.5 pt-3">
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-bold uppercase text-slate-500 hover:bg-slate-50 cursor-pointer"
+                        disabled={isDeletingProduct}
+                        className="rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-bold uppercase text-slate-500 hover:bg-slate-50 cursor-pointer text-center disabled:opacity-50"
                       >
                         Cancelar
                       </button>
                       <button
-                        onClick={() => handleDeleteProduct(confirmDeleteId)}
-                        className="rounded-lg bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 text-xs font-bold uppercase cursor-pointer shadow-md shadow-red-600/10"
+                        onClick={() => {
+                          if (confirmDeleteId) {
+                            handleProductActiveToggleDb(confirmDeleteId, false);
+                          }
+                        }}
+                        disabled={isDeletingProduct}
+                        className="rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 px-5 py-2.5 text-xs font-bold uppercase cursor-pointer shadow-md shadow-amber-500/10 text-center disabled:opacity-50"
                       >
-                        Excluir Permanentemente
+                        {isDeletingProduct ? 'Pendente...' : 'Desativar Produto'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirmDeleteId) {
+                            handleProductDeleteDb(confirmDeleteId);
+                          }
+                        }}
+                        disabled={isDeletingProduct}
+                        className="rounded-lg bg-red-650 hover:bg-red-500 text-white px-5 py-2.5 text-xs font-bold uppercase cursor-pointer shadow-md shadow-red-600/10 text-center disabled:opacity-50"
+                      >
+                        {isDeletingProduct ? 'Removendo...' : 'Excluir definitivamente'}
                       </button>
                     </div>
                   </motion.div>

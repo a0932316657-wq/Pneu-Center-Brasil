@@ -70,9 +70,6 @@ const RIM_CARDS_STORE_KEY = 'pneu_center_rim_cards_v1';
 
 // Detection variables for Supabase schemas dynamically
 let settingsSchemaType: 'columns' | 'keyvalue' = 'columns';
-let productColumns: string[] = [];
-let brandColumns: string[] = [];
-let rimCardColumns: string[] = [];
 
 /**
  * ------------------------------------------------------------------------
@@ -117,25 +114,21 @@ function buildProductPayload(p: Product): any {
     price: p.price
   };
 
-  if (p.id && !p.id.startsWith('temp_') && p.id.length < 15) {
-    payload.id = p.id;
-  }
-
-  // Handle image and main_image_url columns dynamically
+  // Convert image and main_image_url column names
   payload.main_image_url = p.image;
   payload.image = p.image;
 
-  // Handle description camelCase / snake_case variants
+  // Set description snake_case and camelCase forms
   payload.short_desc = p.shortDesc || '';
   payload.shortDesc = p.shortDesc || '';
   payload.full_desc = p.fullDesc || '';
   payload.fullDesc = p.fullDesc || '';
 
-  // Handle price status mapping
+  // Set price status
   payload.price_status = p.priceStatus || 'sob_consulta';
   payload.priceStatus = p.priceStatus || 'sob_consulta';
 
-  // Handle gallery mapping
+  // Set gallery payload
   payload.gallery = p.gallery || [];
 
   return payload;
@@ -233,7 +226,7 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
 
 /**
  * ------------------------------------------------------------------------
- * SYNCHRONOUS CACHED RETRIEVERS (FOR BUNDLING/FLICKER-FREE PAINT)
+ * SYNCHRONOUS CACHED RETRIEVERS (FOR FAST INTERFACE REDUCTION)
  * ------------------------------------------------------------------------
  */
 
@@ -285,8 +278,8 @@ export function saveSettings(settings: SiteSettings): void {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     window.dispatchEvent(new Event('pneu_center_settings_updated'));
     
-    // Save to Supabase in background
-    saveSettingsDb(settings).catch(err => console.error('Error saving settings to DB:', err));
+    // Save to Supabase in background without blocking current thread
+    saveSettingsDb(settings).catch(err => console.error('Error saving settings to Supabase in background:', err));
   } catch (error) {
     console.error('Error saving site settings to localStorage', error);
   }
@@ -318,8 +311,8 @@ export function removeLogo(): void {
     localStorage.removeItem(LOGO_KEY);
     window.dispatchEvent(new Event('pneu_center_logo_updated'));
     
-    // Remove from Supabase logo in background too
-    removeLogoDb().catch(err => console.error('Error removing logo in DB:', err));
+    // Remove in background
+    removeLogoDb().catch(err => console.error('Error removing logo in background:', err));
   } catch (error) {
     console.error('Error removing logo from localStorage', error);
   }
@@ -412,7 +405,6 @@ export async function syncFromSupabase(): Promise<void> {
       .select('*');
 
     if (!prodError && prodData) {
-      productColumns = prodData.length > 0 ? Object.keys(prodData[0]) : [];
       const mappedProducts = prodData.map(mapProductFromRow);
       if (mappedProducts.length > 0) {
         localStorage.setItem(PRODUCTS_KEY, JSON.stringify(mappedProducts));
@@ -426,7 +418,6 @@ export async function syncFromSupabase(): Promise<void> {
       .select('*');
 
     if (!brandError && brandData) {
-      brandColumns = brandData.length > 0 ? Object.keys(brandData[0]) : [];
       const mappedBrands = brandData.map(mapBrandFromRow);
       if (mappedBrands.length > 0) {
         localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(mappedBrands));
@@ -440,7 +431,6 @@ export async function syncFromSupabase(): Promise<void> {
       .select('*');
 
     if (!rimError && rimData) {
-      rimCardColumns = rimData.length > 0 ? Object.keys(rimData[0]) : [];
       const mappedRims = rimData.map(mapRimCardFromRow);
       if (mappedRims.length > 0) {
         localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(mappedRims));
@@ -460,24 +450,29 @@ export async function syncFromSupabase(): Promise<void> {
 
 export async function saveProductDb(product: Product): Promise<Product> {
   const payload = buildProductPayload(product);
-
   let resultRow: any = null;
 
-  // Try upserting first if the ID looks like a valid primary key
-  if (product.id && !product.id.startsWith('temp_') && product.id.length < 15) {
+  // Parse ID to Integer if purely numeric (PostgreSQL Serial column)
+  const isIdReal = product.id && !product.id.startsWith('temp_');
+  const numericId = isIdReal && !isNaN(Number(product.id)) ? Number(product.id) : null;
+  const productIdToUse = numericId !== null ? numericId : product.id;
+
+  if (isIdReal) {
+    // Try updating first
     const { data, error } = await supabase
       .from('products')
-      .upsert({ id: product.id, ...payload })
+      .update(payload)
+      .eq('id', productIdToUse)
       .select();
 
     if (!error && data && data.length > 0) {
       resultRow = data[0];
     } else {
-      console.warn('Id-based upsert failed, trying general insert:', error);
+      console.warn('Direct update failed, checking if upsert is possible:', error);
     }
   }
 
-  // If no success yet, insert as raw row to let Supabase trigger generation (Serial/UUID)
+  // If no success (e.g. inserting new record), insert without 'id' to let DB generate PK
   if (!resultRow) {
     const { data, error } = await supabase
       .from('products')
@@ -485,15 +480,19 @@ export async function saveProductDb(product: Product): Promise<Product> {
       .select();
 
     if (error) {
-      console.error('Error inserting product into Supabase:', error);
-      throw error;
+      console.error('Error inserting product in Supabase:', error);
+      throw new Error(`Erro ao cadastrar produto no Supabase: ${error.message}`);
     }
     resultRow = data?.[0];
   }
 
+  if (!resultRow) {
+    throw new Error('Supabase retornou um resultado nulo ao salvar produto.');
+  }
+
   const mapped = mapProductFromRow(resultRow);
   
-  // Re-sync local storage cache
+  // Update local storage instantly to reflect changes immediately
   const currentLocal = getProducts().filter(p => p.id !== product.id && p.id !== mapped.id);
   saveProducts([mapped, ...currentLocal]);
   
@@ -501,16 +500,16 @@ export async function saveProductDb(product: Product): Promise<Product> {
 }
 
 export async function deleteProductDb(id: string): Promise<void> {
-  // Try deletion with original string cast, then fall back to integer representation
-  const { error } = await supabase.from('products').delete().eq('id', id);
+  const numericId = !isNaN(Number(id)) ? Number(id) : null;
+  const idValue = numericId !== null ? numericId : id;
+
+  const { error } = await supabase.from('products').delete().eq('id', idValue);
   if (error) {
-    const numId = Number(id);
-    if (!isNaN(numId)) {
-      await supabase.from('products').delete().eq('id', numId);
-    }
+    console.error('Failed to delete product from Supabase:', error);
+    throw new Error(`Erro ao deletar produto do Supabase: ${error.message}`);
   }
 
-  // Update local cache
+  // Update local cache immediately
   const updated = getProducts().filter(p => p.id !== id);
   saveProducts(updated);
 }
@@ -523,11 +522,15 @@ export async function saveBrandDb(brand: Brand): Promise<Brand> {
   };
 
   let resultRow: any = null;
+  const isIdReal = brand.id && !brand.id.startsWith('brand_');
+  const numericId = isIdReal && !isNaN(Number(brand.id)) ? Number(brand.id) : null;
+  const brandIdToUse = numericId !== null ? numericId : brand.id;
 
-  if (brand.id && !brand.id.startsWith('brand_') && brand.id.length < 15) {
+  if (isIdReal) {
     const { data, error } = await supabase
       .from('brands')
-      .upsert({ id: brand.id, ...payload })
+      .update(payload)
+      .eq('id', brandIdToUse)
       .select();
     
     if (!error && data && data.length > 0) {
@@ -543,9 +546,13 @@ export async function saveBrandDb(brand: Brand): Promise<Brand> {
 
     if (error) {
       console.error('Error inserting brand to Supabase:', error);
-      throw error;
+      throw new Error(`Erro ao cadastrar marca no Supabase: ${error.message}`);
     }
     resultRow = data?.[0];
+  }
+
+  if (!resultRow) {
+    throw new Error('Supabase retornou um resultado nulo ao salvar marca.');
   }
 
   const mapped = mapBrandFromRow(resultRow);
@@ -557,12 +564,13 @@ export async function saveBrandDb(brand: Brand): Promise<Brand> {
 }
 
 export async function deleteBrandDb(id: string): Promise<void> {
-  const { error } = await supabase.from('brands').delete().eq('id', id);
+  const numericId = !isNaN(Number(id)) ? Number(id) : null;
+  const idValue = numericId !== null ? numericId : id;
+
+  const { error } = await supabase.from('brands').delete().eq('id', idValue);
   if (error) {
-    const numId = Number(id);
-    if (!isNaN(numId)) {
-      await supabase.from('brands').delete().eq('id', numId);
-    }
+    console.error('Error deleting brand:', error);
+    throw new Error(`Erro ao deletar marca do Supabase: ${error.message}`);
   }
 
   const updated = getBrands().filter(b => b.id !== id);
@@ -579,11 +587,15 @@ export async function saveRimCardDb(card: RimCard): Promise<RimCard> {
   };
 
   let resultRow: any = null;
+  const isIdReal = card.id && !card.id.startsWith('rim_');
+  const numericId = isIdReal && !isNaN(Number(card.id)) ? Number(card.id) : null;
+  const cardIdToUse = numericId !== null ? numericId : card.id;
 
-  if (card.id && !card.id.startsWith('rim_') && card.id.length < 15) {
+  if (isIdReal) {
     const { data, error } = await supabase
       .from('rim_cards')
-      .upsert({ id: card.id, ...payload })
+      .update(payload)
+      .eq('id', cardIdToUse)
       .select();
     
     if (!error && data && data.length > 0) {
@@ -599,9 +611,13 @@ export async function saveRimCardDb(card: RimCard): Promise<RimCard> {
 
     if (error) {
       console.error('Error inserting rim card to Supabase:', error);
-      throw error;
+      throw new Error(`Erro ao salvar card de aro no Supabase: ${error.message}`);
     }
     resultRow = data?.[0];
+  }
+
+  if (!resultRow) {
+    throw new Error('Supabase retornou um resultado nulo ao salvar card de aro.');
   }
 
   const mapped = mapRimCardFromRow(resultRow);
@@ -613,12 +629,13 @@ export async function saveRimCardDb(card: RimCard): Promise<RimCard> {
 }
 
 export async function deleteRimCardDb(id: string): Promise<void> {
-  const { error } = await supabase.from('rim_cards').delete().eq('id', id);
+  const numericId = !isNaN(Number(id)) ? Number(id) : null;
+  const idValue = numericId !== null ? numericId : id;
+
+  const { error } = await supabase.from('rim_cards').delete().eq('id', idValue);
   if (error) {
-    const numId = Number(id);
-    if (!isNaN(numId)) {
-      await supabase.from('rim_cards').delete().eq('id', numId);
-    }
+    console.error('Error deleting rim card:', error);
+    throw new Error(`Erro ao deletar card de aro do Supabase: ${error.message}`);
   }
 
   const updated = getRimCards().filter(r => r.id !== id);
@@ -626,87 +643,183 @@ export async function deleteRimCardDb(id: string): Promise<void> {
 }
 
 export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
-  if (settingsSchemaType === 'keyvalue') {
-    const keys = [
-      { key: 'commercial_name', value: settings.commercialName },
-      { key: 'corporate_name', value: settings.corporateName },
-      { key: 'cnpj', value: settings.cnpj },
-      { key: 'address', value: settings.address },
-      { key: 'whatsapp_text', value: settings.whatsappText },
-      { key: 'whatsapp_raw', value: settings.whatsappRaw },
-      { key: 'email', value: settings.email },
-      { key: 'hours', value: settings.hours },
-      { key: 'slogan', value: settings.slogan }
-    ];
-    await supabase.from('site_settings').upsert(keys);
-  } else {
-    const payload = {
-      commercial_name: settings.commercialName,
-      corporate_name: settings.corporateName,
-      cnpj: settings.cnpj,
-      address: settings.address,
-      whatsapp_text: settings.whatsappText,
-      whatsapp_raw: settings.whatsappRaw,
-      email: settings.email,
-      hours: settings.hours,
-      slogan: settings.slogan
-    };
-    
-    const { data: rows } = await supabase.from('site_settings').select('*').limit(1);
-    if (rows && rows.length > 0) {
-      const rowId = rows[0].id;
-      await supabase.from('site_settings').update(payload).eq('id', rowId);
+  try {
+    const { data: rows, error: selectErr } = await supabase.from('site_settings').select('*');
+    if (selectErr) throw selectErr;
+
+    const isKeyValue = rows && rows.length > 0 && 'key' in rows[0] && 'value' in rows[0];
+
+    if (isKeyValue) {
+      const keys = [
+        { key: 'commercial_name', value: settings.commercialName },
+        { key: 'commercialName', value: settings.commercialName },
+        { key: 'corporate_name', value: settings.corporateName },
+        { key: 'corporateName', value: settings.corporateName },
+        { key: 'cnpj', value: settings.cnpj },
+        { key: 'address', value: settings.address },
+        { key: 'whatsapp_text', value: settings.whatsappText },
+        { key: 'whatsappText', value: settings.whatsappText },
+        { key: 'whatsapp_raw', value: settings.whatsappRaw },
+        { key: 'whatsappRaw', value: settings.whatsappRaw },
+        { key: 'email', value: settings.email },
+        { key: 'hours', value: settings.hours },
+        { key: 'slogan', value: settings.slogan }
+      ];
+      
+      const validDbKeys = rows.map(r => r.key);
+      const payloadKeys = keys.filter(k => validDbKeys.includes(k.key));
+      
+      if (payloadKeys.length > 0) {
+        for (const item of payloadKeys) {
+          const match = rows.find(r => r.key === item.key);
+          if (match) {
+            await supabase.from('site_settings').upsert({ id: match.id, key: item.key, value: item.value });
+          } else {
+            await supabase.from('site_settings').insert({ key: item.key, value: item.value });
+          }
+        }
+      } else {
+        const initialKeys = [
+          { key: 'commercial_name', value: settings.commercialName },
+          { key: 'corporate_name', value: settings.corporateName },
+          { key: 'cnpj', value: settings.cnpj },
+          { key: 'address', value: settings.address },
+          { key: 'whatsapp_text', value: settings.whatsappText },
+          { key: 'whatsapp_raw', value: settings.whatsappRaw },
+          { key: 'email', value: settings.email },
+          { key: 'hours', value: settings.hours },
+          { key: 'slogan', value: settings.slogan }
+        ];
+        await supabase.from('site_settings').upsert(initialKeys);
+      }
     } else {
-      await supabase.from('site_settings').insert(payload);
+      const payload: any = {};
+      const cols = rows && rows.length > 0 ? Object.keys(rows[0]) : [];
+      
+      const setField = (dbField: string, val: any) => {
+        if (cols.includes(dbField)) payload[dbField] = val;
+      };
+
+      setField('commercial_name', settings.commercialName);
+      setField('commercialName', settings.commercialName);
+      setField('corporate_name', settings.corporateName);
+      setField('corporateName', settings.corporateName);
+      setField('cnpj', settings.cnpj);
+      setField('address', settings.address);
+      setField('whatsapp_text', settings.whatsappText);
+      setField('whatsappText', settings.whatsappText);
+      setField('whatsapp_raw', settings.whatsappRaw);
+      setField('whatsappRaw', settings.whatsappRaw);
+      setField('email', settings.email);
+      setField('hours', settings.hours);
+      setField('slogan', settings.slogan);
+
+      if (rows && rows.length > 0) {
+        const rowId = rows[0].id;
+        const { error: updateErr } = await supabase.from('site_settings').update(payload).eq('id', rowId);
+        if (updateErr) throw updateErr;
+      } else {
+        const { error: insertErr } = await supabase.from('site_settings').insert(payload);
+        if (insertErr) throw insertErr;
+      }
     }
+  } catch (err: any) {
+    console.error('Failed to save settings in Supabase DB:', err);
+    throw new Error(`Erro ao salvar configurações no Supabase: ${err.message || err}`);
   }
 }
 
 export async function saveLogoDb(logoUrl: string): Promise<void> {
+  // Save locally first to be instantaneous
   saveLogo(logoUrl);
 
-  if (settingsSchemaType === 'keyvalue') {
-    await supabase.from('site_settings').upsert({ key: 'logo_url', value: logoUrl });
-  } else {
-    const { data: rows } = await supabase.from('site_settings').select('*').limit(1);
+  try {
+    const { data: rows, error: selectErr } = await supabase.from('site_settings').select('*');
+    if (selectErr) throw selectErr;
+
     if (rows && rows.length > 0) {
-      const rowId = rows[0].id;
-      const cols = Object.keys(rows[0]);
-      const payload: any = {};
-      if (cols.includes('logo_url')) payload.logo_url = logoUrl;
-      else if (cols.includes('logo')) payload.logo = logoUrl;
-      else if (cols.includes('logoUrl')) payload.logoUrl = logoUrl;
-      else payload.logo_url = logoUrl;
-      
-      await supabase.from('site_settings').update(payload).eq('id', rowId);
+      const isKeyValue = 'key' in rows[0] && 'value' in rows[0];
+      if (isKeyValue) {
+        const existingLogo = rows.find(r => r.key === 'logo_url' || r.key === 'logoUrl' || r.key === 'logo');
+        if (existingLogo) {
+          const { error: upsertErr } = await supabase
+            .from('site_settings')
+            .upsert({ id: existingLogo.id, key: existingLogo.key, value: logoUrl });
+          if (upsertErr) throw upsertErr;
+        } else {
+          const { error: insertErr } = await supabase
+            .from('site_settings')
+            .insert({ key: 'logo_url', value: logoUrl });
+          if (insertErr) throw insertErr;
+        }
+      } else {
+        const rowId = rows[0].id;
+        const cols = Object.keys(rows[0]);
+        const payload: any = {};
+        if (cols.includes('logo_url')) payload.logo_url = logoUrl;
+        else if (cols.includes('logo')) payload.logo = logoUrl;
+        else if (cols.includes('logoUrl')) payload.logoUrl = logoUrl;
+        else payload.logo_url = logoUrl;
+
+        const { error: updateErr } = await supabase
+          .from('site_settings')
+          .update(payload)
+          .eq('id', rowId);
+        if (updateErr) throw updateErr;
+      }
     } else {
-      await supabase.from('site_settings').insert({ logo_url: logoUrl });
+      const { error: insertErr } = await supabase
+        .from('site_settings')
+        .insert({ logo_url: logoUrl });
+      
+      if (insertErr) {
+        await supabase.from('site_settings').insert({ key: 'logo_url', value: logoUrl });
+      }
     }
+  } catch (err: any) {
+    console.error('Failed to save logo in Supabase DB:', err);
+    throw new Error(`Erro ao salvar logo no Supabase: ${err.message || err}`);
   }
 }
 
 export async function removeLogoDb(): Promise<void> {
-  if (settingsSchemaType === 'keyvalue') {
-    await supabase.from('site_settings').delete().eq('key', 'logo_url');
-  } else {
-    const { data: rows } = await supabase.from('site_settings').select('*').limit(1);
+  // Update locally first
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(LOGO_KEY);
+    window.dispatchEvent(new Event('pneu_center_logo_updated'));
+  }
+
+  try {
+    const { data: rows, error: selectErr } = await supabase.from('site_settings').select('*');
+    if (selectErr) throw selectErr;
+
     if (rows && rows.length > 0) {
-      const rowId = rows[0].id;
-      const cols = Object.keys(rows[0]);
-      const payload: any = {};
-      
-      if (cols.includes('logo_url')) payload.logo_url = null;
-      else if (cols.includes('logo')) payload.logo = null;
-      else if (cols.includes('logoUrl')) payload.logoUrl = null;
-      else payload.logo_url = null;
-      
-      await supabase.from('site_settings').update(payload).eq('id', rowId);
+      const isKeyValue = 'key' in rows[0] && 'value' in rows[0];
+      if (isKeyValue) {
+        const existingLogo = rows.find(r => r.key === 'logo_url' || r.key === 'logoUrl' || r.key === 'logo');
+        if (existingLogo) {
+          await supabase.from('site_settings').delete().eq('id', existingLogo.id);
+        }
+      } else {
+        const rowId = rows[0].id;
+        const cols = Object.keys(rows[0]);
+        const payload: any = {};
+        if (cols.includes('logo_url')) payload.logo_url = null;
+        else if (cols.includes('logo')) payload.logo = null;
+        else if (cols.includes('logoUrl')) payload.logoUrl = null;
+        else payload.logo_url = null;
+
+        await supabase.from('site_settings').update(payload).eq('id', rowId);
+      }
     }
+  } catch (err: any) {
+    console.error('Failed to delete logo from Supabase DB:', err);
+    throw new Error(`Erro ao remover logo do Supabase: ${err.message || err}`);
   }
 }
 
 /**
- * Optimizes/Compresses an image file to safe JPEG Base64 to prevent localStorage quota issues
+ * Optimizes/Compresses an image file to safe JPEG Base64 as secondary utility
  */
 export function compressImage(file: File, maxWidth = 800, maxHeight = 600, quality = 0.7): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -737,7 +850,7 @@ export function compressImage(file: File, maxWidth = 800, maxHeight = 600, quali
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(event.target?.result as string); // Keep original if canvas fails
+          resolve(event.target?.result as string);
           return;
         }
 
