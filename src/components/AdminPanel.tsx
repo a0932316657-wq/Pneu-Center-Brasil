@@ -1198,7 +1198,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       productsList.map((prod) => (
                         <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-6 py-4">
-                            <div className="h-12 w-16 rounded border bg-slate-50 overflow-hidden flex items-center justify-center">
+                            <div className="h-12 w-16 rounded border bg-checkerboard overflow-hidden flex items-center justify-center">
                               <img src={prod.image} alt={prod.name} className="h-full w-full object-contain p-1" />
                             </div>
                           </td>
@@ -1284,7 +1284,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     productsList.map((prod) => (
                       <div key={prod.id} className="p-4 space-y-4 font-sans">
                         <div className="flex gap-3">
-                          <div className="h-16 w-20 rounded border bg-slate-50 overflow-hidden flex items-center justify-center shrink-0">
+                          <div className="h-16 w-20 rounded border bg-checkerboard overflow-hidden flex items-center justify-center shrink-0">
                             <img src={prod.image} alt={prod.name} className="h-full w-full object-contain p-1" />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -1674,7 +1674,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                       {/* Product image Preview Panel */}
-                      <div className="h-24 w-32 border bg-white rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                      <div className="h-24 w-32 border bg-checkerboard rounded-lg overflow-hidden flex items-center justify-center shrink-0">
                         {prodImage ? (
                           <img src={prodImage} alt="Preview principal" className="h-full w-full object-contain p-1" />
                         ) : (
@@ -1737,7 +1737,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       {prodGallery.length > 0 && (
                         <div className="flex flex-wrap gap-2.5 pt-1">
                           {prodGallery.map((img, index) => (
-                            <div key={index} className="relative h-14 w-18 border bg-white rounded overflow-hidden group/gal flex items-center justify-center shrink-0">
+                            <div key={index} className="relative h-14 w-18 border bg-checkerboard rounded overflow-hidden group/gal flex items-center justify-center shrink-0">
                               <img src={img} alt={`Gallery ${index}`} className="h-full w-full object-contain p-1" />
                               <button
                                 type="button"
@@ -1832,7 +1832,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   {/* Active logo */}
                   <div className="space-y-1.5">
                     <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide">Logo Ativa Atualmente</span>
-                    <div className="h-20 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-4">
+                    <div className="h-20 bg-checkerboard border border-slate-200 rounded-lg flex items-center justify-center p-4">
                       {currentLogo ? (
                         <img src={currentLogo} alt="Logo Ativa" className="max-h-full max-w-full object-contain" />
                       ) : (
@@ -1849,7 +1849,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       className="space-y-1.5 border-t border-slate-200 pt-4"
                     >
                       <span className="block text-[11px] font-bold text-slate-650 uppercase tracking-widest text-orange-600">Prévia Pendente</span>
-                      <div className="h-20 bg-white border border-orange-200 rounded-lg flex items-center justify-center p-4">
+                      <div className="h-20 bg-checkerboard border border-orange-200 rounded-lg flex items-center justify-center p-4">
                         <img src={tempLogo} alt="Preview pendente" className="max-h-full max-w-full object-contain" />
                       </div>
                       <button
@@ -2182,7 +2182,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-12 w-16 bg-white border border-slate-150 rounded p-1 flex items-center justify-center shrink-0">
+                        <div className="h-12 w-16 bg-checkerboard border border-slate-150 rounded p-1 flex items-center justify-center shrink-0">
                           {brand.logo ? (
                             <img src={brand.logo} alt={brand.name} className="h-full w-full object-contain" />
                           ) : (
@@ -2402,8 +2402,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                         card.active ? 'border-slate-200 bg-slate-50' : 'border-slate-150 bg-slate-50/40 opacity-70'
                       }`}
                     >
-                      <div className="h-16 w-16 bg-white border border-slate-200 rounded overflow-hidden p-0.5 shrink-0">
-                        <img src={card.image} alt={card.name} className="h-full w-full object-cover rounded" />
+                      <div className="h-16 w-16 bg-checkerboard border border-slate-200 rounded overflow-hidden p-0.5 shrink-0 flex items-center justify-center">
+                        <img src={card.image} alt={card.name} className="h-full w-full object-contain rounded" />
                       </div>
                       
                       <div className="flex-grow min-w-0">

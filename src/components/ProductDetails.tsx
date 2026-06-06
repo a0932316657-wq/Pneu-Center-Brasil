@@ -37,7 +37,7 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
         
         {/* Left Side: Premium Image Panel */}
         <div className="lg:col-span-6 flex flex-col justify-start">
-          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-checkerboard shadow-xs">
             {/* Dynamic support for multiple gallery images if they exist - otherwise show main single image */}
             <img
               src={product.image}
@@ -61,11 +61,11 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
             <div className="mt-4 space-y-2">
               <span className="block text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold">Galeria do Produto:</span>
               <div className="flex gap-2 bg-slate-100 p-2 rounded-xl overflow-x-auto">
-                <div className="h-14 w-18 border-2 border-orange-500 bg-white rounded overflow-hidden flex items-center justify-center shrink-0">
+                <div className="h-14 w-18 border-2 border-orange-500 bg-checkerboard rounded overflow-hidden flex items-center justify-center shrink-0">
                   <img src={product.image} alt="principal" className="h-full w-full object-contain p-1" />
                 </div>
                 {product.gallery.map((galleryImg, idx) => (
-                  <div key={idx} className="h-14 w-18 border border-slate-200 bg-white rounded overflow-hidden flex items-center justify-center shrink-0 hover:border-slate-400 transition-colors">
+                  <div key={idx} className="h-14 w-18 border border-slate-200 bg-checkerboard rounded overflow-hidden flex items-center justify-center shrink-0 hover:border-slate-400 transition-colors">
                     <img src={galleryImg} alt={`Foto adicional ${idx + 1}`} className="h-full w-full object-contain p-1" />
                   </div>
                 ))}

@@ -25,7 +25,7 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
     >
       {/* Product Image Panel */}
       <div 
-        className="relative aspect-video w-full overflow-hidden bg-white border-b border-slate-100 cursor-pointer"
+        className="relative aspect-video w-full overflow-hidden bg-checkerboard border-b border-slate-100 cursor-pointer"
         onClick={() => onViewDetails(product.id)}
       >
         <img
