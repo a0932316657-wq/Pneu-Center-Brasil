@@ -234,17 +234,17 @@ export const FAQS: FAQItem[] = [
   {
     question: 'O site vende pneus diretamente?',
     answer:
-      'Não. O site da Pneu Center Brasil funciona estritamente como um catálogo digital online. Todo o atendimento, consulta de disponibilidade, esclarecimento de dúvidas e detalhes comerciais são efetuados diretamente pelo WhatsApp com nossa equipe de especialistas.',
+      'Não. Nosso site atua estritamente como um catálogo digital informativo e de suporte técnico para consulta de marcas e medidas. Toda a negociação e combinação de entrega ocorre através do nosso atendimento humano via WhatsApp.',
   },
   {
     question: 'Posso pagar pelo site?',
     answer:
-      'Não. A Pneu Center Brasil não realiza vendas por e-commerce, não possui carrinho de compras, não realiza checkout e não solicita dados de cartão de crédito, PIX antecipado, boletos ou informações financeiras através deste site.',
+      'Não. Não possuímos carrinho de compras, checkout virtual ou qualquer sistema de faturamento online. O cliente não paga nada adiantado. O pagamento é realizado única e exclusivamente no ato da entrega diretamente para a transportadora parceira, após a conferência dos produtos.',
   },
   {
     question: 'O WhatsApp finaliza a compra automaticamente?',
     answer:
-      'Não. O contato pelo WhatsApp inicia um atendimento personalizado com nossos atendentes humanos. O atendente irá tirar suas dúvidas, conferir o estoque físico para a sua medida, explicar as formas de pagamento válidas e coordenar os prazos e condições de entrega de forma manual e segura.',
+      'Não. O contato via WhatsApp serve para nosso consultor humanizado tirar dúvidas técnicas do condutor, confirmar a disponibilidade física dos pneus em nosso estoque e agendar o envio seguro por transportadora.',
   },
   {
     question: 'Como funciona a disponibilidade dos produtos?',

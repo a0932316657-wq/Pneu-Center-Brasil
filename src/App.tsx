@@ -391,6 +391,11 @@ export default function App() {
                     </button>
                   </div>
 
+                  {/* Reinforcement of delivery/payment model legend requested */}
+                  <p className="text-xs font-semibold text-orange-400 max-w-xl mx-auto font-sans leading-normal mt-3 bg-orange-950/20 py-2.5 px-4 rounded-xl border border-orange-500/10 shadow-xs">
+                    *Modelo de Entrega Segura: Envio por transportadora parceira com pagamento feito apenas no ato do recebimento após conferir os pneus. Zero taxas antecipadas.*
+                  </p>
+
                   {/* Sane disclosure message */}
                   <p className="text-[11px] sm:text-xs text-gray-400 max-w-lg mx-auto font-sans leading-normal">
                     *Site informativo de catálogo. Não realizamos pagamento online, transações virtuais de faturamento ou cobranças antecipadas neste domínio eletrônico.
@@ -435,7 +440,7 @@ export default function App() {
                       { step: '1', title: 'Escolha o pneu', desc: 'Navegue pelo catálogo e veja medidas, marcas e especificações.' },
                       { step: '2', title: 'Tire dúvidas', desc: 'Nossa equipe informa disponibilidade, características e condições comerciais.' },
                       { step: '3', title: 'Combine a entrega', desc: 'As condições de entrega são informadas durante o atendimento, conforme região e modelo.' },
-                      { step: '4', title: 'Receba e confira', desc: 'O cliente recebe as orientações de entrega e pode conferir o pneu conforme combinado.' },
+                      { step: '4', title: 'Receba, Confira e Pague', desc: 'A transportadora parceira realiza a entrega no local combinado. Você confere os pneus fisicamente em mãos e realiza o pagamento diretamente para o entregador (via Pix ou Cartão na maquininha). Não realizamos nenhuma cobrança antecipada.' },
                     ].map((step, idx) => (
                       <div key={idx} className="relative p-6 rounded-xl border border-slate-200 bg-white shadow-xs">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-600 font-sans font-extrabold text-slate-950 mb-3.5">
@@ -952,8 +957,8 @@ export default function App() {
                   },
                   {
                     step: '4',
-                    title: 'Receba e confira com total segurabilidade',
-                    desc: 'Após combinados os prazos, o cliente recebe em sua localidade. Indicamos que confira as vulcanizações e especificações industriais antes de assinar o canhoto.'
+                    title: 'Receba, Confira e Pague',
+                    desc: 'A transportadora parceira realiza a entrega no local combinado. Você confere os pneus fisicamente em mãos e realiza o pagamento diretamente para o entregador (via Pix ou Cartão na maquininha). Não realizamos nenhuma cobrança antecipada.'
                   }
                 ].map((st, idx) => (
                   <div key={idx} className="relative flex gap-6 items-start">
