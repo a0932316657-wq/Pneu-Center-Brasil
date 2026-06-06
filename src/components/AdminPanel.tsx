@@ -55,7 +55,8 @@ import {
   saveSettingsDb,
   saveLogoDb,
   removeLogoDb,
-  syncFromSupabase
+  syncFromSupabase,
+  clearDemoProducts
 } from '../lib/appStore';
 import { supabase, uploadFile, isSupabaseUrlAbsent, isSupabaseKeyAbsent } from '../lib/supabaseClient';
 import { BRANDS } from '../data';
@@ -1048,19 +1049,44 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               ))}
             </div>
 
-            {/* Informational banner */}
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs flex flex-col md:flex-row gap-5 items-start">
-              <div className="bg-orange-50 p-2.5 rounded text-orange-600 shrink-0">
-                <Database className="h-6 w-6" />
+            {/* Informational and maintenance banner */}
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row gap-5 items-start">
+                <div className="bg-orange-50 p-2.5 rounded text-orange-600 shrink-0">
+                  <Database className="h-6 w-6" />
+                </div>
+                <div className="space-y-2 text-left">
+                  <h4 className="font-sans font-extrabold text-slate-800 text-sm uppercase tracking-wider">Persistência, Arquitetura e Demonstração</h4>
+                  <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-3xl">
+                    Seu portal suporta modo híbrido local/nuvem. Ao conectar as credenciais do Supabase, o catálogo irá priorizar somente os dados sincronizados em nuvem. Se restarem produtos de demonstração antigos no navegador, você pode removê-los com segurança usando o botão abaixo.
+                  </p>
+                  <p className="text-xs text-slate-400 font-medium italic mt-1 leading-normal">
+                    *Para que as alterações fiquem visíveis globalmente para todos os visitantes da internet, lembre de conectar este painel administrativo a um banco de dados persistente em nuvem (como Firebase Firestore ou PostgreSQL) seguindo a estrutura pré-preparada em /src/lib/appStore.ts.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h4 className="font-sans font-extrabold text-slate-800 text-sm uppercase tracking-wider">Persistência e Arquitetura local</h4>
-                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-3xl">
-                  Atualmente, seu portal de catálogo está funcionando no modo <strong>Armazenamento do Navegador (LocalStorage)</strong>. Isto significa que as edições efetuadas (adicionar pneus, excluir, upload de fotos e troca de logo) serão perfeitamente salvas no navegador atual.
-                </p>
-                <p className="text-xs text-slate-400 font-medium italic mt-1 leading-normal">
-                  *Para que as alterações fiquem visíveis globalmente para todos os visitantes da internet, lembre de conectar este painel administrativo a um banco de dados persistente em nuvem (como Firebase Firestore ou PostgreSQL) seguindo a estrutura pré-preparada e amplamente comentada em /src/lib/appStore.ts.
-                </p>
+              
+              <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  id="btn-clear-demo"
+                  onClick={async () => {
+                    if (window.confirm("Deseja realmente remover do navegador todos os produtos de demonstração do catálogo? (Esta ação não afeta produtos reais no Supabase)")) {
+                      try {
+                        clearDemoProducts();
+                        setProductsList(getProducts());
+                        onRefreshPublicData();
+                        triggerFeedback("Produtos de demonstração removidos com sucesso!", "success");
+                      } catch (err: any) {
+                        triggerFeedback(`Erro ao limpar demonstração: ${err.message || err}`, "error");
+                      }
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs uppercase px-4 py-2 transition-all cursor-pointer shadow-xs"
+                >
+                  <Trash2 className="h-4 w-4 text-red-600" />
+                  <span>Limpar produtos de demonstração / localStorage</span>
+                </button>
               </div>
             </div>
 
@@ -1115,13 +1141,36 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                 <h1 className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight">Produtos Cadastrados</h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1">Gerencie a listagem com edição completa, exclusão de itens e controle de visibilidade da bandeira.</p>
               </div>
-              <button
-                onClick={() => initProductForm(null)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 font-bold text-xs uppercase px-4 py-2.5 transition-all text-center shadow-md shadow-orange-600/10 cursor-pointer"
-              >
-                <Plus className="h-4.5 w-4.5" />
-                <span>Novo Pneu</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  id="btn-clear-demo-products-list"
+                  onClick={async () => {
+                    if (window.confirm("Deseja realmente remover do navegador todos os produtos de demonstração do catálogo? (Esta ação não afeta produtos reais no Supabase)")) {
+                      try {
+                        clearDemoProducts();
+                        setProductsList(getProducts());
+                        onRefreshPublicData();
+                        triggerFeedback("Produtos de demonstração removidos com sucesso!", "success");
+                      } catch (err: any) {
+                        triggerFeedback(`Erro ao limpar demonstração: ${err.message || err}`, "error");
+                      }
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs uppercase px-4 py-2.5 transition-all text-center shadow-xs cursor-pointer"
+                >
+                  <Trash2 className="h-4.5 w-4.5 text-red-650" />
+                  <span>Limpar Demonstração</span>
+                </button>
+
+                <button
+                  onClick={() => initProductForm(null)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 font-bold text-xs uppercase px-4 py-2.5 transition-all text-center shadow-md shadow-orange-600/10 cursor-pointer"
+                >
+                  <Plus className="h-4.5 w-4.5" />
+                  <span>Novo Pneu</span>
+                </button>
+              </div>
             </div>
 
             {/* Desktop and table view of list. Transposed as responsive cards on mobile. */}

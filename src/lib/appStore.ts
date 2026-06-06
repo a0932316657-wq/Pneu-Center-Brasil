@@ -1,6 +1,6 @@
 import { Product } from '../types';
 import { PRODUCTS as DEFAULT_PRODUCTS } from '../data';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseUrlAbsent, isSupabaseKeyAbsent } from './supabaseClient';
 
 export interface SiteSettings {
   commercialName: string;
@@ -70,6 +70,24 @@ const RIM_CARDS_STORE_KEY = 'pneu_center_rim_cards_v1';
 
 // Detection variables for Supabase schemas dynamically
 let settingsSchemaType: 'columns' | 'keyvalue' = 'columns';
+
+/**
+ * Checks if a string is a valid UUID
+ */
+export function isValidUUID(id: string): boolean {
+  if (!id) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
+/**
+ * Removes all non-UUID products from localStorage
+ */
+export function clearDemoProducts(): void {
+  const current = getProducts();
+  const keep = current.filter(p => isValidUUID(p.id));
+  saveProducts(keep);
+}
 
 /**
  * ------------------------------------------------------------------------
@@ -233,14 +251,25 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
 export function getProducts(): Product[] {
   if (typeof window === 'undefined') return DEFAULT_PRODUCTS;
   try {
+    const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
     const stored = localStorage.getItem(PRODUCTS_KEY);
-    if (!stored) {
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(DEFAULT_PRODUCTS));
-      return DEFAULT_PRODUCTS;
+    
+    if (isSupabaseConnected) {
+      if (stored) {
+        const parsed = JSON.parse(stored) as Product[];
+        // Prioritize only products with valid UUIDs from Supabase
+        return parsed.filter(p => isValidUUID(p.id));
+      }
+      return [];
+    } else {
+      if (!stored) {
+        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(DEFAULT_PRODUCTS));
+        return DEFAULT_PRODUCTS;
+      }
+      const parsed = JSON.parse(stored) as Product[];
+      if (parsed.length === 0) return DEFAULT_PRODUCTS;
+      return parsed;
     }
-    const parsed = JSON.parse(stored) as Product[];
-    if (parsed.length === 0) return DEFAULT_PRODUCTS;
-    return parsed;
   } catch (error) {
     console.error('Error reading products from localStorage', error);
     return DEFAULT_PRODUCTS;
@@ -406,10 +435,8 @@ export async function syncFromSupabase(): Promise<void> {
 
     if (!prodError && prodData) {
       const mappedProducts = prodData.map(mapProductFromRow);
-      if (mappedProducts.length > 0) {
-        localStorage.setItem(PRODUCTS_KEY, JSON.stringify(mappedProducts));
-        window.dispatchEvent(new Event('pneu_center_products_updated'));
-      }
+      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(mappedProducts));
+      window.dispatchEvent(new Event('pneu_center_products_updated'));
     }
 
     // 3. Fetch brands
@@ -419,10 +446,8 @@ export async function syncFromSupabase(): Promise<void> {
 
     if (!brandError && brandData) {
       const mappedBrands = brandData.map(mapBrandFromRow);
-      if (mappedBrands.length > 0) {
-        localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(mappedBrands));
-        window.dispatchEvent(new Event('pneu_center_brands_updated'));
-      }
+      localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(mappedBrands));
+      window.dispatchEvent(new Event('pneu_center_brands_updated'));
     }
 
     // 4. Fetch rim cards
@@ -432,10 +457,8 @@ export async function syncFromSupabase(): Promise<void> {
 
     if (!rimError && rimData) {
       const mappedRims = rimData.map(mapRimCardFromRow);
-      if (mappedRims.length > 0) {
-        localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(mappedRims));
-        window.dispatchEvent(new Event('pneu_center_rimcards_updated'));
-      }
+      localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(mappedRims));
+      window.dispatchEvent(new Event('pneu_center_rimcards_updated'));
     }
   } catch (error) {
     console.error('Error synchronizing with Supabase database:', error);
@@ -452,17 +475,15 @@ export async function saveProductDb(product: Product): Promise<Product> {
   const payload = buildProductPayload(product);
   let resultRow: any = null;
 
-  // Parse ID to Integer if purely numeric (PostgreSQL Serial column)
-  const isIdReal = product.id && !product.id.startsWith('temp_');
-  const numericId = isIdReal && !isNaN(Number(product.id)) ? Number(product.id) : null;
-  const productIdToUse = numericId !== null ? numericId : product.id;
+  // Since Supabase uses UUID for products, check if it's a valid UUID
+  const isIdReal = product.id && isValidUUID(product.id);
 
   if (isIdReal) {
     // Try updating first
     const { data, error } = await supabase
       .from('products')
       .update(payload)
-      .eq('id', productIdToUse)
+      .eq('id', product.id)
       .select();
 
     if (!error && data && data.length > 0) {
@@ -500,13 +521,14 @@ export async function saveProductDb(product: Product): Promise<Product> {
 }
 
 export async function deleteProductDb(id: string): Promise<void> {
-  const numericId = !isNaN(Number(id)) ? Number(id) : null;
-  const idValue = numericId !== null ? numericId : id;
-
-  const { error } = await supabase.from('products').delete().eq('id', idValue);
-  if (error) {
-    console.error('Failed to delete product from Supabase:', error);
-    throw new Error(`Erro ao deletar produto do Supabase: ${error.message}`);
+  if (isValidUUID(id)) {
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete product from Supabase:', error);
+      throw new Error(`Erro ao deletar produto do Supabase: ${error.message}`);
+    }
+  } else {
+    console.log('ID is not a valid UUID, skipping Supabase delete (treating as local/demo product):', id);
   }
 
   // Update local cache immediately
