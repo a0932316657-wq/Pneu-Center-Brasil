@@ -1,24 +1,78 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 
-  ((import.meta as any).env?.VITE_SUPABASE_URL) || 
-  (typeof process !== 'undefined' && process.env?.SUPABASE_URL) || 
-  '';
-
-const supabaseKey = 
-  ((import.meta as any).env?.VITE_SUPABASE_KEY) || 
-  (typeof process !== 'undefined' && process.env?.SUPABASE_KEY) || 
-  '';
-
-if (!supabaseUrl || !supabaseKey) {
-  console.warn(
-    'As credenciais do Supabase não foram encontradas! Certifique-se de configurar SUPABASE_URL e SUPABASE_KEY nas Variáveis de Ambiente.'
-  );
+function getSupabaseUrl(): string {
+  // 1. import.meta.env.VITE_SUPABASE_URL
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_URL) {
+    return (import.meta as any).env.VITE_SUPABASE_URL;
+  }
+  // 3. import.meta.env.SUPABASE_URL
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.SUPABASE_URL) {
+    return (import.meta as any).env.SUPABASE_URL;
+  }
+  // 5. process.env.SUPABASE_URL
+  if (typeof process !== 'undefined' && process.env?.SUPABASE_URL) {
+    return process.env.SUPABASE_URL;
+  }
+  return '';
 }
 
+function getSupabaseKey(): string {
+  // 2. import.meta.env.VITE_SUPABASE_KEY
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_KEY) {
+    return (import.meta as any).env.VITE_SUPABASE_KEY;
+  }
+  // 4. import.meta.env.SUPABASE_KEY
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.SUPABASE_KEY) {
+    return (import.meta as any).env.SUPABASE_KEY;
+  }
+  // 6. process.env.SUPABASE_KEY
+  if (typeof process !== 'undefined' && process.env?.SUPABASE_KEY) {
+    return process.env.SUPABASE_KEY;
+  }
+  return '';
+}
+
+const rawUrl = getSupabaseUrl();
+const rawKey = getSupabaseKey();
+
+// Check if raw values are actually placeholder texts or empty
+const hasPlaceholderUrl = (val: string): boolean => {
+  const v = val.toLowerCase().trim();
+  return !v || 
+    v.includes('placeholder.supabase') || 
+    v.includes('placeholder_supabase') || 
+    v.includes('sua-url-supabase') || 
+    v.includes('your-supabase-url');
+};
+
+const hasPlaceholderKey = (val: string): boolean => {
+  const v = val.toLowerCase().trim();
+  return !v || 
+    v.includes('placeholder') || 
+    v.includes('sua-chave') || 
+    v.includes('your-anon-key');
+};
+
+// Flags stating whether original system env vars are absent/placeholders
+export const isSupabaseUrlAbsent = hasPlaceholderUrl(rawUrl);
+export const isSupabaseKeyAbsent = hasPlaceholderKey(rawKey);
+
+// Define final URL. Use exactly "https://jpqtdcwvlchhxxovfftl.supabase.co" if absent or placeholder.
+let finalUrl = isSupabaseUrlAbsent ? 'https://jpqtdcwvlchhxxovfftl.supabase.co' : rawUrl.trim();
+
+// Ensure it doesn't end with /rest/v1 or trailing slash
+finalUrl = finalUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '').trim();
+
+// Define final key.
+const finalKey = isSupabaseKeyAbsent ? '' : rawKey.trim();
+
+// Print logs exactly as requested:
+console.log(`Supabase URL carregada: ${!isSupabaseUrlAbsent ? 'sim' : 'não'}`);
+console.log(`Supabase KEY carregada: ${!isSupabaseKeyAbsent ? 'sim' : 'não'}`);
+
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder-key'
+  finalUrl,
+  finalKey || 'placeholder-key'
 );
 
 /**
@@ -97,7 +151,7 @@ function compressImageIfNeeded(file: File): Promise<File | Blob> {
  * @param file The file object to upload
  */
 export async function uploadFile(bucketName: string, folder: string, file: File): Promise<string> {
-  if (!supabaseUrl || !supabaseKey) {
+  if (isSupabaseUrlAbsent || isSupabaseKeyAbsent) {
     throw new Error('Supabase não configurado. Por favor, adicione as credenciais SUPABASE_URL e SUPABASE_KEY.');
   }
 

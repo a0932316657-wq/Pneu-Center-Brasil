@@ -57,7 +57,7 @@ import {
   removeLogoDb,
   syncFromSupabase
 } from '../lib/appStore';
-import { supabase, uploadFile } from '../lib/supabaseClient';
+import { supabase, uploadFile, isSupabaseUrlAbsent, isSupabaseKeyAbsent } from '../lib/supabaseClient';
 import { BRANDS } from '../data';
 
 interface AdminPanelProps {
@@ -796,6 +796,31 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
             </div>
 
             <form onSubmit={handleLoginSubmit} className="space-y-4">
+              {/* Supabase connection warnings on login screen */}
+              {(isSupabaseUrlAbsent || isSupabaseKeyAbsent) && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-xs flex gap-3 items-start">
+                  <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="font-sans font-black text-red-800 text-xs uppercase tracking-wider">Supabase não configurado</h4>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {isSupabaseUrlAbsent && (
+                        <span className="inline-flex items-center rounded bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-800 uppercase border border-red-200 animate-pulse">
+                          SUPABASE_URL ausente
+                        </span>
+                      )}
+                      {isSupabaseKeyAbsent && (
+                        <span className="inline-flex items-center rounded bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-800 uppercase border border-red-200 animate-pulse">
+                          SUPABASE_KEY ausente
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-red-650 mt-1 leading-relaxed">
+                      Por favor, configure as credenciais públicas nas Variáveis de Ambiente do Google AI Studio/Netlify.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="email" className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                   E-mail do Administrador
@@ -962,8 +987,40 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       </aside>
 
       {/* MAIN CONTAINER CONTENT VIEW */}
-      <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl mx-auto w-full space-y-6 animate-fade-in">
         
+        {/* Banner with clear status of Supabase configuration */}
+        {(isSupabaseUrlAbsent || isSupabaseKeyAbsent) && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex gap-3.5 items-start">
+              <div className="bg-red-100 p-2.5 rounded-lg text-red-650 shrink-0">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-sans font-black text-red-800 text-sm uppercase tracking-wider">Atenção: Supabase não conectado</h4>
+                <p className="text-xs sm:text-sm text-red-650 leading-relaxed font-sans">
+                  Detector de ambiente ativo identificou inconsistências nas Variáveis de Ambiente do catálogo:
+                </p>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {isSupabaseUrlAbsent && (
+                    <span className="inline-flex items-center rounded bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-850 uppercase border border-red-200">
+                      SUPABASE_URL ausente
+                    </span>
+                  )}
+                  {isSupabaseKeyAbsent && (
+                    <span className="inline-flex items-center rounded bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-850 uppercase border border-red-200">
+                      SUPABASE_KEY ausente
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <span className="text-[10px] uppercase tracking-widest font-extrabold text-red-500 shrink-0 self-end sm:self-center">
+              Apenas LocalStorage ativo
+            </span>
+          </div>
+        )}
+
         {/* TAB 1: OVERVIEW SCREEN */}
         {activeTab === 'overview' && (
           <motion.div
