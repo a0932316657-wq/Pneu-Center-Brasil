@@ -391,6 +391,21 @@ export default function App() {
                     </p>
                   </div>
 
+                  {/* Dynamic Product Counter display badge */}
+                  <div className="inline-flex flex-col sm:flex-row items-center gap-3 sm:gap-5 justify-center bg-orange-500/10 hover:bg-orange-500/15 border border-orange-500/20 rounded-2xl p-4 sm:p-5 max-w-xl mx-auto shadow-sm transition-all duration-300 text-left">
+                    <div className="flex items-center justify-center bg-orange-600 font-display font-black text-slate-950 text-xl sm:text-2xl h-12 w-12 rounded-xl shrink-0 shadow-md animate-pulse">
+                      {products.filter(p => p.active !== false).length}
+                    </div>
+                    <div>
+                      <p className="text-sm font-sans font-bold text-white uppercase tracking-wide">
+                        Pneus Multimarcas Disponíveis
+                      </p>
+                      <p className="text-xs text-slate-300 font-sans mt-0.5">
+                        Temos mais de <span className="font-extrabold text-orange-500">{products.filter(p => p.active !== false).length}</span> pneus ativos cadastrados em nosso estoque multimarcas. Confira o catálogo completo abaixo!
+                      </p>
+                    </div>
+                  </div>
+
                   {/* Call to Actions buttons */}
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
                     <button
@@ -529,39 +544,49 @@ export default function App() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {rimCards.filter(rc => rc.active).map((card) => (
                       <button
                         key={card.id}
                         onClick={() => {
                           filterByRim(`Aro ${card.rim}`);
                         }}
-                        className="group relative h-40 rounded-2xl overflow-hidden border border-slate-200 shadow-sm cursor-pointer hover:shadow-lg transition-all duration-300 flex flex-col justify-end p-4 text-left w-full"
+                        className="group relative h-56 rounded-2xl overflow-hidden border-2 border-slate-200 hover:border-orange-500 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between p-5 text-left w-full cursor-pointer bg-slate-900"
                       >
                         {/* Background Image of standard tire */}
-                        <div className="absolute inset-0 z-0 bg-slate-900">
+                        <div className="absolute inset-0 z-0">
                           {card.image && card.image.trim() ? (
                             <img
                               src={card.image.trim() || null}
                               alt={card.name}
                               referrerPolicy="no-referrer"
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-70"
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-40 group-hover:opacity-50"
                             />
                           ) : null}
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent opacity-85 group-hover:opacity-90 transition-opacity" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-900/60" />
                         </div>
 
-                        {/* Title block */}
-                        <div className="relative z-10 font-sans">
-                          <span className="block text-orange-500 text-[10px] uppercase font-mono tracking-wider font-extrabold leading-none mb-1">
-                            Diâmetro R{card.rim}
-                          </span>
-                          <h4 className="font-sans font-black text-white text-base sm:text-lg uppercase italic tracking-tight leading-none">
-                            {card.name}
-                          </h4>
-                          <p className="text-[10px] text-slate-300 font-sans leading-tight mt-1 opacity-90 truncate hover:text-white transition-colors">
-                            {card.description || `${card.name} de passeio`}
+                        {/* Top Area: Badge & Header */}
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="inline-flex items-center rounded-md bg-orange-500/10 px-2 py-1 text-[10px] font-mono font-black text-orange-400 border border-orange-500/20 uppercase tracking-widest">
+                              Diâmetro R{card.rim}
+                            </span>
+                          </div>
+                          <h3 className="font-sans font-black text-white text-lg sm:text-xl uppercase tracking-tight group-hover:text-orange-400 transition-colors">
+                            Pneus {card.name}
+                          </h3>
+                        </div>
+
+                        {/* Bottom Area: Custom CTA / Description */}
+                        <div className="relative z-10 w-full mt-auto">
+                          <p className="text-xs text-slate-300 font-sans leading-normal mb-3 opacity-90">
+                            {card.description || `Disponíveis em diversas medidas e marcas para o seu veículo.`}
                           </p>
+                          <div className="w-full bg-orange-600 group-hover:bg-orange-500 text-slate-950 font-display font-extrabold text-[11px] uppercase tracking-wider py-2.5 px-4 rounded-xl flex items-center justify-between transition-colors shadow-md">
+                            <span>Ver modelos disponíveis para aro {card.rim}</span>
+                            <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" />
+                          </div>
                         </div>
                       </button>
                     ))}

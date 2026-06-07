@@ -122,6 +122,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   // Editing state for products
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  // States to filter the product list in the admin view
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [adminRimFilter, setAdminRimFilter] = useState<string>('Todos');
+  const [adminBrandFilter, setAdminBrandFilter] = useState<string>('Todas');
+  const [adminCategoryFilter, setAdminCategoryFilter] = useState<string>('Todas');
+
   // Form states for creating/editing products
   const [prodName, setProdName] = useState('');
   const [prodBrand, setProdBrand] = useState('Pirelli');
@@ -180,6 +186,29 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
   // Delete Confirmation ID Modal
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Filter products for the admin dashboard list
+  const filteredAdminProducts = productsList.filter((prod) => {
+    const matchesSearch = 
+      adminSearchQuery.trim() === '' ||
+      prod.name.toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
+      prod.brand.toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
+      prod.measure.toLowerCase().includes(adminSearchQuery.toLowerCase());
+
+    const matchesRim = 
+      adminRimFilter === 'Todos' || 
+      String(prod.rim) === adminRimFilter;
+
+    const matchesBrand = 
+      adminBrandFilter === 'Todas' || 
+      prod.brand.trim().toLowerCase() === adminBrandFilter.trim().toLowerCase();
+
+    const matchesCategory = 
+      adminCategoryFilter === 'Todas' || 
+      prod.category === adminCategoryFilter;
+
+    return matchesSearch && matchesRim && matchesBrand && matchesCategory;
+  });
 
   // Computes for Unsaved changes warnings
   const hasUnsavedBrandChanges = editingBrand ? (
@@ -1981,6 +2010,83 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               </div>
             </div>
 
+            {/* Filtros de Busca e Organização */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+              {/* Campo de pesquisa por texto */}
+              <div className="sm:col-span-4 relative">
+                <label className="block text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">Pesquisar</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Nome, marca ou medida..."
+                    value={adminSearchQuery}
+                    onChange={(e) => setAdminSearchQuery(e.target.value)}
+                    className="w-full text-xs sm:text-sm rounded-lg border border-slate-200 bg-white pl-3 pr-8 py-2 text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-sans"
+                  />
+                  {adminSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setAdminSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filtro de Aro (Diâmetro) */}
+              <div className="sm:col-span-3">
+                <label className="block text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">Aro (Diâmetro)</label>
+                <select
+                  value={adminRimFilter}
+                  onChange={(e) => setAdminRimFilter(e.target.value)}
+                  className="w-full text-xs sm:text-sm rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-800 outline-none focus:border-orange-500 transition-all font-sans font-bold cursor-pointer"
+                >
+                  <option value="Todos">Todos os Aros</option>
+                  {Array.from(new Set(productsList.map(p => p.rim)))
+                    .sort((a: number, b: number) => a - b)
+                    .map((rim) => (
+                      <option key={rim} value={String(rim)}>Aro {rim}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro de Marca */}
+              <div className="sm:col-span-2">
+                <label className="block text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">Fabricante</label>
+                <select
+                  value={adminBrandFilter}
+                  onChange={(e) => setAdminBrandFilter(e.target.value)}
+                  className="w-full text-xs sm:text-sm rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-800 outline-none focus:border-orange-500 transition-all font-sans cursor-pointer"
+                >
+                  <option value="Todas">Todas</option>
+                  {Array.from(new Set(productsList.map(p => p.brand)))
+                    .sort()
+                    .map((brand) => (
+                      <option key={brand} value={brand}>{brand}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro de Categoria */}
+              <div className="sm:col-span-3">
+                <label className="block text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mb-1">Categoria da Carga</label>
+                <select
+                  value={adminCategoryFilter}
+                  onChange={(e) => setAdminCategoryFilter(e.target.value)}
+                  className="w-full text-xs sm:text-sm rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-800 outline-none focus:border-orange-500 transition-all font-sans cursor-pointer"
+                >
+                  <option value="Todas">Todas</option>
+                  {Array.from(new Set(productsList.map(p => p.category)))
+                    .sort()
+                    .map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Desktop and table view of list. Transposed as responsive cards on mobile. */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden/hidden">
               <div className="overflow-x-auto min-w-full">
@@ -1996,14 +2102,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-650">
-                    {productsList.length === 0 ? (
+                    {filteredAdminProducts.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="text-center py-12 text-slate-400 font-sans">
-                          Nenhum pneu cadastrado no portfólio.
+                          Nenhum pneu encontrado com os filtros selecionados.
                         </td>
                       </tr>
                     ) : (
-                      productsList.map((prod) => (
+                      filteredAdminProducts.map((prod) => (
                         <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="h-12 w-16 rounded border bg-checkerboard overflow-hidden flex items-center justify-center">
@@ -2084,12 +2190,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
                 {/* Mobile list representation for cards */}
                 <div className="block md:hidden divide-y divide-slate-100">
-                  {productsList.length === 0 ? (
+                  {filteredAdminProducts.length === 0 ? (
                     <div className="text-center py-10 text-slate-400 font-sans text-xs">
-                      Nenhum pneu cadastrado no portfólio.
+                      Nenhum pneu encontrado com os filtros selecionados.
                     </div>
                   ) : (
-                    productsList.map((prod) => (
+                    filteredAdminProducts.map((prod) => (
                       <div key={prod.id} className="p-4 space-y-4 font-sans">
                         <div className="flex gap-3">
                           <div className="h-16 w-20 rounded border bg-checkerboard overflow-hidden flex items-center justify-center shrink-0">
