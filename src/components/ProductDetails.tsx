@@ -3,6 +3,7 @@ import { ArrowLeft, MessageSquare, ShieldAlert, BadgeCheck, Compass, Settings, A
 import { motion } from 'motion/react';
 import { Product } from '../types';
 import { openWhatsAppChat, getProductMessage } from '../lib/whatsapp';
+import BrandBadge from './BrandBadge';
 
 interface ProductDetailsProps {
   product: Product;
@@ -69,9 +70,7 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
             />
             
             {/* Visual Indicators */}
-            <div className="absolute top-4 left-4 rounded bg-slate-900/90 backdrop-blur-md px-3 py-1.5 text-xs font-mono font-bold tracking-wider uppercase text-orange-400 border border-slate-700">
-              {product.brand} Original
-            </div>
+            <BrandBadge brandName={product.brand} />
             
             <div className="absolute bottom-4 left-4 rounded bg-slate-900/90 backdrop-blur-md px-3.5 py-2 text-xs text-white border border-slate-700">
               Pneu Aro {product.rim} • Categoria {product.category}
@@ -145,7 +144,7 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
               ) : (
                 <div>
                   <div className="text-2xl font-sans font-black text-slate-750 uppercase tracking-tight">
-                    Preço sob consulta
+                    Preço sob atendimento
                   </div>
                   <p className="text-xs text-slate-500 mt-1 leading-normal font-sans">
                     Fale com nosso consultor técnico no WhatsApp para receber o orçamento imediato com preços especiais da semana.
@@ -179,15 +178,13 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
               </div>
             )}
 
-            {/* Extended Technical Specs List */}
-            <div className="space-y-4 border-t border-slate-100 pt-4">
-              <h3 className="font-sans text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <Settings className="h-4.5 w-4.5 text-orange-500" />
-                Especificações de Fábrica
-              </h3>
-              
-              {/* If we have the new technical specs grid, display elegant key-values */}
-              {technicalSpecs.length > 0 && (
+            {/* Ficha Técnica Detalhada (Campos individuais estruturados opcionais) */}
+            {technicalSpecs.length > 0 && (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <h3 className="font-sans text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Settings className="h-4.5 w-4.5 text-orange-500" />
+                  Ficha Técnica Detalhada
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs bg-slate-50 rounded-xl border border-slate-200 p-4 shadow-3xs">
                   {technicalSpecs.map((spec, index) => (
                     <div key={index} className="flex justify-between border-b border-slate-100 pb-1.5 pt-0.5">
@@ -196,43 +193,52 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
                     </div>
                   ))}
                 </div>
-              )}
-
-              {/* Classic Bullet points */}
-              <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 shrink-0 shadow-xs">
-                <ul className="space-y-2.5 font-sans text-xs sm:text-sm text-slate-750">
-                  {product.specs && product.specs.map((spec, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span className="text-slate-700">{spec}</span>
-                    </li>
-                  ))}
-                  <li className="flex items-start gap-2">
-                    <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span className="text-slate-700 font-medium">Garantia integral de fábrica de 5 anos contra defeitos de fabricação</span>
-                  </li>
-                </ul>
               </div>
+            )}
 
-              {/* INMETRO homologation seal if present */}
-              {product.inmetro_label_url && (
-                <div className="rounded-xl border border-slate-150 p-4 bg-white flex items-center gap-4 shadow-xs animate-fade-in">
-                  <div className="h-20 w-16 bg-white flex items-center justify-center border border-slate-100 p-1 shrink-0 rounded">
-                    <img
-                      src={product.inmetro_label_url}
-                      alt="Selo de homologação INMETRO"
-                      className="h-full w-full object-contain"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-mono tracking-wider font-extrabold text-orange-600 uppercase">Selo de Eficiência</span>
-                    <h4 className="font-sans text-xs font-bold text-slate-800 uppercase mt-0.5 leading-tight">Homologado pelo INMETRO / CONPET</h4>
-                    <p className="text-[11px] text-slate-500 leading-normal mt-1 leading-snug">Este modelo passou pelos testes nacionais obrigatórios de resistência ao rolamento, aderência em pista molhada e ruído externo.</p>
-                  </div>
+            {/* Especificações Técnicas - Do campo technical_specs */}
+            {product.specs && product.specs.length > 0 && (
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <h3 className="font-sans text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Settings className="h-4.5 w-4.5 text-orange-500" />
+                  Especificações Técnicas
+                </h3>
+                
+                <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 shrink-0 shadow-xs">
+                  <ul className="space-y-2.5 font-sans text-xs sm:text-sm text-slate-750">
+                    {product.specs.map((spec, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="text-slate-700">{spec}</span>
+                      </li>
+                    ))}
+                    <li className="flex items-start gap-2">
+                      <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span className="text-slate-705 font-medium">Garantia integral de fábrica de 5 anos contra defeitos de fabricação</span>
+                    </li>
+                  </ul>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* INMETRO homologation seal if present */}
+            {product.inmetro_label_url && (
+              <div className="rounded-xl border border-slate-150 p-4 bg-white flex items-center gap-4 shadow-xs animate-fade-in mt-4">
+                <div className="h-20 w-16 bg-white flex items-center justify-center border border-slate-100 p-1 shrink-0 rounded">
+                  <img
+                    src={product.inmetro_label_url}
+                    alt="Selo de homologação INMETRO"
+                    className="h-full w-full object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div>
+                  <span className="block text-[9px] font-mono tracking-wider font-extrabold text-orange-600 uppercase">Selo de Eficiência</span>
+                  <h4 className="font-sans text-xs font-bold text-slate-800 uppercase mt-0.5 leading-tight">Homologado pelo INMETRO / CONPET</h4>
+                  <p className="text-[11px] text-slate-500 leading-normal mt-1 leading-snug">Este modelo passou pelos testes nacionais obrigatórios de resistência ao rolamento, aderência em pista molhada e ruído externo.</p>
+                </div>
+              </div>
+            )}
 
           </div>
 

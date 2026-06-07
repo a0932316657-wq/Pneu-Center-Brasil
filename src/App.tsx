@@ -291,7 +291,7 @@ export default function App() {
       product.measure.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.brand.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesBrand = selectedBrand === 'Todas' || product.brand === selectedBrand;
+    const matchesBrand = selectedBrand === 'Todas' || product.brand.trim().toLowerCase() === selectedBrand.trim().toLowerCase();
 
     let matchesRim = true;
     if (selectedRim !== 'Todos') {
@@ -743,12 +743,29 @@ export default function App() {
                       className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs sm:text-sm text-slate-800 outline-none focus:border-orange-500 transition-all font-sans cursor-pointer"
                     >
                       <option value="Todas">Fabricante: Todos</option>
-                      {Array.from(new Set([
-                        ...brands.filter(b => b.active).map(b => b.name),
-                        ...products.filter(p => p.active !== false).map(p => p.brand)
-                      ])).sort().map((br) => (
-                        <option key={br} value={br}>{br}</option>
-                      ))}
+                      {(() => {
+                        const brandNamesMap = new Map<string, string>();
+                        // First establishing known cased active brands
+                        brands.filter(b => b.active).forEach((b) => {
+                          const trimName = b.name.trim();
+                          if (trimName) {
+                            brandNamesMap.set(trimName.toLowerCase(), trimName);
+                          }
+                        });
+                        // Incorporate dynamically seen active products brands
+                        products.filter(p => p.active !== false).forEach((p) => {
+                          const trimBrand = p.brand.trim();
+                          if (trimBrand) {
+                            const key = trimBrand.toLowerCase();
+                            if (!brandNamesMap.has(key)) {
+                              brandNamesMap.set(key, trimBrand);
+                            }
+                          }
+                        });
+                        return Array.from(brandNamesMap.values()).sort().map((br) => (
+                          <option key={br} value={br}>{br}</option>
+                        ));
+                      })()}
                     </select>
                   </div>
 

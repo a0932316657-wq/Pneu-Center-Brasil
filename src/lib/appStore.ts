@@ -115,7 +115,57 @@ export function isRimCardIdReal(id: string): boolean {
   return true;
 }
 
+function parseSpecs(rawSpecs: any): string[] {
+  if (Array.isArray(rawSpecs)) {
+    return rawSpecs;
+  }
+  if (typeof rawSpecs === 'string') {
+    const trimmed = rawSpecs.trim();
+    if (!trimmed) return [];
+    
+    // Check if it's a JSON array
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map(item => String(item));
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    
+    // Split by pipe or newline safely
+    if (trimmed.includes('|')) {
+      return trimmed.split('|').map(s => s.trim()).filter(Boolean);
+    } else if (trimmed.includes('\n')) {
+      return trimmed.split('\n').map(s => s.trim()).filter(Boolean);
+    }
+    
+    return [trimmed];
+  }
+  return [];
+}
+
 function mapProductFromRow(row: any): Product {
+  const priceNum = (row.price != null && row.price !== '') ? Number(row.price) : 0;
+  
+  let computedShowPrice = false;
+  if (priceNum > 0) {
+    if (row.show_price === undefined || row.show_price === null || row.show_price === '') {
+      computedShowPrice = true;
+    } else if (typeof row.show_price === 'string') {
+      const sp = row.show_price.trim().toLowerCase();
+      if (sp === 'true' || sp === 'sim' || sp === '1' || sp === 'yes' || sp === 'exibir') {
+        computedShowPrice = true;
+      } else {
+        computedShowPrice = false;
+      }
+    } else {
+      computedShowPrice = !!row.show_price;
+    }
+  }
+
   return {
     id: row.id?.toString() || '',
     name: row.name || '',
@@ -124,13 +174,13 @@ function mapProductFromRow(row: any): Product {
     rim: Number(row.rim) || 15,
     category: row.category || 'Carro de passeio',
     application: row.application || '',
-    specs: Array.isArray(row.technical_specs) ? row.technical_specs : (Array.isArray(row.specs) ? row.specs : (typeof row.technical_specs === 'string' ? JSON.parse(row.technical_specs) : (typeof row.specs === 'string' ? JSON.parse(row.specs) : []))),
+    specs: parseSpecs(row.technical_specs || row.specs),
     status: row.availability_status || row.status || 'Em estoque',
     image: row.main_image_url || row.image || '',
     shortDesc: row.short_description || row.short_desc || row.shortDesc || row.shortdesc || '',
     fullDesc: row.full_description || row.full_desc || row.fullDesc || row.fulldesc || '',
-    price: row.price != null ? Number(row.price) : undefined,
-    priceStatus: row.show_price === false ? 'sob_consulta' : (row.price_status || row.priceStatus || row.pricestatus || 'sob_consulta'),
+    price: priceNum > 0 ? priceNum : undefined,
+    priceStatus: computedShowPrice ? 'exibir' : 'sob_consulta',
     gallery: Array.isArray(row.gallery_images) ? row.gallery_images : (Array.isArray(row.gallery) ? row.gallery : (typeof row.gallery_images === 'string' ? JSON.parse(row.gallery_images) : (typeof row.gallery === 'string' ? JSON.parse(row.gallery) : []))),
     featured: !!row.featured,
     active: row.active !== false,

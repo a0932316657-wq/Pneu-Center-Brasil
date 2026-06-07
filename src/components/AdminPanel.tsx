@@ -558,8 +558,19 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
     setIsSavingProduct(true);
     try {
-      const priceNum = parseFloat(prodPrice);
-      const parsedPrice = isNaN(priceNum) ? undefined : priceNum;
+      let parsedPrice: number | undefined = undefined;
+      if (prodPrice) {
+        let cleaned = prodPrice.toString().toLowerCase().replace('r$', '').replace(/\s/g, '');
+        if (cleaned.includes('.') && cleaned.includes(',')) {
+          cleaned = cleaned.replace(/\./g, '').replace(/,/g, '.');
+        } else if (cleaned.includes(',')) {
+          cleaned = cleaned.replace(/,/g, '.');
+        }
+        const pNum = parseFloat(cleaned);
+        if (!isNaN(pNum) && pNum > 0) {
+          parsedPrice = pNum;
+        }
+      }
 
       // Split specs from multi-line text input
       const parsedSpecs = prodSpecsText
@@ -1249,27 +1260,72 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
         let specs: string[] = [];
         if (technicalSpecsStr) {
-          try {
-            if (technicalSpecsStr.startsWith('[') && technicalSpecsStr.endsWith(']')) {
-              specs = JSON.parse(technicalSpecsStr);
+          const trimmed = technicalSpecsStr.trim();
+          if (trimmed) {
+            if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+              try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                  specs = parsed.map(item => String(item));
+                } else {
+                  specs = [trimmed];
+                }
+              } catch (e) {
+                specs = trimmed.split('|').map(s => s.trim()).filter(Boolean);
+              }
+            } else if (trimmed.includes('|')) {
+              specs = trimmed.split('|').map(s => s.trim()).filter(Boolean);
+            } else if (trimmed.includes('\n')) {
+              specs = trimmed.split('\n').map(s => s.trim()).filter(Boolean);
             } else {
-              specs = technicalSpecsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+              specs = trimmed.split(',').map(s => s.trim()).filter(s => s.length > 0);
             }
-          } catch (specErr) {
-            specs = [technicalSpecsStr];
           }
         }
 
         let price: number | undefined = undefined;
         if (priceStr) {
-          const cleanedPrice = priceStr.replace('R$', '').replace(/\s/g, '').replace(',', '.');
-          const parsedPrice = Number(cleanedPrice);
-          if (!isNaN(parsedPrice)) {
+          let cleaned = priceStr.toLowerCase().replace('r$', '').replace(/\s/g, '');
+          if (cleaned.includes('.') && cleaned.includes(',')) {
+            cleaned = cleaned.replace(/\./g, '').replace(/,/g, '.');
+          } else if (cleaned.includes(',')) {
+            cleaned = cleaned.replace(/,/g, '.');
+          }
+          const parsedPrice = Number(cleaned);
+          if (!isNaN(parsedPrice) && parsedPrice > 0) {
             price = parsedPrice;
           }
         }
 
-        const priceStatus = showPriceStr === 'false' ? 'sob_consulta' : 'exibir';
+        const hasPrice = price !== undefined && price > 0;
+        const normalizedShowPrice = showPriceStr.trim().toLowerCase();
+        
+        let showPriceBool = false;
+        
+        const trueValues = ['true', 'sim', '1', 'yes', 'exibir'];
+        const falseValues = ['false', 'não', 'nao', '0', 'no', 'vazio', 'null', 'undefined', ''];
+        
+        if (trueValues.includes(normalizedShowPrice)) {
+          showPriceBool = true;
+        } else if (falseValues.includes(normalizedShowPrice)) {
+          showPriceBool = false;
+          // Exception: "Se price vier preenchido e show_price vier vazio, assumir automaticamente: show_price = true"
+          if (hasPrice && normalizedShowPrice === '') {
+            showPriceBool = true;
+          }
+        } else {
+          // If price > 0, default to true
+          if (hasPrice) {
+            showPriceBool = true;
+          }
+        }
+        
+        // Enforce price > 0 default to true unless explicitly false-valued
+        if (hasPrice && !falseValues.includes(normalizedShowPrice)) {
+          showPriceBool = true;
+        }
+
+        const priceStatus = showPriceBool ? 'exibir' : 'sob_consulta';
 
         const existingProd = existingMap.get(name.toLowerCase());
         
@@ -1882,6 +1938,40 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                 </button>
 
                 <button
+                  type="button"
+                  id="btn-show-prices-all-prods"
+                  onClick={async () => {
+                    if (window.confirm("Deseja realmente exibir o preço de todos os produtos que possuem preço maior que R$ 0,00 cadastrado?")) {
+                      setIsSavingProduct(true);
+                      try {
+                        const currentList = getProducts();
+                        let updatedCount = 0;
+                        for (const p of currentList) {
+                          if (p.price && p.price > 0 && p.priceStatus !== 'exibir') {
+                            const updated = { ...p, priceStatus: 'exibir' as const };
+                            await saveProductDb(updated);
+                            updatedCount++;
+                          }
+                        }
+                        // Refresh state
+                        setProductsList(getProducts());
+                        onRefreshPublicData();
+                        triggerFeedback(`Sucesso! Exibição de preço ativada para ${updatedCount} produtos.`, "success");
+                      } catch (err: any) {
+                        console.error(err);
+                        triggerFeedback(`Erro ao atualizar preços: ${err.message || err}`, 'error');
+                      } finally {
+                        setIsSavingProduct(false);
+                      }
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-850 font-bold text-xs uppercase px-4 py-2.5 transition-all text-center shadow-xs cursor-pointer"
+                >
+                  <Eye className="h-4.5 w-4.5 text-orange-600" />
+                  <span>Exibir preço em todos os produtos com valor</span>
+                </button>
+
+                <button
                   onClick={() => initProductForm(null)}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 font-bold text-xs uppercase px-4 py-2.5 transition-all text-center shadow-md shadow-orange-600/10 cursor-pointer"
                 >
@@ -2253,11 +2343,21 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   </label>
                   <input
                     type="text"
-                    disabled={prodPriceStatus === 'sob_consulta'}
                     value={prodPrice}
-                    onChange={(e) => setProdPrice(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setProdPrice(val);
+                      // Auto-toggle "Exibir Valor R$" if price is positive
+                      const cleanedVal = val.toLowerCase().replace('r$', '').replace(/\s/g, '').replace(',', '.');
+                      const numericVal = parseFloat(cleanedVal);
+                      if (!isNaN(numericVal) && numericVal > 0) {
+                        setProdPriceStatus('exibir');
+                      } else if (val.trim() === '' || numericVal === 0) {
+                        setProdPriceStatus('sob_consulta');
+                      }
+                    }}
                     placeholder="Ex: 399.90"
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-mono disabled:opacity-50"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-mono"
                   />
                 </div>
 
@@ -2268,7 +2368,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   </label>
                   <div className="grid grid-cols-2 gap-4 mt-1">
                     {[
-                      { id: 'sob_consulta', label: 'Econdido (Sob Consulta)' },
+                      { id: 'sob_consulta', label: 'Escondido / Sob Consulta' },
                       { id: 'exibir', label: 'Exibir Valor R$' },
                     ].map((st) => (
                       <label key={st.id} className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer font-sans">

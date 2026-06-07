@@ -3,6 +3,7 @@ import { Tag, HelpCircle, Eye, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Product } from '../types';
 import { openWhatsAppChat, getProductMessage } from '../lib/whatsapp';
+import BrandBadge from './BrandBadge';
 
 interface ProductCardProps {
   product: Product;
@@ -35,9 +36,7 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
           className="h-full w-full object-contain p-4 object-center transition-transform duration-500 group-hover:scale-105"
         />
         {/* Brand Badge Overlay */}
-        <div className="absolute top-3 left-3 rounded bg-slate-900/90 backdrop-blur-xs px-2.5 py-1 text-[10px] font-mono font-bold tracking-wider uppercase text-orange-400 border border-slate-700">
-          {product.brand}
-        </div>
+        <BrandBadge brandName={product.brand} />
         
         {/* Category Overlay */}
         <div className="absolute bottom-3 left-3 rounded bg-slate-900/90 backdrop-blur-xs px-2.5 py-1 text-[10px] font-medium text-white border border-slate-700">
@@ -75,7 +74,7 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
             </div>
           ) : (
             <div className="text-sm font-sans font-extrabold text-[#0B1B32] uppercase tracking-tight">
-              Preço sob consulta
+              Preço sob atendimento
             </div>
           )}
         </div>
