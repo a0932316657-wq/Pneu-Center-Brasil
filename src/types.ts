@@ -16,6 +16,28 @@ export interface Product {
   gallery?: string[];
   featured?: boolean;
   active?: boolean;
+
+  // Technical info fields
+  technical_category?: string;
+  terrain?: string;
+  load_index?: string;
+  load_capacity?: string;
+  speed_index?: string;
+  max_speed?: string;
+  compatible_rims?: string;
+  width_mm?: string;
+  diameter_mm?: string;
+  treadwear?: string;
+  traction?: string;
+  temperature?: string;
+  runflat?: string;
+  extra_load?: string;
+  rim_protector?: string;
+  ply_quantity?: string;
+  mounting?: string;
+  letter_color?: string;
+  groove_depth?: string;
+  inmetro_label_url?: string;
 }
 
 export type AppRoute =

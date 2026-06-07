@@ -133,7 +133,29 @@ function mapProductFromRow(row: any): Product {
     priceStatus: row.show_price === false ? 'sob_consulta' : (row.price_status || row.priceStatus || row.pricestatus || 'sob_consulta'),
     gallery: Array.isArray(row.gallery_images) ? row.gallery_images : (Array.isArray(row.gallery) ? row.gallery : (typeof row.gallery_images === 'string' ? JSON.parse(row.gallery_images) : (typeof row.gallery === 'string' ? JSON.parse(row.gallery) : []))),
     featured: !!row.featured,
-    active: row.active !== false
+    active: row.active !== false,
+
+    // New Technical fields
+    technical_category: row.technical_category || '',
+    terrain: row.terrain || '',
+    load_index: row.load_index || '',
+    load_capacity: row.load_capacity || '',
+    speed_index: row.speed_index || '',
+    max_speed: row.max_speed || '',
+    compatible_rims: row.compatible_rims || '',
+    width_mm: row.width_mm || '',
+    diameter_mm: row.diameter_mm || '',
+    treadwear: row.treadwear || '',
+    traction: row.traction || '',
+    temperature: row.temperature || '',
+    runflat: row.runflat || '',
+    extra_load: row.extra_load || '',
+    rim_protector: row.rim_protector || '',
+    ply_quantity: row.ply_quantity || '',
+    mounting: row.mounting || '',
+    letter_color: row.letter_color || '',
+    groove_depth: row.groove_depth || '',
+    inmetro_label_url: row.inmetro_label_url || ''
   };
 }
 
@@ -154,7 +176,29 @@ function buildProductPayload(p: Product): any {
     main_image_url: p.image || '',
     short_description: p.shortDesc || '',
     full_description: p.fullDesc || '',
-    gallery_images: p.gallery || []
+    gallery_images: p.gallery || [],
+
+    // New Technical fields
+    technical_category: p.technical_category || '',
+    terrain: p.terrain || '',
+    load_index: p.load_index || '',
+    load_capacity: p.load_capacity || '',
+    speed_index: p.speed_index || '',
+    max_speed: p.max_speed || '',
+    compatible_rims: p.compatible_rims || '',
+    width_mm: p.width_mm || '',
+    diameter_mm: p.diameter_mm || '',
+    treadwear: p.treadwear || '',
+    traction: p.traction || '',
+    temperature: p.temperature || '',
+    runflat: p.runflat || '',
+    extra_load: p.extra_load || '',
+    rim_protector: p.rim_protector || '',
+    ply_quantity: p.ply_quantity || '',
+    mounting: p.mounting || '',
+    letter_color: p.letter_color || '',
+    groove_depth: p.groove_depth || '',
+    inmetro_label_url: p.inmetro_label_url || ''
   };
 }
 
@@ -530,33 +574,61 @@ export async function saveProductDb(product: Product): Promise<Product> {
     // Since Supabase uses UUID for products, check if it's a valid UUID
     const isIdReal = product.id && isValidUUID(product.id);
 
-    if (isIdReal) {
-      // Try updating first
-      const { data, error } = await supabase
-        .from('products')
-        .update(payload)
-        .eq('id', product.id)
-        .select();
+    const attemptSave = async (pay: any) => {
+      if (isIdReal) {
+        const { data, error } = await supabase
+          .from('products')
+          .update(pay)
+          .eq('id', product.id)
+          .select();
 
-      if (!error && data && data.length > 0) {
-        resultRow = data[0];
-      } else {
-        console.warn('Direct update failed, checking if upsert is possible:', error);
+        if (!error && data && data.length > 0) {
+          return data[0];
+        }
+        if (error && (error.message?.includes('column') || error.code === '42703')) {
+          throw error; // Propagate column error for retry handling
+        }
       }
-    }
 
-    // If no success (e.g. inserting new record), insert without 'id' to let DB generate PK
-    if (!resultRow) {
       const { data, error } = await supabase
         .from('products')
-        .insert(payload)
+        .insert(pay)
         .select();
 
       if (error) {
-        console.error('Error inserting product in Supabase:', error);
-        throw new Error(`Erro ao cadastrar produto no Supabase: ${error.message}`);
+        throw error;
       }
-      resultRow = data?.[0];
+      return data?.[0];
+    };
+
+    try {
+      resultRow = await attemptSave(payload);
+    } catch (saveError: any) {
+      const isColError = saveError.message?.includes('column') || saveError.code === '42703';
+      if (isColError) {
+        console.warn('New technical columns not found on Supabase schema yet. Stripping and retrying with standard columns...');
+        const stripped = { ...payload };
+        const technicalKeys = [
+          'technical_category', 'terrain', 'load_index', 'load_capacity',
+          'speed_index', 'max_speed', 'compatible_rims', 'width_mm',
+          'diameter_mm', 'treadwear', 'traction', 'temperature',
+          'runflat', 'extra_load', 'rim_protector', 'ply_quantity',
+          'mounting', 'letter_color', 'groove_depth', 'inmetro_label_url'
+        ];
+        technicalKeys.forEach(k => {
+          delete stripped[k];
+        });
+
+        try {
+          resultRow = await attemptSave(stripped);
+        } catch (retryError: any) {
+          console.error('Fatal saving even with stripped columns:', retryError);
+          throw new Error(`Erro ao salvar produto no Supabase: ${retryError.message}`);
+        }
+      } else {
+        console.error('Save error occurred:', saveError);
+        throw new Error(`Erro ao salvar produto no Supabase: ${saveError.message}`);
+      }
     }
   }
 
@@ -569,6 +641,7 @@ export async function saveProductDb(product: Product): Promise<Product> {
   const currentLocal = getProducts().filter(p => p.id !== product.id && p.id !== mapped.id);
   saveProducts([mapped, ...currentLocal]);
   
+  window.dispatchEvent(new Event('pneu_center_products_updated'));
   return mapped;
 }
 

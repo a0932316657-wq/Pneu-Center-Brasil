@@ -15,6 +15,28 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
     openWhatsAppChat(msg);
   };
 
+  const technicalSpecs = [
+    { label: 'Categoria Comercial', value: product.technical_category },
+    { label: 'Terreno (Terrain)', value: product.terrain },
+    { label: 'Índice de Carga', value: product.load_index },
+    { label: 'Capacidade de Carga', value: product.load_capacity },
+    { label: 'Índice de Velocidade', value: product.speed_index },
+    { label: 'Velocidade Máxima', value: product.max_speed },
+    { label: 'Aros Compatíveis', value: product.compatible_rims },
+    { label: 'Largura Total (mm)', value: product.width_mm },
+    { label: 'Diâmetro Externo (mm)', value: product.diameter_mm },
+    { label: 'Treadwear', value: product.treadwear },
+    { label: 'Tração (Traction)', value: product.traction },
+    { label: 'Temperatura (Temperature)', value: product.temperature },
+    { label: 'RunFlat', value: product.runflat },
+    { label: 'Carga Extra (XL)', value: product.extra_load },
+    { label: 'Protetor de Borda', value: product.rim_protector },
+    { label: 'Quantidade de Lonas', value: product.ply_quantity },
+    { label: 'Montagem', value: product.mounting },
+    { label: 'Cor das Letras', value: product.letter_color },
+    { label: 'Profundidade do Sulco', value: product.groove_depth },
+  ].filter(spec => spec.value && spec.value.trim() !== '');
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
@@ -158,12 +180,25 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
             )}
 
             {/* Extended Technical Specs List */}
-            <div className="space-y-3">
+            <div className="space-y-4 border-t border-slate-100 pt-4">
               <h3 className="font-sans text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <Settings className="h-4.5 w-4.5 text-orange-500" />
-                Especificações Técnicas
+                Especificações de Fábrica
               </h3>
               
+              {/* If we have the new technical specs grid, display elegant key-values */}
+              {technicalSpecs.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs bg-slate-50 rounded-xl border border-slate-200 p-4 shadow-3xs">
+                  {technicalSpecs.map((spec, index) => (
+                    <div key={index} className="flex justify-between border-b border-slate-100 pb-1.5 pt-0.5">
+                      <span className="text-slate-400 font-medium uppercase text-[10px] tracking-wide">{spec.label}</span>
+                      <span className="text-slate-700 font-mono font-extrabold text-right">{spec.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Classic Bullet points */}
               <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 shrink-0 shadow-xs">
                 <ul className="space-y-2.5 font-sans text-xs sm:text-sm text-slate-750">
                   {product.specs && product.specs.map((spec, index) => (
@@ -178,6 +213,25 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
                   </li>
                 </ul>
               </div>
+
+              {/* INMETRO homologation seal if present */}
+              {product.inmetro_label_url && (
+                <div className="rounded-xl border border-slate-150 p-4 bg-white flex items-center gap-4 shadow-xs animate-fade-in">
+                  <div className="h-20 w-16 bg-white flex items-center justify-center border border-slate-100 p-1 shrink-0 rounded">
+                    <img
+                      src={product.inmetro_label_url}
+                      alt="Selo de homologação INMETRO"
+                      className="h-full w-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-mono tracking-wider font-extrabold text-orange-600 uppercase">Selo de Eficiência</span>
+                    <h4 className="font-sans text-xs font-bold text-slate-800 uppercase mt-0.5 leading-tight">Homologado pelo INMETRO / CONPET</h4>
+                    <p className="text-[11px] text-slate-500 leading-normal mt-1 leading-snug">Este modelo passou pelos testes nacionais obrigatórios de resistência ao rolamento, aderência em pista molhada e ruído externo.</p>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

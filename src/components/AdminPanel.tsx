@@ -140,6 +140,28 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [prodIsFeatured, setProdIsFeatured] = useState(false);
   const [prodIsActive, setProdIsActive] = useState(true);
 
+  // New Technical States
+  const [prodTechnicalCategory, setProdTechnicalCategory] = useState('');
+  const [prodTerrain, setProdTerrain] = useState('');
+  const [prodLoadIndex, setProdLoadIndex] = useState('');
+  const [prodLoadCapacity, setProdLoadCapacity] = useState('');
+  const [prodSpeedIndex, setProdSpeedIndex] = useState('');
+  const [prodMaxSpeed, setProdMaxSpeed] = useState('');
+  const [prodCompatibleRims, setProdCompatibleRims] = useState('');
+  const [prodWidthMm, setProdWidthMm] = useState('');
+  const [prodDiameterMm, setProdDiameterMm] = useState('');
+  const [prodTreadwear, setProdTreadwear] = useState('');
+  const [prodTraction, setProdTraction] = useState('');
+  const [prodTemperature, setProdTemperature] = useState('');
+  const [prodRunflat, setProdRunflat] = useState('');
+  const [prodExtraLoad, setProdExtraLoad] = useState('');
+  const [prodRimProtector, setProdRimProtector] = useState('');
+  const [prodPlyQuantity, setProdPlyQuantity] = useState('');
+  const [prodMounting, setProdMounting] = useState('');
+  const [prodLetterColor, setProdLetterColor] = useState('');
+  const [prodGrooveDepth, setProdGrooveDepth] = useState('');
+  const [prodInmetroLabelUrl, setProdInmetroLabelUrl] = useState('');
+
   // Form states for custom logo
   const [tempLogo, setTempLogo] = useState<string | null>(null);
 
@@ -311,6 +333,29 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       setProdGallery(target.gallery || []);
       setProdIsFeatured(target.featured !== undefined ? target.featured : false);
       setProdIsActive(target.active !== undefined ? target.active : true);
+
+      // Populate Technical Fields
+      setProdTechnicalCategory(target.technical_category || '');
+      setProdTerrain(target.terrain || '');
+      setProdLoadIndex(target.load_index || '');
+      setProdLoadCapacity(target.load_capacity || '');
+      setProdSpeedIndex(target.speed_index || '');
+      setProdMaxSpeed(target.max_speed || '');
+      setProdCompatibleRims(target.compatible_rims || '');
+      setProdWidthMm(target.width_mm || '');
+      setProdDiameterMm(target.diameter_mm || '');
+      setProdTreadwear(target.treadwear || '');
+      setProdTraction(target.traction || '');
+      setProdTemperature(target.temperature || '');
+      setProdRunflat(target.runflat || '');
+      setProdExtraLoad(target.extra_load || '');
+      setProdRimProtector(target.rim_protector || '');
+      setProdPlyQuantity(target.ply_quantity || '');
+      setProdMounting(target.mounting || '');
+      setProdLetterColor(target.letter_color || '');
+      setProdGrooveDepth(target.groove_depth || '');
+      setProdInmetroLabelUrl(target.inmetro_label_url || '');
+
       setActiveTab('add-product');
     } else {
       setEditingProduct(null);
@@ -330,6 +375,28 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       setProdGallery([]);
       setProdIsFeatured(false);
       setProdIsActive(true);
+
+      // Reset Technical Fields
+      setProdTechnicalCategory('');
+      setProdTerrain('');
+      setProdLoadIndex('');
+      setProdLoadCapacity('');
+      setProdSpeedIndex('');
+      setProdMaxSpeed('');
+      setProdCompatibleRims('');
+      setProdWidthMm('');
+      setProdDiameterMm('');
+      setProdTreadwear('');
+      setProdTraction('');
+      setProdTemperature('');
+      setProdRunflat('');
+      setProdExtraLoad('');
+      setProdRimProtector('');
+      setProdPlyQuantity('');
+      setProdMounting('');
+      setProdLetterColor('');
+      setProdGrooveDepth('');
+      setProdInmetroLabelUrl('');
     }
   };
 
@@ -524,7 +591,29 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         priceStatus: prodPriceStatus,
         gallery: prodGallery,
         featured: prodIsFeatured,
-        active: prodIsActive
+        active: prodIsActive,
+
+        // Technical specs
+        technical_category: prodTechnicalCategory.trim(),
+        terrain: prodTerrain.trim(),
+        load_index: prodLoadIndex.trim(),
+        load_capacity: prodLoadCapacity.trim(),
+        speed_index: prodSpeedIndex.trim(),
+        max_speed: prodMaxSpeed.trim(),
+        compatible_rims: prodCompatibleRims.trim(),
+        width_mm: prodWidthMm.trim(),
+        diameter_mm: prodDiameterMm.trim(),
+        treadwear: prodTreadwear.trim(),
+        traction: prodTraction.trim(),
+        temperature: prodTemperature.trim(),
+        runflat: prodRunflat.trim(),
+        extra_load: prodExtraLoad.trim(),
+        rim_protector: prodRimProtector.trim(),
+        ply_quantity: prodPlyQuantity.trim(),
+        mounting: prodMounting.trim(),
+        letter_color: prodLetterColor.trim(),
+        groove_depth: prodGrooveDepth.trim(),
+        inmetro_label_url: prodInmetroLabelUrl.trim()
       };
 
       await saveProductDb(cleanProduct);
@@ -841,109 +930,127 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = [
-      'name',
-      'brand',
-      'measure',
-      'rim',
-      'category',
-      'application',
-      'short_description',
-      'full_description',
-      'technical_specs',
-      'price',
-      'show_price',
-      'availability_status',
-      'main_image_url',
-      'featured',
-      'active'
-    ];
-    
-    const sampleData = [
-      'Pneu Pirelli Cinturato P1 175/70 R13',
-      'Pirelli',
-      '175/70 R13',
-      '13',
-      'Carro de passeio',
-      'Uso urbano e rodoviário diário con conforto',
-      'Pneu Aro 13 ideal para carros de passeio compactos',
-      'Oferece ótima durabilidade, frenagem segura em pista molhada e excelente custo-benefício para rodar na cidade ou estrada.',
-      '["Desenho: Simétrico", "Aderência (Traction): A", "Temperatura (Temperature): B"]',
-      '379.90',
-      'true',
-      'Disponível',
-      '',
-      'false',
-      'true'
-    ];
+    try {
+      const csvContent = "\uFEFFname;brand;measure;rim;category;application;short_description;full_description;technical_specs;price;show_price;availability_status;main_image_url;featured;active\n" +
+        "Pneu Pirelli 175/70 R13;Pirelli;175/70 R13;13;Passeio;Uso urbano;Pneu aro 13;Descrição completa;Especificações;379.90;true;Disponível;;false;true\n" +
+        "Pneu Michelin 175/70 R13;Michelin;175/70 R13;13;Passeio;Uso urbano;Pneu aro 13;Descrição completa;Especificações;399.90;true;Disponível;;false;true";
 
-    const csvContent = [
-      headers.join(';'),
-      sampleData.map(val => `"${val.replace(/"/g, '""')}"`).join(';')
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'modelo_importacao_pneus.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    triggerFeedback('Modelo CSV baixado! Preencha e salve como .csv para importação.');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'modelo-produtos-pneu-center.csv';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      triggerFeedback('Modelo CSV baixado de forma offline com sucesso!');
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao baixar modelo CSV: ${err.message || err}`, 'error');
+    }
   };
 
   const handleExportCatalog = () => {
-    const headers = [
-      'name',
-      'brand',
-      'measure',
-      'rim',
-      'category',
-      'application',
-      'short_description',
-      'full_description',
-      'technical_specs',
-      'price',
-      'show_price',
-      'availability_status',
-      'main_image_url',
-      'featured',
-      'active'
-    ];
+    try {
+      const headers = [
+        'name',
+        'brand',
+        'measure',
+        'rim',
+        'category',
+        'application',
+        'short_description',
+        'full_description',
+        'technical_specs',
+        'price',
+        'show_price',
+        'availability_status',
+        'main_image_url',
+        'featured',
+        'active',
+        'technical_category',
+        'terrain',
+        'load_index',
+        'load_capacity',
+        'speed_index',
+        'max_speed',
+        'compatible_rims',
+        'width_mm',
+        'diameter_mm',
+        'treadwear',
+        'traction',
+        'temperature',
+        'runflat',
+        'extra_load',
+        'rim_protector',
+        'ply_quantity',
+        'mounting',
+        'letter_color',
+        'groove_depth',
+        'inmetro_label_url'
+      ];
 
-    const rows = productsList.map(p => {
-      return [
-        p.name || '',
-        p.brand || '',
-        p.measure || '',
-        (p.rim || '').toString(),
-        p.category || '',
-        p.application || '',
-        p.shortDesc || '',
-        p.fullDesc || '',
-        JSON.stringify(p.specs || []),
-        p.price != null ? p.price.toString() : '',
-        p.priceStatus === 'exibir' ? 'true' : 'false',
-        p.status || 'Em estoque',
-        p.image || '',
-        p.featured ? 'true' : 'false',
-        p.active !== false ? 'true' : 'false'
-      ].map(val => `"${val.replace(/"/g, '""')}"`).join(';');
-    });
+      const rows = productsList.map(p => {
+        return [
+          p.name || '',
+          p.brand || '',
+          p.measure || '',
+          (p.rim || '').toString(),
+          p.category || '',
+          p.application || '',
+          p.shortDesc || '',
+          p.fullDesc || '',
+          JSON.stringify(p.specs || []),
+          p.price != null ? p.price.toString() : '',
+          p.priceStatus === 'exibir' ? 'true' : 'false',
+          p.status || 'Em estoque',
+          p.image || '',
+          p.featured ? 'true' : 'false',
+          p.active !== false ? 'true' : 'false',
+          p.technical_category || '',
+          p.terrain || '',
+          p.load_index || '',
+          p.load_capacity || '',
+          p.speed_index || '',
+          p.max_speed || '',
+          p.compatible_rims || '',
+          p.width_mm || '',
+          p.diameter_mm || '',
+          p.treadwear || '',
+          p.traction || '',
+          p.temperature || '',
+          p.runflat || '',
+          p.extra_load || '',
+          p.rim_protector || '',
+          p.ply_quantity || '',
+          p.mounting || '',
+          p.letter_color || '',
+          p.groove_depth || '',
+          p.inmetro_label_url || ''
+        ].map(val => {
+          const escaped = val.replace(/"/g, '""');
+          return `"${escaped}"`;
+        }).join(';');
+      });
 
-    const csvContent = [headers.join(';'), ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'catalogo_produtos_exportado.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    triggerFeedback(`Catálogo exportado com sucesso! ${productsList.length} produtos incluídos.`);
+      const csvContent = "\uFEFF" + [headers.join(';'), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'catalogo_produtos_exportado.csv';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      triggerFeedback(`Catálogo exportado com sucesso! ${productsList.length} produtos incluídos.`);
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao exportar catálogo: ${err.message || err}`, 'error');
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1103,6 +1210,28 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         
         const technicalSpecsStr = (row[colIndices['technical_specs']] || '').trim();
 
+        // Safe fetch from potentially unmapped CSV technical columns
+        const technical_category = colIndices['technical_category'] !== undefined ? (row[colIndices['technical_category']] || '').trim() : '';
+        const terrain = colIndices['terrain'] !== undefined ? (row[colIndices['terrain']] || '').trim() : '';
+        const load_index = colIndices['load_index'] !== undefined ? (row[colIndices['load_index']] || '').trim() : '';
+        const load_capacity = colIndices['load_capacity'] !== undefined ? (row[colIndices['load_capacity']] || '').trim() : '';
+        const speed_index = colIndices['speed_index'] !== undefined ? (row[colIndices['speed_index']] || '').trim() : '';
+        const max_speed = colIndices['max_speed'] !== undefined ? (row[colIndices['max_speed']] || '').trim() : '';
+        const compatible_rims = colIndices['compatible_rims'] !== undefined ? (row[colIndices['compatible_rims']] || '').trim() : '';
+        const width_mm = colIndices['width_mm'] !== undefined ? (row[colIndices['width_mm']] || '').trim() : '';
+        const diameter_mm = colIndices['diameter_mm'] !== undefined ? (row[colIndices['diameter_mm']] || '').trim() : '';
+        const treadwear = colIndices['treadwear'] !== undefined ? (row[colIndices['treadwear']] || '').trim() : '';
+        const traction = colIndices['traction'] !== undefined ? (row[colIndices['traction']] || '').trim() : '';
+        const temperature = colIndices['temperature'] !== undefined ? (row[colIndices['temperature']] || '').trim() : '';
+        const runflat = colIndices['runflat'] !== undefined ? (row[colIndices['runflat']] || '').trim() : '';
+        const extra_load = colIndices['extra_load'] !== undefined ? (row[colIndices['extra_load']] || '').trim() : '';
+        const rim_protector = colIndices['rim_protector'] !== undefined ? (row[colIndices['rim_protector']] || '').trim() : '';
+        const ply_quantity = colIndices['ply_quantity'] !== undefined ? (row[colIndices['ply_quantity']] || '').trim() : '';
+        const mounting = colIndices['mounting'] !== undefined ? (row[colIndices['mounting']] || '').trim() : '';
+        const letter_color = colIndices['letter_color'] !== undefined ? (row[colIndices['letter_color']] || '').trim() : '';
+        const groove_depth = colIndices['groove_depth'] !== undefined ? (row[colIndices['groove_depth']] || '').trim() : '';
+        const inmetro_label_url = colIndices['inmetro_label_url'] !== undefined ? (row[colIndices['inmetro_label_url']] || '').trim() : '';
+
         if (brand && !activeBrandNamesSet.has(brand.toLowerCase())) {
           try {
             const newBrandObj: Brand = {
@@ -1160,7 +1289,29 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
           price,
           priceStatus,
           featured: featuredStr === 'true',
-          active: activeStr !== 'false'
+          active: activeStr !== 'false',
+
+          // Injecting new specifications
+          technical_category,
+          terrain,
+          load_index,
+          load_capacity,
+          speed_index,
+          max_speed,
+          compatible_rims,
+          width_mm,
+          diameter_mm,
+          treadwear,
+          traction,
+          temperature,
+          runflat,
+          extra_load,
+          rim_protector,
+          ply_quantity,
+          mounting,
+          letter_color,
+          groove_depth,
+          inmetro_label_url
         };
 
         await saveProductDb(productData);
@@ -2226,6 +2377,134 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   />
                 </div>
 
+              </div>
+
+              {/* Informações Técnicas Conpet/Inmetro Opcionais */}
+              <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-4">
+                <div>
+                  <h3 className="font-extrabold text-xs sm:text-sm text-slate-800 uppercase tracking-wide">Ficha Técnica Detalhada (Campos Opcionais)</h3>
+                  <p className="text-[11px] text-slate-500">Todos os campos abaixo são opcionais e só serão exibidos no site caso sejam preenchidos.</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-2">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Categoria Comercial</label>
+                    <input type="text" value={prodTechnicalCategory} onChange={e => setProdTechnicalCategory(e.target.value)} placeholder="Ex: Passeio" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Terreno (Terrain)</label>
+                    <input type="text" value={prodTerrain} onChange={e => setProdTerrain(e.target.value)} placeholder="Ex: HT (Highway Terrain)" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Índice de Carga</label>
+                    <input type="text" value={prodLoadIndex} onChange={e => setProdLoadIndex(e.target.value)} placeholder="Ex: 82" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Capacidade de Carga</label>
+                    <input type="text" value={prodLoadCapacity} onChange={e => setProdLoadCapacity(e.target.value)} placeholder="Ex: 475 kg por pneu" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Índice de Velocidade</label>
+                    <input type="text" value={prodSpeedIndex} onChange={e => setProdSpeedIndex(e.target.value)} placeholder="Ex: H" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Velocidade Máxima</label>
+                    <input type="text" value={prodMaxSpeed} onChange={e => setProdMaxSpeed(e.target.value)} placeholder="Ex: 210 km/h" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Aros Compatíveis</label>
+                    <input type="text" value={prodCompatibleRims} onChange={e => setProdCompatibleRims(e.target.value)} placeholder="Ex: 13, 13.5" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Largura Total (mm)</label>
+                    <input type="text" value={prodWidthMm} onChange={e => setProdWidthMm(e.target.value)} placeholder="Ex: 177 mm" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Diâmetro Externo (mm)</label>
+                    <input type="text" value={prodDiameterMm} onChange={e => setProdDiameterMm(e.target.value)} placeholder="Ex: 568 mm" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Treadwear</label>
+                    <input type="text" value={prodTreadwear} onChange={e => setProdTreadwear(e.target.value)} placeholder="Ex: 420" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Tração (Traction)</label>
+                    <input type="text" value={prodTraction} onChange={e => setProdTraction(e.target.value)} placeholder="Ex: A" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Temperatura (Temperature)</label>
+                    <input type="text" value={prodTemperature} onChange={e => setProdTemperature(e.target.value)} placeholder="Ex: B" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">RunFlat</label>
+                    <input type="text" value={prodRunflat} onChange={e => setProdRunflat(e.target.value)} placeholder="Ex: Não / Sim" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Extra Load (XL)</label>
+                    <input type="text" value={prodExtraLoad} onChange={e => setProdExtraLoad(e.target.value)} placeholder="Ex: Sim" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Protetor de Borda</label>
+                    <input type="text" value={prodRimProtector} onChange={e => setProdRimProtector(e.target.value)} placeholder="Ex: Sim" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Quantidade de Lonas</label>
+                    <input type="text" value={prodPlyQuantity} onChange={e => setProdPlyQuantity(e.target.value)} placeholder="Ex: 4" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Montagem</label>
+                    <input type="text" value={prodMounting} onChange={e => setProdMounting(e.target.value)} placeholder="Ex: Sem câmara (TL)" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Cor das Letras</label>
+                    <input type="text" value={prodLetterColor} onChange={e => setProdLetterColor(e.target.value)} placeholder="Ex: Pretas" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">Profundidade do Sulco</label>
+                    <input type="text" value={prodGrooveDepth} onChange={e => setProdGrooveDepth(e.target.value)} placeholder="Ex: 7.2 mm" className="w-full rounded border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-orange-500" />
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-3 border-t border-slate-200">
+                  <span className="block text-[11px] font-bold text-slate-700 uppercase">Selo de Eficiência Energética (INMETRO / CONPET)</span>
+                  <div className="flex flex-col sm:flex-row items-center gap-4 bg-white rounded-lg border border-slate-200 p-3">
+                    <div className="h-16 w-20 border bg-checkerboard rounded flex items-center justify-center shrink-0">
+                      {prodInmetroLabelUrl ? (
+                        <img src={prodInmetroLabelUrl} alt="Selo Inmetro" className="h-full w-full object-contain p-0.5 animate-fade-in" />
+                      ) : (
+                        <span className="text-[9px] text-slate-400 font-mono italic">Sem Selo</span>
+                      )}
+                    </div>
+                    <div className="space-y-2 w-full">
+                      <div className="flex items-center gap-2">
+                        <label className="inline-flex items-center justify-center gap-1 bg-slate-800 hover:bg-slate-700 text-white font-bold text-[10px] uppercase px-3 py-1.5 rounded cursor-pointer transition-all">
+                          <span>Subir Selo do Dispositivo</span>
+                          <input type="file" accept="image/*" onChange={async (e) => {
+                            const files = e.target.files;
+                            if (files && files[0]) {
+                              if (!(await checkAuth())) return;
+                              setIsSavingProduct(true);
+                              try {
+                                const url = await uploadFile('pneu-center', 'products', files[0]);
+                                setProdInmetroLabelUrl(url);
+                                triggerFeedback('Selo INMETRO carregado com sucesso!');
+                              } catch (err: any) {
+                                console.error(err);
+                                triggerFeedback(`Erro ao subir selo: ${err.message || err}`, 'error');
+                              } finally {
+                                setIsSavingProduct(false);
+                              }
+                            }
+                          }} className="hidden" />
+                        </label>
+                        {prodInmetroLabelUrl && (
+                          <button type="button" onClick={() => setProdInmetroLabelUrl('')} className="text-[10px] font-bold text-red-650 hover:underline">REMOVER SELO</button>
+                        )}
+                      </div>
+                      <input type="text" value={prodInmetroLabelUrl} onChange={e => setProdInmetroLabelUrl(e.target.value)} placeholder="Ou cole a URL direta do selo de homologação do pneu..." className="w-full rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-[10px] text-slate-650 outline-none" />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Photo uploading blocks */}
