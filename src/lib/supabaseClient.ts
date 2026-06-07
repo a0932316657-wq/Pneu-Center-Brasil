@@ -165,29 +165,42 @@ export async function uploadFile(bucketName: string, folder: string, file: File)
     throw new Error('Supabase não configurado. Por favor, adicione as credenciais SUPABASE_URL e SUPABASE_KEY.');
   }
 
-  // 1. Validar Tipo (JPG, JPEG, PNG, WEBP)
-  const allowedExtensions = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  if (!allowedExtensions.includes(file.type.toLowerCase())) {
-    throw new Error('Tipo de imagem não permitido. Escolha JPG, JPEG, PNG ou WEBP.');
+  // 1. Validar Tipo (JPG, JPEG, PNG, WEBP + Formatos de Vídeo)
+  const isVideo = file.type.toLowerCase().startsWith('video/');
+  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+  
+  if (!allowedImageTypes.includes(file.type.toLowerCase()) && !allowedVideoTypes.includes(file.type.toLowerCase()) && !isVideo) {
+    throw new Error('Tipo de arquivo não permitido. Escolha imagens (JPG, JPEG, PNG, WEBP, GIF) ou vídeos (MP4, WEBM, OGG, MOV).');
   }
 
-  // 2. Validar tamanho máximo: 5MB Original
-  const maxSize_5MB = 5 * 1024 * 1024;
-  if (file.size > maxSize_5MB) {
-    throw new Error(`Arquivo muito grande! O limite de upload é de 5MB. Sua foto possui ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+  // 2. Validar tamanho máximo: 8MB para Imagem, 35MB para Vídeo
+  const maxImageSize = 8 * 1024 * 1024;
+  const maxVideoSize = 35 * 1024 * 1024;
+  const sizeLimit = isVideo ? maxVideoSize : maxImageSize;
+  
+  if (file.size > sizeLimit) {
+    const fileClass = isVideo ? 'vídeos' : 'imagens';
+    const limitName = isVideo ? '35MB' : '8MB';
+    throw new Error(`Arquivo muito grande! O limite de upload para ${fileClass} é de ${limitName}. Seu arquivo possui ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
   }
 
-  // Compress the image in-browser first to make the application super-light
+  // Compress the image in-browser first if it is an image to keep the application super-light
   let fileToUpload: File | Blob = file;
-  try {
-    fileToUpload = await compressImageIfNeeded(file);
-  } catch (err) {
-    console.warn('Erro ao pré-comprimir imagem, enviando arquivo original:', err);
+  if (!isVideo) {
+    try {
+      fileToUpload = await compressImageIfNeeded(file);
+    } catch (err) {
+      console.warn('Erro ao pré-comprimir imagem, enviando arquivo original:', err);
+    }
   }
 
   // Sanitize file name to avoid issues with special characters
   const nameToUse = (fileToUpload instanceof File) ? fileToUpload.name : file.name;
-  const fileExt = 'jpg'; // We convert to jpg in compression, fallback to original extension
+  const extMatch = file.name.match(/\.([a-zA-Z0-9]+)$/);
+  const originalExt = extMatch ? extMatch[1].toLowerCase() : 'bin';
+  const fileExt = fileToUpload.type === 'image/jpeg' ? 'jpg' : originalExt;
+  
   const baseName = nameToUse.replace(/\.[^/.]+$/, "");
   const cleanName = baseName
     .replace(/[^a-zA-Z0-9]/g, '_')

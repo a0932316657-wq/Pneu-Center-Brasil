@@ -63,6 +63,22 @@ import {
 import { supabase, uploadFile, isSupabaseUrlAbsent, isSupabaseKeyAbsent } from '../lib/supabaseClient';
 import { BRANDS } from '../data';
 
+export function isVideoUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const lowercase = url.toLowerCase();
+  return (
+    lowercase.endsWith('.mp4') ||
+    lowercase.endsWith('.webm') ||
+    lowercase.endsWith('.ogg') ||
+    lowercase.endsWith('.mov') ||
+    lowercase.endsWith('.m4v') ||
+    lowercase.includes('video/mp4') ||
+    lowercase.includes('video/webm') ||
+    lowercase.includes('video/ogg') ||
+    lowercase.includes('video/quicktime')
+  );
+}
+
 interface AdminPanelProps {
   key?: string;
   onBackToHome: () => void;
@@ -771,10 +787,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         ...prev,
         heroImageUrl: publicUrl
       }));
-      triggerFeedback('Imagem de destaque enviada com sucesso! Lembre-se de clicar em salvar para aplicar.');
+      triggerFeedback('Mídia de destaque (Imagem/Vídeo) enviada com sucesso! Lembre-se de clicar em salvar para aplicar.');
     } catch (err: any) {
       console.error(err);
-      triggerFeedback(`Erro ao enviar imagem de destaque: ${err.message || err}`, 'error');
+      triggerFeedback(`Erro ao enviar mídia de destaque: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingHero(false);
     }
@@ -3180,10 +3196,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
             <div>
               <h1 className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
                 <Sparkles className="h-7 w-7 text-orange-500" />
-                Imagem de Destaque / Card Hero
+                Imagem ou Vídeo de Destaque / Card Hero
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Suba e configure a imagem de destaque da vitrine principal. A borda neon e o glow se ajustam automaticamente ao redor da sua imagem.
+                Suba e configure a imagem ou vídeo de destaque da vitrine principal. A borda neon e o glow se ajustam automaticamente ao redor do seu arquivo (suporta MP4 e WebM).
               </p>
             </div>
 
@@ -3196,10 +3212,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     Uploader e Parâmetros
                   </h3>
 
-                  {/* Image Select Control */}
+                  {/* Image/Video Select Control */}
                   <div className="space-y-3">
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Selecione a Imagem (Com ou sem fundo)
+                      Selecione uma Imagem ou Vídeo (Com ou sem fundo)
                     </label>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3208,12 +3224,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       }`}>
                         <Upload className={`h-8 w-8 mb-2 ${siteSettings.heroImageUrl ? 'text-green-500 animate-bounce' : 'text-slate-400'}`} />
                         <span className="text-xs font-bold uppercase text-slate-700">
-                          {isUploadingHero ? 'Enviando Imagem...' : 'Subir Imagem'}
+                          {isUploadingHero ? 'Enviando Arquivo...' : 'Subir Vídeo ou Imagem'}
                         </span>
-                        <span className="text-[10px] text-slate-400 mt-1">Formatos: PNG, JPG ou WEBP</span>
+                        <span className="text-[10px] text-slate-400 mt-1">Formatos: PNG, JPG, WEBP, GIF, MP4, WEBM</span>
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/*,video/*"
                           onChange={handleHeroImageUpload}
                           disabled={isUploadingHero}
                           className="hidden"
@@ -3223,7 +3239,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       {/* Remove Image Action */}
                       {siteSettings.heroImageUrl ? (
                         <div className="flex flex-col justify-center bg-slate-50 rounded-lg p-4 border border-slate-200">
-                          <span className="text-[10px] font-mono font-bold text-slate-400 uppercase mb-2 truncate">URL da imagem ativa:</span>
+                          <span className="text-[10px] font-mono font-bold text-slate-400 uppercase mb-2 truncate">URL da mídia ativa:</span>
                           <p className="text-[10px] font-mono text-slate-600 break-all leading-normal bg-white p-2 rounded border border-slate-150 max-h-12 overflow-y-auto mb-3">
                             {siteSettings.heroImageUrl}
                           </p>
@@ -3232,12 +3248,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                             onClick={handleRemoveHeroImage}
                             className="text-center rounded-lg border border-red-200 hover:bg-red-50 hover:border-red-300 text-red-650 font-bold text-[10px] uppercase py-2.5 transition-colors cursor-pointer"
                           >
-                            Remover Destaque / Usar Padrão
+                            Remover Mídia / Usar Padrão
                           </button>
                         </div>
                       ) : (
                         <div className="flex flex-col justify-center items-center bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
-                          <span className="text-[11px] font-semibold text-slate-400 italic">Nenhuma imagem enviada ainda.</span>
+                          <span className="text-[11px] font-semibold text-slate-400 italic">Nenhuma mídia enviada ainda.</span>
                           <span className="text-[10px] text-slate-400 mt-1 leading-normal">Utilizando pneu padrão da Home com borda neon laranja.</span>
                         </div>
                       )}
@@ -3417,7 +3433,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       }}
                     />
 
-                    {/* Animated Neon Wrapper adjusted closely around image */}
+                    {/* Animated Neon Wrapper adjusted closely around image or video */}
                     <div
                       className="inline-block relative shrink-0 max-w-full max-h-full transition-all duration-300"
                       style={{
@@ -3426,17 +3442,31 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                         boxShadow: `0 0 ${8 * parseFloat(siteSettings.heroGlowIntensity || '0.4')}px ${siteSettings.heroBorderColor || '#f97316'}, inset 0 0 ${4 * parseFloat(siteSettings.heroGlowIntensity || '0.4')}px ${siteSettings.heroBorderColor || '#f97316'}, 0 0 ${30 * parseFloat(siteSettings.heroGlowIntensity || '0.4')}px ${siteSettings.heroGlowColor || '#f97316'}`
                       }}
                     >
-                      <img
-                        src={siteSettings.heroImageUrl || 'https://raw.githubusercontent.com/antigravityai/wheelcenter/main/assets/featured-tire.png'}
-                        alt="Preview Destaque"
-                        className="max-h-56 max-w-full object-contain block select-none pointer-events-none"
-                        style={{
-                          borderRadius: `${siteSettings.heroBorderRadius || 24}px`,
-                        }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=400';
-                        }}
-                      />
+                      {isVideoUrl(siteSettings.heroImageUrl) ? (
+                        <video
+                          src={siteSettings.heroImageUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="max-h-56 max-w-full object-contain block select-none pointer-events-none"
+                          style={{
+                            borderRadius: `${siteSettings.heroBorderRadius || 24}px`,
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={siteSettings.heroImageUrl || 'https://raw.githubusercontent.com/antigravityai/wheelcenter/main/assets/featured-tire.png'}
+                          alt="Preview Destaque"
+                          className="max-h-56 max-w-full object-contain block select-none pointer-events-none"
+                          style={{
+                            borderRadius: `${siteSettings.heroBorderRadius || 24}px`,
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=400';
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -3447,7 +3477,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     <span className="text-emerald-400 font-bold block">Automático (Conteúdo Útil)</span>
                   </div>
                   <p className="leading-snug text-[10px] text-slate-500">
-                    O card se alinha perfeitamente ao redor do desenho físico da sua imagem! Evitando caixas pretas vazias ou sobrando espaços mortos. Os cantos arredondados suavizam o corte automático.
+                    O card se alinha perfeitamente ao redor do desenho físico da sua imagem ou vídeo! Evitando caixas vazias ou sobrando espaços mortos. Os cantos arredondados suavizam o corte automático.
                   </p>
                 </div>
               </div>

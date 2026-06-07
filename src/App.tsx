@@ -48,6 +48,22 @@ import {
 // WhatsApp direct messenger
 import { openWhatsAppChat, DEFAULT_WHATSAPP_MESSAGE, getProductMessage } from './lib/whatsapp';
 
+function isVideoUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const lowercase = url.toLowerCase();
+  return (
+    lowercase.endsWith('.mp4') ||
+    lowercase.endsWith('.webm') ||
+    lowercase.endsWith('.ogg') ||
+    lowercase.endsWith('.mov') ||
+    lowercase.endsWith('.m4v') ||
+    lowercase.includes('video/mp4') ||
+    lowercase.includes('video/webm') ||
+    lowercase.includes('video/ogg') ||
+    lowercase.includes('video/quicktime')
+  );
+}
+
 export default function App() {
   const [routeState, setRouteState] = useState<RouteState>({ path: 'home' });
   const [products, setProducts] = useState<Product[]>(getProducts());
@@ -571,6 +587,7 @@ export default function App() {
                           const gIntensity = parseFloat(siteSettings.heroGlowIntensity || '0.4');
                           const hasCustomHero = siteSettings.heroImageUrl && siteSettings.heroImageUrl.trim() !== '';
                           const activeHeroUrl = hasCustomHero ? siteSettings.heroImageUrl : heroTiresImage;
+                          const isCustomVideo = hasCustomHero && isVideoUrl(siteSettings.heroImageUrl);
 
                           return (
                             <motion.div
@@ -591,16 +608,30 @@ export default function App() {
                                 boxShadow: `0 0 ${18 * gIntensity}px ${borderClr}, inset 0 0 ${10 * gIntensity}px ${borderClr}, 0 0 ${35 * gIntensity}px ${glowClr}`
                               }}
                             >
-                              <img
-                                src={activeHeroUrl}
-                                alt="Destaque Pneu Center Brasil"
-                                referrerPolicy="no-referrer"
-                                className="h-52 sm:h-72 w-auto object-contain select-none pointer-events-none block"
-                                style={{
-                                  borderRadius: bRad,
-                                  mixBlendMode: hasCustomHero ? 'normal' : 'lighten'
-                                }}
-                              />
+                              {isCustomVideo ? (
+                                <video
+                                  src={activeHeroUrl}
+                                  autoPlay
+                                  loop
+                                  muted
+                                  playsInline
+                                  className="h-52 sm:h-72 w-auto object-contain select-none pointer-events-none block animate-fade-in"
+                                  style={{
+                                    borderRadius: bRad,
+                                  }}
+                                />
+                              ) : (
+                                <img
+                                  src={activeHeroUrl}
+                                  alt="Destaque Pneu Center Brasil"
+                                  referrerPolicy="no-referrer"
+                                  className="h-52 sm:h-72 w-auto object-contain select-none pointer-events-none block animate-fade-in"
+                                  style={{
+                                    borderRadius: bRad,
+                                    mixBlendMode: hasCustomHero ? 'normal' : 'lighten'
+                                  }}
+                                />
+                              )}
                             </motion.div>
                           );
                         })()}
