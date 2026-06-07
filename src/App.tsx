@@ -28,7 +28,7 @@ import heroTiresImage from './assets/images/hero_tires_1780836675879.png';
 // Shared types and data
 import { AppRoute, RouteState, Product } from './types';
 import { BRANDS } from './data';
-import { getProducts, getBrands, getRimCards, Brand, RimCard } from './lib/appStore';
+import { getProducts, getBrands, getRimCards, getSettings, Brand, RimCard } from './lib/appStore';
 
 // Custom components
 import Navbar from './components/Navbar';
@@ -53,6 +53,14 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>(getProducts());
   const [brands, setBrands] = useState<Brand[]>(getBrands());
   const [rimCards, setRimCards] = useState<RimCard[]>(getRimCards());
+  const [siteSettings, setSiteSettings] = useState(getSettings());
+
+  const refreshStoreData = () => {
+    setProducts(getProducts());
+    setBrands(getBrands());
+    setRimCards(getRimCards());
+    setSiteSettings(getSettings());
+  };
   
   // Minute counter to tick and auto-refresh the hourly rotate list and countdown
   const [minutesCounter, setMinutesCounter] = useState(0);
@@ -555,26 +563,47 @@ export default function App() {
                           });
                         })()}
 
-                        {/* Central Floating/Hovering Premium Tire Stack wrapped in an elegant rounded glowing orange LED container */}
-                        <motion.div
-                          animate={{
-                            y: [0, -12, 0],
-                            rotate: [0, 0.5, -0.5, 0],
-                          }}
-                          transition={{
-                            duration: 5,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                          className="z-10 p-5 sm:p-6 rounded-[2.5rem] border border-orange-500 shadow-[0_0_25px_rgba(249,115,22,0.5),_inset_0_0_18px_rgba(249,115,22,0.3)] bg-slate-950/70 backdrop-blur-md flex items-center justify-center select-none pointer-events-none"
-                        >
-                          <img
-                            src={heroTiresImage}
-                            alt="Pneus Premium e Roda Esportiva"
-                            referrerPolicy="no-referrer"
-                            className="h-52 sm:h-72 w-auto object-contain mix-blend-lighten select-none pointer-events-none"
-                          />
-                        </motion.div>
+                        {/* Central Floating/Hovering Premium Tire Card with customized neon LED border and glow */}
+                        {(() => {
+                          const borderClr = siteSettings.heroBorderColor || '#f97316';
+                          const glowClr = siteSettings.heroGlowColor || '#f97316';
+                          const bRad = `${siteSettings.heroBorderRadius || 24}px`;
+                          const gIntensity = parseFloat(siteSettings.heroGlowIntensity || '0.4');
+                          const hasCustomHero = siteSettings.heroImageUrl && siteSettings.heroImageUrl.trim() !== '';
+                          const activeHeroUrl = hasCustomHero ? siteSettings.heroImageUrl : heroTiresImage;
+
+                          return (
+                            <motion.div
+                              animate={{
+                                y: [0, -12, 0],
+                                rotate: [0, 0.5, -0.5, 0],
+                              }}
+                              transition={{
+                                duration: 5,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }}
+                              className="z-10 bg-slate-950/70 backdrop-blur-md inline-block relative shrink-0 transition-all duration-300 select-none pointer-events-none"
+                              style={{
+                                padding: hasCustomHero ? '0px' : '20px',
+                                borderRadius: bRad,
+                                border: `1px solid ${borderClr}`,
+                                boxShadow: `0 0 ${18 * gIntensity}px ${borderClr}, inset 0 0 ${10 * gIntensity}px ${borderClr}, 0 0 ${35 * gIntensity}px ${glowClr}`
+                              }}
+                            >
+                              <img
+                                src={activeHeroUrl}
+                                alt="Destaque Pneu Center Brasil"
+                                referrerPolicy="no-referrer"
+                                className="h-52 sm:h-72 w-auto object-contain select-none pointer-events-none block"
+                                style={{
+                                  borderRadius: bRad,
+                                  mixBlendMode: hasCustomHero ? 'normal' : 'lighten'
+                                }}
+                              />
+                            </motion.div>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -1438,7 +1467,7 @@ export default function App() {
 
           {/* 12. ADMIN PANEL VIEW */}
           {routeState.path === 'paineladmin' && (
-            <AdminPanel key="admin-panel" onBackToHome={() => navigateTo('home')} />
+            <AdminPanel key="admin-panel" onBackToHome={() => navigateTo('home')} onRefreshPublicData={refreshStoreData} />
           )}
 
         </AnimatePresence>

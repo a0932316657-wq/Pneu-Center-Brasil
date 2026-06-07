@@ -78,7 +78,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Dashboard navigation tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'marcas' | 'cards-do-aro' | 'import-export'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image'>('overview');
   
   // App states loaded from store
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -93,7 +93,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     whatsappRaw: '',
     email: '',
     hours: '',
-    slogan: ''
+    slogan: '',
+    heroImageUrl: '',
+    heroBorderColor: '#f97316',
+    heroGlowColor: '#f97316',
+    heroBorderRadius: '24',
+    heroGlowIntensity: '0.4'
   });
   const [currentLogo, setCurrentLogo] = useState<string | null>(null);
 
@@ -748,6 +753,55 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     } catch (err: any) {
       console.error(err);
       triggerFeedback(`Erro ao salvar configurações: ${err.message || err}`, 'error');
+    }
+  };
+
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
+
+  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!(await checkAuth())) return;
+
+    setIsUploadingHero(true);
+    try {
+      const publicUrl = await uploadFile('pneu-center', 'hero', file);
+      setSiteSettings(prev => ({
+        ...prev,
+        heroImageUrl: publicUrl
+      }));
+      triggerFeedback('Imagem de destaque enviada com sucesso! Lembre-se de clicar em salvar para aplicar.');
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao enviar imagem de destaque: ${err.message || err}`, 'error');
+    } finally {
+      setIsUploadingHero(false);
+    }
+  };
+
+  const handleRemoveHeroImage = () => {
+    setSiteSettings(prev => ({
+      ...prev,
+      heroImageUrl: ''
+    }));
+    triggerFeedback('Imagem de destaque removida. Clique em salvar para confirmar.');
+  };
+
+  const handleSaveHeroSettings = async () => {
+    if (!(await checkAuth())) return;
+
+    setIsSavingLogo(true);
+    try {
+      await saveSettingsDb(siteSettings);
+      saveSettings(siteSettings);
+      triggerFeedback('Configurações da Imagem de Destaque salvas no Supabase!');
+      onRefreshPublicData();
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao salvar configurações da imagem de destaque: ${err.message || err}`, 'error');
+    } finally {
+      setIsSavingLogo(false);
     }
   };
 
@@ -1714,6 +1768,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               { id: 'cards-do-aro', label: 'Cards de Aro', icon: Database },
               { id: 'logo-identity', label: 'Logo e Identidade', icon: ImageIcon },
               { id: 'site-settings', label: 'Configurações do Site', icon: SettingsIcon },
+              { id: 'hero-image', label: 'Imagem de Destaque', icon: Sparkles },
             ].map((btn) => {
               const Icon = btn.icon;
               const isSel = activeTab === btn.id;
@@ -3112,6 +3167,292 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               </div>
 
             </form>
+          </motion.div>
+        )}
+
+        {/* TAB 5.5: HERO IMAGE CARD SETTINGS */}
+        {activeTab === 'hero-image' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6 animate-fade-in text-slate-800"
+          >
+            <div>
+              <h1 className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                <Sparkles className="h-7 w-7 text-orange-500" />
+                Imagem de Destaque / Card Hero
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Suba e configure a imagem de destaque da vitrine principal. A borda neon e o glow se ajustam automaticamente ao redor da sua imagem.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              
+              {/* CONFIG PANEL - 7 cols */}
+              <div className="lg:col-span-7 space-y-6">
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
+                  <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider border-b border-slate-150 pb-2">
+                    Uploader e Parâmetros
+                  </h3>
+
+                  {/* Image Select Control */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Selecione a Imagem (Com ou sem fundo)
+                    </label>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-all ${
+                        siteSettings.heroImageUrl ? 'border-green-300 bg-green-50/20' : 'border-slate-350 hover:border-orange-400 bg-slate-50'
+                      }`}>
+                        <Upload className={`h-8 w-8 mb-2 ${siteSettings.heroImageUrl ? 'text-green-500 animate-bounce' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold uppercase text-slate-700">
+                          {isUploadingHero ? 'Enviando Imagem...' : 'Subir Imagem'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 mt-1">Formatos: PNG, JPG ou WEBP</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleHeroImageUpload}
+                          disabled={isUploadingHero}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {/* Remove Image Action */}
+                      {siteSettings.heroImageUrl ? (
+                        <div className="flex flex-col justify-center bg-slate-50 rounded-lg p-4 border border-slate-200">
+                          <span className="text-[10px] font-mono font-bold text-slate-400 uppercase mb-2 truncate">URL da imagem ativa:</span>
+                          <p className="text-[10px] font-mono text-slate-600 break-all leading-normal bg-white p-2 rounded border border-slate-150 max-h-12 overflow-y-auto mb-3">
+                            {siteSettings.heroImageUrl}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleRemoveHeroImage}
+                            className="text-center rounded-lg border border-red-200 hover:bg-red-50 hover:border-red-300 text-red-650 font-bold text-[10px] uppercase py-2.5 transition-colors cursor-pointer"
+                          >
+                            Remover Destaque / Usar Padrão
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col justify-center items-center bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
+                          <span className="text-[11px] font-semibold text-slate-400 italic">Nenhuma imagem enviada ainda.</span>
+                          <span className="text-[10px] text-slate-400 mt-1 leading-normal">Utilizando pneu padrão da Home com borda neon laranja.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Neon custom values sliders */}
+                  <div className="space-y-4 pt-4 border-t border-slate-150">
+                    
+                    {/* Borda Neon Presets */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Atalhos de Cores Neon (Temas Rápidos)
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { name: 'Laranja LED', border: '#f97316', glow: '#ea580c' },
+                          { name: 'Vermelho Nitro', border: '#ef4444', glow: '#b91c1c' },
+                          { name: 'Verde Ácido', border: '#22c55e', glow: '#15803d' },
+                          { name: 'Laser Ciano', border: '#06b6d4', glow: '#0891b2' },
+                          { name: 'Voltagem Amarela', border: '#eab308', glow: '#ca8a04' },
+                          { name: 'Plasma Roxo', border: '#a855f7', glow: '#7e22ce' },
+                        ].map((swatch, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setSiteSettings(prev => ({
+                                ...prev,
+                                heroBorderColor: swatch.border,
+                                heroGlowColor: swatch.glow
+                              }));
+                              triggerFeedback(`Cor alterada para ${swatch.name}!`);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 hover:border-slate-350 text-[10px] font-extrabold uppercase bg-white cursor-pointer transition-all"
+                          >
+                            <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: swatch.border }} />
+                            <span>{swatch.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Border Color Pick */}
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          Cor da Borda Neon Fina
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={siteSettings.heroBorderColor || '#f97316'}
+                            onChange={(e) => setSiteSettings({ ...siteSettings, heroBorderColor: e.target.value })}
+                            className="h-10 w-12 rounded cursor-pointer border border-slate-250 p-1 bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={siteSettings.heroBorderColor || '#f97316'}
+                            onChange={(e) => setSiteSettings({ ...siteSettings, heroBorderColor: e.target.value })}
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 uppercase outline-none focus:border-orange-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Glow Color Pick */}
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          Cor do Brilho / Glow
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={siteSettings.heroGlowColor || '#f97316'}
+                            onChange={(e) => setSiteSettings({ ...siteSettings, heroGlowColor: e.target.value })}
+                            className="h-10 w-12 rounded cursor-pointer border border-slate-250 p-1 bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={siteSettings.heroGlowColor || '#f97316'}
+                            onChange={(e) => setSiteSettings({ ...siteSettings, heroGlowColor: e.target.value })}
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 uppercase outline-none focus:border-orange-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                      {/* Border Radius px Slider */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            Arredondamento dos Cantos
+                          </label>
+                          <span className="text-[10px] font-mono font-bold text-slate-400">{(siteSettings.heroBorderRadius || '24')}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="60"
+                          step="1"
+                          value={siteSettings.heroBorderRadius || '24'}
+                          onChange={(e) => setSiteSettings({ ...siteSettings, heroBorderRadius: e.target.value })}
+                          className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-500 focus:outline-none focus:ring-0"
+                        />
+                        <span className="block text-[8.5px] text-slate-400 leading-normal">Determina os cantos redondos da imagem e da borda neon ligada à ela.</span>
+                      </div>
+
+                      {/* Glow Strength Slider */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            Intensidade do Neon & Brilho
+                          </label>
+                          <span className="text-[10px] font-mono font-bold text-slate-400">{(parseFloat(siteSettings.heroGlowIntensity || '0.4') * 100).toFixed(0)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={siteSettings.heroGlowIntensity || '0.4'}
+                          onChange={(e) => setSiteSettings({ ...siteSettings, heroGlowIntensity: e.target.value })}
+                          className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-orange-500 focus:outline-none focus:ring-0"
+                        />
+                        <span className="block text-[8.5px] text-slate-400 leading-normal">Controla a opacidade e a força do brilho holográfico projetado atrás do card.</span>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="flex items-center justify-end gap-3 pt-5 border-t border-slate-150">
+                    <button
+                      type="button"
+                      onClick={handleSaveHeroSettings}
+                      disabled={isSavingLogo}
+                      className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3.5 text-xs font-black uppercase cursor-pointer shadow-md shadow-orange-600/10 disabled:opacity-50"
+                    >
+                      {isSavingLogo ? 'Salvando...' : 'Salvar Alterações'}
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* LIVE DOCK PREVIEW CARD - 5 cols */}
+              <div className="lg:col-span-5 flex flex-col justify-between rounded-xl bg-[#091122] border border-slate-800 p-5 shadow-inner">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800/85 pb-2">
+                    <span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-400">PRÉ-VISUALIZAÇÃO EM TEMPO REAL</span>
+                    <span className="flex items-center gap-1 text-[9px] font-mono bg-orange-900/40 text-orange-400 font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border border-orange-500/25">
+                      ● Simulador
+                    </span>
+                  </div>
+
+                  <div className="h-72 w-full rounded-lg bg-slate-950 border border-slate-900 flex items-center justify-center p-6 relative overflow-hidden">
+                    
+                    {/* Dark Grid Automotive style background */}
+                    <div className="absolute inset-0 opacity-15 pointer-events-none" style={{
+                      backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px), radial-gradient(#1e293b 1px, transparent 1px)',
+                      backgroundSize: '20px 20px',
+                      backgroundPosition: '0 0, 10px 10px'
+                    }} />
+
+                    {/* Background Soft Glow */}
+                    <div 
+                      className="absolute rounded-full pointer-events-none blur-3xl transition-all duration-300"
+                      style={{
+                        width: '280px',
+                        height: '280px',
+                        backgroundColor: siteSettings.heroGlowColor || '#f97316',
+                        opacity: parseFloat(siteSettings.heroGlowIntensity || '0.4') * 0.15,
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                    />
+
+                    {/* Animated Neon Wrapper adjusted closely around image */}
+                    <div
+                      className="inline-block relative shrink-0 max-w-full max-h-full transition-all duration-300"
+                      style={{
+                        borderRadius: `${siteSettings.heroBorderRadius || 24}px`,
+                        border: `1px solid ${siteSettings.heroBorderColor || '#f97316'}`,
+                        boxShadow: `0 0 ${8 * parseFloat(siteSettings.heroGlowIntensity || '0.4')}px ${siteSettings.heroBorderColor || '#f97316'}, inset 0 0 ${4 * parseFloat(siteSettings.heroGlowIntensity || '0.4')}px ${siteSettings.heroBorderColor || '#f97316'}, 0 0 ${30 * parseFloat(siteSettings.heroGlowIntensity || '0.4')}px ${siteSettings.heroGlowColor || '#f97316'}`
+                      }}
+                    >
+                      <img
+                        src={siteSettings.heroImageUrl || 'https://raw.githubusercontent.com/antigravityai/wheelcenter/main/assets/featured-tire.png'}
+                        alt="Preview Destaque"
+                        className="max-h-56 max-w-full object-contain block select-none pointer-events-none"
+                        style={{
+                          borderRadius: `${siteSettings.heroBorderRadius || 24}px`,
+                        }}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=400';
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-2 border-t border-slate-800/80 pt-4 text-xs text-slate-400">
+                  <div className="flex justify-between">
+                    <span className="font-mono text-[9px] text-slate-400 uppercase tracking-widest block">Ajuste de Container:</span>
+                    <span className="text-emerald-400 font-bold block">Automático (Conteúdo Útil)</span>
+                  </div>
+                  <p className="leading-snug text-[10px] text-slate-500">
+                    O card se alinha perfeitamente ao redor do desenho físico da sua imagem! Evitando caixas pretas vazias ou sobrando espaços mortos. Os cantos arredondados suavizam o corte automático.
+                  </p>
+                </div>
+              </div>
+
+            </div>
           </motion.div>
         )}
 

@@ -12,6 +12,11 @@ export interface SiteSettings {
   email: string;
   hours: string;
   slogan: string;
+  heroImageUrl?: string;
+  heroBorderColor?: string;
+  heroGlowColor?: string;
+  heroBorderRadius?: string;
+  heroGlowIntensity?: string;
 }
 
 export interface Brand {
@@ -40,6 +45,11 @@ const DEFAULT_SETTINGS: SiteSettings = {
   email: 'contato.pneucenterbrasil@gmail.com',
   hours: 'Segunda a sexta, das 8h às 18h. Sábado, das 8h às 13h.',
   slogan: 'Catálogo Oficial Multimarcas',
+  heroImageUrl: '',
+  heroBorderColor: '#f97316',
+  heroGlowColor: '#f97316',
+  heroBorderRadius: '24',
+  heroGlowIntensity: '0.4',
 };
 
 const DEFAULT_BRANDS: Brand[] = [
@@ -323,6 +333,26 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
         case 'logo':
           resultLogo = val;
           break;
+        case 'hero_image_url':
+        case 'heroImageUrl':
+          resultSettings.heroImageUrl = val;
+          break;
+        case 'hero_border_color':
+        case 'heroBorderColor':
+          resultSettings.heroBorderColor = val;
+          break;
+        case 'hero_glow_color':
+        case 'heroGlowColor':
+          resultSettings.heroGlowColor = val;
+          break;
+        case 'hero_border_radius':
+        case 'heroBorderRadius':
+          resultSettings.heroBorderRadius = val;
+          break;
+        case 'hero_glow_intensity':
+        case 'heroGlowIntensity':
+          resultSettings.heroGlowIntensity = val;
+          break;
       }
     }
   } else {
@@ -336,6 +366,11 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
     resultSettings.email = row.email || resultSettings.email;
     resultSettings.hours = row.hours || resultSettings.hours;
     resultSettings.slogan = row.slogan || resultSettings.slogan;
+    resultSettings.heroImageUrl = row.hero_image_url || row.heroImageUrl || resultSettings.heroImageUrl;
+    resultSettings.heroBorderColor = row.hero_border_color || row.heroBorderColor || resultSettings.heroBorderColor;
+    resultSettings.heroGlowColor = row.hero_glow_color || row.heroGlowColor || resultSettings.heroGlowColor;
+    resultSettings.heroBorderRadius = row.hero_border_radius || row.heroBorderRadius || resultSettings.heroBorderRadius;
+    resultSettings.heroGlowIntensity = row.hero_glow_intensity || row.heroGlowIntensity || resultSettings.heroGlowIntensity;
     resultLogo = row.logo_url || row.logoUrl || row.logo || null;
   }
 
@@ -865,7 +900,17 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
         { key: 'whatsappRaw', value: settings.whatsappRaw },
         { key: 'email', value: settings.email },
         { key: 'hours', value: settings.hours },
-        { key: 'slogan', value: settings.slogan }
+        { key: 'slogan', value: settings.slogan },
+        { key: 'hero_image_url', value: settings.heroImageUrl || '' },
+        { key: 'heroImageUrl', value: settings.heroImageUrl || '' },
+        { key: 'hero_border_color', value: settings.heroBorderColor || '' },
+        { key: 'heroBorderColor', value: settings.heroBorderColor || '' },
+        { key: 'hero_glow_color', value: settings.heroGlowColor || '' },
+        { key: 'heroGlowColor', value: settings.heroGlowColor || '' },
+        { key: 'hero_border_radius', value: settings.heroBorderRadius || '' },
+        { key: 'heroBorderRadius', value: settings.heroBorderRadius || '' },
+        { key: 'hero_glow_intensity', value: settings.heroGlowIntensity || '' },
+        { key: 'heroGlowIntensity', value: settings.heroGlowIntensity || '' }
       ];
       
       const validDbKeys = rows.map(r => r.key);
@@ -890,7 +935,12 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
           { key: 'whatsapp_raw', value: settings.whatsappRaw },
           { key: 'email', value: settings.email },
           { key: 'hours', value: settings.hours },
-          { key: 'slogan', value: settings.slogan }
+          { key: 'slogan', value: settings.slogan },
+          { key: 'hero_image_url', value: settings.heroImageUrl || '' },
+          { key: 'hero_border_color', value: settings.heroBorderColor || '' },
+          { key: 'hero_glow_color', value: settings.heroGlowColor || '' },
+          { key: 'hero_border_radius', value: settings.heroBorderRadius || '' },
+          { key: 'hero_glow_intensity', value: settings.heroGlowIntensity || '' }
         ];
         await supabase.from('site_settings').upsert(initialKeys);
       }
@@ -915,6 +965,16 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
       setField('email', settings.email);
       setField('hours', settings.hours);
       setField('slogan', settings.slogan);
+      setField('hero_image_url', settings.heroImageUrl || '');
+      setField('heroImageUrl', settings.heroImageUrl || '');
+      setField('hero_border_color', settings.heroBorderColor || '');
+      setField('heroBorderColor', settings.heroBorderColor || '');
+      setField('hero_glow_color', settings.heroGlowColor || '');
+      setField('heroGlowColor', settings.heroGlowColor || '');
+      setField('hero_border_radius', settings.heroBorderRadius || '');
+      setField('heroBorderRadius', settings.heroBorderRadius || '');
+      setField('hero_glow_intensity', settings.heroGlowIntensity || '');
+      setField('heroGlowIntensity', settings.heroGlowIntensity || '');
 
       if (rows && rows.length > 0) {
         const rowId = rows[0].id;
