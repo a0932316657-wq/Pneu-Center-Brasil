@@ -17,6 +17,9 @@ export interface SiteSettings {
   heroGlowColor?: string;
   heroBorderRadius?: string;
   heroGlowIntensity?: string;
+  institutionalMediaUrl?: string;
+  institutionalMediaType?: 'image' | 'video';
+  institutionalMediaAlt?: string;
 }
 
 export interface Brand {
@@ -50,6 +53,9 @@ const DEFAULT_SETTINGS: SiteSettings = {
   heroGlowColor: '#f97316',
   heroBorderRadius: '24',
   heroGlowIntensity: '0.4',
+  institutionalMediaUrl: '',
+  institutionalMediaType: 'image',
+  institutionalMediaAlt: 'Pneu Center Brasil • Distribuição Digital',
 };
 
 const DEFAULT_BRANDS: Brand[] = [
@@ -353,6 +359,18 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
         case 'heroGlowIntensity':
           resultSettings.heroGlowIntensity = val;
           break;
+        case 'institutional_media_url':
+        case 'institutionalMediaUrl':
+          resultSettings.institutionalMediaUrl = val;
+          break;
+        case 'institutional_media_type':
+        case 'institutionalMediaType':
+          resultSettings.institutionalMediaType = val;
+          break;
+        case 'institutional_media_alt':
+        case 'institutionalMediaAlt':
+          resultSettings.institutionalMediaAlt = val;
+          break;
       }
     }
   } else {
@@ -371,6 +389,9 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
     resultSettings.heroGlowColor = row.hero_glow_color || row.heroGlowColor || resultSettings.heroGlowColor;
     resultSettings.heroBorderRadius = row.hero_border_radius || row.heroBorderRadius || resultSettings.heroBorderRadius;
     resultSettings.heroGlowIntensity = row.hero_glow_intensity || row.heroGlowIntensity || resultSettings.heroGlowIntensity;
+    resultSettings.institutionalMediaUrl = row.institutional_media_url || row.institutionalMediaUrl || resultSettings.institutionalMediaUrl;
+    resultSettings.institutionalMediaType = row.institutional_media_type || row.institutionalMediaType || resultSettings.institutionalMediaType;
+    resultSettings.institutionalMediaAlt = row.institutional_media_alt || row.institutionalMediaAlt || resultSettings.institutionalMediaAlt;
     resultLogo = row.logo_url || row.logoUrl || row.logo || null;
   }
 
@@ -910,7 +931,13 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
         { key: 'hero_border_radius', value: settings.heroBorderRadius || '' },
         { key: 'heroBorderRadius', value: settings.heroBorderRadius || '' },
         { key: 'hero_glow_intensity', value: settings.heroGlowIntensity || '' },
-        { key: 'heroGlowIntensity', value: settings.heroGlowIntensity || '' }
+        { key: 'heroGlowIntensity', value: settings.heroGlowIntensity || '' },
+        { key: 'institutional_media_url', value: settings.institutionalMediaUrl || '' },
+        { key: 'institutionalMediaUrl', value: settings.institutionalMediaUrl || '' },
+        { key: 'institutional_media_type', value: settings.institutionalMediaType || 'image' },
+        { key: 'institutionalMediaType', value: settings.institutionalMediaType || 'image' },
+        { key: 'institutional_media_alt', value: settings.institutionalMediaAlt || '' },
+        { key: 'institutionalMediaAlt', value: settings.institutionalMediaAlt || '' }
       ];
       
       const validDbKeys = rows.map(r => r.key);
@@ -940,7 +967,10 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
           { key: 'hero_border_color', value: settings.heroBorderColor || '' },
           { key: 'hero_glow_color', value: settings.heroGlowColor || '' },
           { key: 'hero_border_radius', value: settings.heroBorderRadius || '' },
-          { key: 'hero_glow_intensity', value: settings.heroGlowIntensity || '' }
+          { key: 'hero_glow_intensity', value: settings.heroGlowIntensity || '' },
+          { key: 'institutional_media_url', value: settings.institutionalMediaUrl || '' },
+          { key: 'institutional_media_type', value: settings.institutionalMediaType || 'image' },
+          { key: 'institutional_media_alt', value: settings.institutionalMediaAlt || '' }
         ];
         await supabase.from('site_settings').upsert(initialKeys);
       }
@@ -975,6 +1005,12 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
       setField('heroBorderRadius', settings.heroBorderRadius || '');
       setField('hero_glow_intensity', settings.heroGlowIntensity || '');
       setField('heroGlowIntensity', settings.heroGlowIntensity || '');
+      setField('institutional_media_url', settings.institutionalMediaUrl || '');
+      setField('institutionalMediaUrl', settings.institutionalMediaUrl || '');
+      setField('institutional_media_type', settings.institutionalMediaType || 'image');
+      setField('institutionalMediaType', settings.institutionalMediaType || 'image');
+      setField('institutional_media_alt', settings.institutionalMediaAlt || '');
+      setField('institutionalMediaAlt', settings.institutionalMediaAlt || '');
 
       if (rows && rows.length > 0) {
         const rowId = rows[0].id;

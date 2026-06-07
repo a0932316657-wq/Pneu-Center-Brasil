@@ -991,7 +991,9 @@ export default function App() {
               {/* SEÇÃO DE CONFIANÇA & SOBRE NÓS INTEGRADO */}
               <section id="sobre-section" className="py-16 bg-white border-b border-slate-200">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                  
+                  {/* Top area: main layout with text on left and 9:16 media on right */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
                     
                     {/* Left text column: Institutional overview */}
                     <div className="lg:col-span-7 space-y-6">
@@ -1000,16 +1002,16 @@ export default function App() {
                           CONFIABILIDADE DOCUMENTADA
                         </span>
                         <h2 className="font-sans text-3xl font-black text-slate-800 uppercase tracking-tight leading-tight">
-                          Pneu Center Brasil • Distribuição Digital
+                          {siteSettings.commercialName || 'Pneu Center Brasil'} • Distribuição Digital
                         </h2>
-                        <p className="text-xs sm:text-sm text-slate-500 font-sans">
+                        <p className="text-xs sm:text-sm text-slate-500 font-sans font-semibold">
                           Unimos a agilidade das pesquisas do catálogo virtual com a segurança de nossa curadoria técnica individualizada.
                         </p>
                       </div>
 
                       <div className="space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed font-sans">
                         <p>
-                          A <strong>Pneu Center Brasil</strong> é operada de forma consolidada pela empresa sob razão social de <strong>CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA</strong>, portadora do CNPJ oficial e regularizado <strong>20.085.983/0001-13</strong>. Nossa operação técnica comercial está localizada em sede física estabelecida na Av. Professor Francisco Morato, 2001, no bairro do Butantã, São Paulo - SP.
+                          A <strong>{siteSettings.commercialName || 'Pneu Center Brasil'}</strong> é operada de forma consolidada pela empresa sob razão social de <strong>{siteSettings.corporateName || 'CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA'}</strong>, portadora do CNPJ oficial e regularizado <strong>{siteSettings.cnpj || '20.085.983/0001-13'}</strong>. Nossa operação técnica comercial está localizada em sede física estabelecida na {siteSettings.address || 'Av. Professor Francisco Morato, 2001, no bairro do Butantã, São Paulo - SP'}.
                         </p>
                         <p>
                           Defendemos uma postura profissional transparente: <strong>não operamos com sistemas robóticos de faturamento direto online</strong>. Ao encontrar um pneu correspondente no catálogo, nosso consultor técnico inicia um contato direto via WhatsApp para garantir que a medida do pneu selecionado atenda perfeitamente o manual do condutor de seu carro, confirmando fisicamente o estoque antes de qualquer cobrança comercial.
@@ -1027,44 +1029,110 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Right column: Bento Trust badges */}
-                    <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Right column: 9:16 vertical media container */}
+                    <div className="lg:col-span-5 flex justify-center w-full">
+                      <div className="relative w-full max-w-[340px] aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-950 flex items-center justify-center group/inst">
+                        {/* Soft overlay pattern */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-orange-500/5 via-transparent to-transparent opacity-40 group-hover/inst:opacity-60 transition-opacity duration-300 pointer-events-none z-10" />
+
+                        {siteSettings.institutionalMediaUrl ? (
+                          siteSettings.institutionalMediaType === 'video' ? (
+                            <video
+                              src={siteSettings.institutionalMediaUrl}
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                              className="w-full h-full object-cover select-none pointer-events-none block"
+                            />
+                          ) : (
+                            <img
+                              src={siteSettings.institutionalMediaUrl}
+                              alt={siteSettings.institutionalMediaAlt || 'Distribuição Digital de Pneus'}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover select-none pointer-events-none block"
+                            />
+                          )
+                        ) : (
+                          // Premium fallback 9:16 card when no custom media is configured
+                          <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 p-6 flex flex-col justify-between">
+                            <div className="absolute inset-0 opacity-5" style={{
+                              backgroundImage: 'radial-gradient(#f97316 1px, transparent 1px)',
+                              backgroundSize: '24px 24px'
+                            }} />
+                            <div className="space-y-4 pt-4">
+                              <div className="inline-flex rounded-xl bg-orange-500/10 p-3 border border-orange-500/20">
+                                <Award className="h-6 w-6 text-orange-500" />
+                              </div>
+                              <h3 className="font-sans text-xl font-bold uppercase tracking-wide text-slate-200 leading-tight">
+                                Distribuição<br />
+                                de Alta<br />
+                                Performance
+                              </h3>
+                              <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+                                Logística otimizada, envio assegurado e suporte de especialistas dedicados para todo o território nacional.
+                              </p>
+                            </div>
+                            
+                            {/* Visual decorative circles/rims */}
+                            <div className="relative h-28 w-full scale-110 translate-y-6 flex justify-end items-end opacity-20 group-hover/inst:opacity-30 transition-opacity duration-300">
+                              <div className="w-24 h-24 rounded-full border-4 border-dashed border-slate-400 animate-[spin_60s_linear_infinite]" />
+                              <div className="w-16 h-16 rounded-full border-4 border-dashed border-slate-400 animate-[spin_40s_linear_infinite] -ml-6" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Bottom area: 4 trust badges in grid */}
+                  <div className="mt-16 pt-10 border-t border-slate-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                       
-                      <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-350 transition-colors flex flex-col justify-between min-h-[140px]">
-                        <Building2 className="h-7 w-7 text-orange-600" />
-                        <div>
+                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
+                        <div className="inline-flex rounded-lg bg-orange-500/10 p-2.5 border border-orange-500/20 w-fit">
+                          <Building2 className="h-6 w-6 text-orange-600" />
+                        </div>
+                        <div className="mt-4">
                           <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Razão Social Registrada</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-tight mt-1">Razão oficial CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA comprovada legalmente.</p>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5Packed">Razão oficial CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA comprovada legalmente.</p>
                         </div>
                       </div>
 
-                      <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-350 transition-colors flex flex-col justify-between min-h-[140px]">
-                        <ShieldCheck className="h-7 w-7 text-emerald-600" />
-                        <div>
+                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
+                        <div className="inline-flex rounded-lg bg-emerald-500/10 p-2.5 border border-emerald-500/20 w-fit">
+                          <ShieldCheck className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <div className="mt-4">
                           <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Garantias & NF Confirmadas</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-tight mt-1">1 ano de garantia total garantido pela nossa loja e 5 anos oficial direto de fábrica. Pneus novos originais com Nota Fiscal tudo certinho.</p>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">1 ano de garantia total garantido pela nossa loja e 5 anos oficial direto de fábrica. Pneus novos originais com Nota Fiscal tudo certinho.</p>
                         </div>
                       </div>
 
-                      <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-350 transition-colors flex flex-col justify-between min-h-[140px]">
-                        <UserCheck className="h-7 w-7 text-indigo-600" />
-                        <div>
+                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
+                        <div className="inline-flex rounded-lg bg-indigo-500/10 p-2.5 border border-indigo-500/20 w-fit">
+                          <UserCheck className="h-6 w-6 text-indigo-600" />
+                        </div>
+                        <div className="mt-4">
                           <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Atendimento Especializado</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-tight mt-1">Consultores humanos aptos para orientar sobre índices de velocidade e especificações de carga técnica.</p>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">Consultores humanos aptos para orientar sobre índices de velocidade e especificações de carga técnica.</p>
                         </div>
                       </div>
 
-                      <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-350 transition-colors flex flex-col justify-between min-h-[140px]">
-                        <Wrench className="h-7 w-7 text-blue-600" />
-                        <div>
+                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
+                        <div className="inline-flex rounded-lg bg-blue-500/10 p-2.5 border border-blue-500/20 w-fit">
+                          <Wrench className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="mt-4">
                           <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Showroom no Butantã</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-tight mt-1">Sede moderna e de fácil acesso integrada para logística rápida de retirada por agendamentos.</p>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">Sede moderna e de fácil acesso integrada para logística rápida de retirada por agendamentos.</p>
                         </div>
                       </div>
 
                     </div>
-
                   </div>
+
                 </div>
               </section>
 

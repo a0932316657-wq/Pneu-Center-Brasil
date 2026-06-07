@@ -28,7 +28,8 @@ import {
   Briefcase,
   Layers,
   ChevronRight,
-  Award
+  Award,
+  Film
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
@@ -114,7 +115,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     heroBorderColor: '#f97316',
     heroGlowColor: '#f97316',
     heroBorderRadius: '24',
-    heroGlowIntensity: '0.4'
+    heroGlowIntensity: '0.4',
+    institutionalMediaUrl: '',
+    institutionalMediaType: 'image',
+    institutionalMediaAlt: 'Pneu Center Brasil • Distribuição Digital'
   });
   const [currentLogo, setCurrentLogo] = useState<string | null>(null);
 
@@ -773,6 +777,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   };
 
   const [isUploadingHero, setIsUploadingHero] = useState(false);
+  const [isUploadingInstitutional, setIsUploadingInstitutional] = useState(false);
+  const [isSavingInstitutional, setIsSavingInstitutional] = useState(false);
 
   const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -818,6 +824,57 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       triggerFeedback(`Erro ao salvar configurações da imagem de destaque: ${err.message || err}`, 'error');
     } finally {
       setIsSavingLogo(false);
+    }
+  };
+
+  const handleInstitutionalMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!(await checkAuth())) return;
+
+    setIsUploadingInstitutional(true);
+    try {
+      const isVideoFile = file.type.toLowerCase().startsWith('video/');
+      const publicUrl = await uploadFile('pneu-center', 'institutional', file);
+      
+      setSiteSettings(prev => ({
+        ...prev,
+        institutionalMediaUrl: publicUrl,
+        institutionalMediaType: isVideoFile ? 'video' : 'image'
+      }));
+      triggerFeedback('Mídia institucional enviada com sucesso! Lembre-se de clicar em salvar para aplicar.');
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao enviar mídia institucional: ${err.message || err}`, 'error');
+    } finally {
+      setIsUploadingInstitutional(false);
+    }
+  };
+
+  const handleRemoveInstitutionalMedia = () => {
+    setSiteSettings(prev => ({
+      ...prev,
+      institutionalMediaUrl: '',
+      institutionalMediaType: 'image'
+    }));
+    triggerFeedback('Mídia institucional removida. Clique em salvar para confirmar.');
+  };
+
+  const handleSaveInstitutionalSettings = async () => {
+    if (!(await checkAuth())) return;
+
+    setIsSavingInstitutional(true);
+    try {
+      await saveSettingsDb(siteSettings);
+      saveSettings(siteSettings);
+      triggerFeedback('Configurações de Mídia Institucional salvas com sucesso!');
+      onRefreshPublicData();
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao salvar configurações de mídia institucional: ${err.message || err}`, 'error');
+    } finally {
+      setIsSavingInstitutional(false);
     }
   };
 
@@ -3183,6 +3240,187 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               </div>
 
             </form>
+
+            {/* CARD: INSTITUTIONAL SECTION MEDIA */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+              <div>
+                <h3 className="text-md font-extrabold text-slate-800 uppercase tracking-tight flex items-center gap-2 font-sans">
+                  <Film className="h-5 w-5 text-orange-500" />
+                  Mídia da Seção Institucional
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Configure o banner ou vídeo vertical no formato 9:16 da seção quem somos ("Pneu Center Brasil • Distribuição Digital").
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-2">
+                <div className="lg:col-span-7 space-y-4">
+                  {/* Media Type selection */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Tipo de Mídia Ativa
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSiteSettings(prev => ({ ...prev, institutionalMediaType: 'image' }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${
+                          (siteSettings.institutionalMediaType || 'image') === 'image'
+                            ? 'bg-orange-600 text-slate-950 shadow cursor-pointer'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-150 cursor-pointer'
+                        }`}
+                      >
+                        Imagem
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSiteSettings(prev => ({ ...prev, institutionalMediaType: 'video' }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${
+                          siteSettings.institutionalMediaType === 'video'
+                            ? 'bg-orange-600 text-slate-950 shadow cursor-pointer'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-150 cursor-pointer'
+                        }`}
+                      >
+                        Vídeo
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Upload Controls */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {(siteSettings.institutionalMediaType || 'image') === 'video' ? 'Subir Vídeo Vertical (9:16)' : 'Subir Imagem Vertical (9:16)'}
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-all ${
+                        siteSettings.institutionalMediaUrl ? 'border-green-300 bg-green-50/20' : 'border-slate-350 hover:border-orange-400 bg-slate-50'
+                      }`}>
+                        <Upload className={`h-8 w-8 mb-2 ${siteSettings.institutionalMediaUrl ? 'text-green-500 animate-bounce' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold uppercase text-slate-700">
+                          {isUploadingInstitutional ? 'Fazendo Upload...' : 'Subir Arquivo'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 mt-1">
+                          {(siteSettings.institutionalMediaType || 'image') === 'video' ? 'Formatos: MP4, WEBM (Máx 35MB)' : 'Formatos: PNG, JPG, WEBP, GIF (Máx 8MB)'}
+                        </span>
+                        <input
+                          type="file"
+                          accept={(siteSettings.institutionalMediaType || 'image') === 'video' ? 'video/*' : 'image/*'}
+                          onChange={handleInstitutionalMediaUpload}
+                          disabled={isUploadingInstitutional}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {/* Remove action */}
+                      {siteSettings.institutionalMediaUrl ? (
+                        <div className="flex flex-col justify-center bg-slate-50 rounded-lg p-4 border border-slate-200">
+                          <span className="text-[10px] font-mono font-bold text-slate-400 uppercase mb-2 truncate">Ativo:</span>
+                          <p className="text-[10px] font-mono text-slate-600 break-all leading-normal bg-white p-2 rounded border border-slate-150 max-h-12 overflow-y-auto mb-3">
+                            {siteSettings.institutionalMediaUrl}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleRemoveInstitutionalMedia}
+                            className="text-center rounded-lg border border-red-200 hover:bg-red-50 hover:border-red-300 text-red-655 font-bold text-[10px] uppercase py-2 transition-colors cursor-pointer"
+                          >
+                            Remover Mídia
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col justify-center items-center bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
+                          <span className="text-[11px] font-semibold text-slate-400 italic">Nenhum arquivo enviado</span>
+                          <span className="text-[10px] text-slate-400 mt-1 leading-normal">
+                            Usando imagem padrão na home.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Text alt tag */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Texto Alternativo de Acessibilidade (Alt)
+                    </label>
+                    <input
+                      type="text"
+                      value={siteSettings.institutionalMediaAlt || ''}
+                      onChange={(e) => setSiteSettings({ ...siteSettings, institutionalMediaAlt: e.target.value })}
+                      placeholder="Ex: Pneu Center Brasil Distribuição Digital de Pneus"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none focus:border-orange-500 font-sans"
+                    />
+                  </div>
+                </div>
+
+                {/* Live Sandbox 9:16 Preview Card */}
+                <div className="lg:col-span-5 bg-[#091122] rounded-xl border border-slate-800 p-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-1">
+                      <span className="text-[9px] font-mono font-extrabold uppercase text-slate-400 tracking-wider">PREVISÃO 9:16 REAIS</span>
+                      <span className="text-[9px] font-mono bg-orange-950 text-orange-400 font-bold uppercase rounded px-1.5 py-0.5 border border-orange-550/20">
+                        {siteSettings.institutionalMediaType === 'video' ? 'VÍDEO' : 'IMAGEM'}
+                      </span>
+                    </div>
+
+                    <div className="h-64 w-full rounded bg-slate-950 border border-slate-900 flex items-center justify-center p-3 relative overflow-hidden">
+                      <div className="absolute inset-0 opacity-10" style={{
+                        backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)',
+                        backgroundSize: '16px 16px'
+                      }} />
+
+                      {/* 9:16 Aspect Box */}
+                      <div className="aspect-[9/16] h-full rounded border border-slate-800 shadow-xl overflow-hidden bg-slate-900 relative flex items-center justify-center">
+                        {siteSettings.institutionalMediaUrl ? (
+                          siteSettings.institutionalMediaType === 'video' ? (
+                            <video
+                              src={siteSettings.institutionalMediaUrl}
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src={siteSettings.institutionalMediaUrl}
+                              alt={siteSettings.institutionalMediaAlt || 'Preview'}
+                              className="w-full h-full object-cover"
+                            />
+                          )
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-center p-3 bg-slate-900 text-slate-500">
+                            <Film className="h-6 w-6 mb-1 text-slate-600 animate-pulse" />
+                            <span className="text-[9px] font-bold uppercase tracking-wider">Mídia Padrão</span>
+                            <span className="text-[8px] mt-0.5 text-slate-600">Representação de tires da Home</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-[10px] text-slate-400 leading-snug border-t border-slate-800 pt-2.5">
+                    Esta mídia aparecerá ocupando o lado direito em telas de computador na proporção vertical perfeita de <strong>9:16</strong>, e logo abaixo do texto em formatos mobile.
+                  </div>
+                </div>
+              </div>
+
+              {/* Save institutional configuration */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleSaveInstitutionalSettings}
+                  disabled={isSavingInstitutional || isUploadingInstitutional}
+                  className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3.5 text-xs font-black uppercase cursor-pointer shadow-md shadow-orange-650/10 disabled:opacity-50"
+                >
+                  {isSavingInstitutional ? 'Salvando...' : 'Salvar Mídia Institucional'}
+                </button>
+              </div>
+            </div>
+
           </motion.div>
         )}
 
