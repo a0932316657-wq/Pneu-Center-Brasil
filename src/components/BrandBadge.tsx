@@ -17,7 +17,7 @@ export default function BrandBadge({ brandName }: BrandBadgeProps) {
   );
 
   // Use logo only if brand is active and has a valid logo
-  const logoUrl = match && match.active && match.logo ? match.logo : null;
+  const logoUrl = match && match.active && match.logo && match.logo.trim() ? match.logo.trim() : null;
 
   return (
     <div
@@ -26,7 +26,7 @@ export default function BrandBadge({ brandName }: BrandBadgeProps) {
     >
       {logoUrl ? (
         <img
-          src={logoUrl}
+          src={logoUrl || null}
           alt={trimmedName}
           className="max-h-full max-w-full object-contain filter hover:brightness-105 transition-all"
           referrerPolicy="no-referrer"

@@ -314,6 +314,24 @@ export default function App() {
       return a.brand.localeCompare(b.brand);
     } else if (sortBy === 'medida') {
       return a.measure.localeCompare(b.measure);
+    } else if (sortBy === 'preco_asc') {
+      const aHasPrice = a.priceStatus === 'exibir' && a.price !== undefined && a.price > 0;
+      const bHasPrice = b.priceStatus === 'exibir' && b.price !== undefined && b.price > 0;
+      if (aHasPrice && bHasPrice) {
+        return (a.price || 0) - (b.price || 0);
+      }
+      if (aHasPrice) return -1;
+      if (bHasPrice) return 1;
+      return a.brand.localeCompare(b.brand);
+    } else if (sortBy === 'preco_desc') {
+      const aHasPrice = a.priceStatus === 'exibir' && a.price !== undefined && a.price > 0;
+      const bHasPrice = b.priceStatus === 'exibir' && b.price !== undefined && b.price > 0;
+      if (aHasPrice && bHasPrice) {
+        return (b.price || 0) - (a.price || 0);
+      }
+      if (aHasPrice) return -1;
+      if (bHasPrice) return 1;
+      return a.brand.localeCompare(b.brand);
     }
     return 0;
   });
@@ -482,8 +500,8 @@ export default function App() {
                         className="group flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-orange-500/5 border border-slate-200 hover:border-orange-500 rounded-2xl w-24 sm:w-28 h-24 sm:h-28 transition-all duration-300 hover:shadow-md cursor-pointer shrink-0"
                       >
                         <div className="h-10 sm:h-12 w-full flex items-center justify-center p-1 overflow-hidden transition-transform group-hover:scale-105 duration-350">
-                          {brand.logo ? (
-                            <img src={brand.logo} alt={brand.name} className="h-full w-full object-contain" />
+                          {brand.logo && brand.logo.trim() ? (
+                            <img src={brand.logo.trim() || null} alt={brand.name} className="h-full w-full object-contain" />
                           ) : (
                             <div className="text-xs sm:text-sm font-sans font-black text-slate-400 uppercase tracking-wider">
                               {brand.name.substring(0, 3).toUpperCase()}
@@ -522,14 +540,14 @@ export default function App() {
                       >
                         {/* Background Image of standard tire */}
                         <div className="absolute inset-0 z-0 bg-slate-900">
-                          {card.image && (
+                          {card.image && card.image.trim() ? (
                             <img
-                              src={card.image}
+                              src={card.image.trim() || null}
                               alt={card.name}
                               referrerPolicy="no-referrer"
                               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-70"
                             />
-                          )}
+                          ) : null}
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent opacity-85 group-hover:opacity-90 transition-opacity" />
                         </div>
 
@@ -785,14 +803,16 @@ export default function App() {
                   </div>
 
                   {/* Sort Selection dropdown */}
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-2 font-sans">
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs sm:text-sm text-amber-700 font-mono outline-none focus:border-orange-500 transition-all cursor-pointer font-bold"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs sm:text-sm text-amber-750 font-sans outline-none focus:border-orange-500 transition-all cursor-pointer font-bold"
                     >
-                      <option value="marca">Ordenar: Marca</option>
-                      <option value="medida">Ordenar: Medida</option>
+                      <option value="marca">Ordenar: Fabricante/Marca</option>
+                      <option value="medida">Ordenar: Medida da Banda</option>
+                      <option value="preco_asc">Ordenar: Menor Preço (R$)</option>
+                      <option value="preco_desc">Ordenar: Maior Preço (R$)</option>
                     </select>
                   </div>
                 </div>
@@ -906,8 +926,8 @@ export default function App() {
                   >
                     {/* Brand Logo Panel */}
                     <div className="h-12 w-20 flex items-center justify-center rounded-lg bg-white border border-slate-150 p-1.5 group-hover:scale-105 transition-transform duration-300 overflow-hidden">
-                      {brand.logo ? (
-                        <img src={brand.logo} alt={brand.name} className="h-full w-full object-contain" />
+                      {brand.logo && brand.logo.trim() ? (
+                        <img src={brand.logo.trim() || null} alt={brand.name} className="h-full w-full object-contain" />
                       ) : (
                         <div className="text-sm font-black text-slate-400 font-mono">
                           {brand.name.substring(0, 2).toUpperCase()}

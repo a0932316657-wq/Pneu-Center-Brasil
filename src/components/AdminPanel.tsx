@@ -2007,7 +2007,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                         <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-6 py-4">
                             <div className="h-12 w-16 rounded border bg-checkerboard overflow-hidden flex items-center justify-center">
-                              <img src={prod.image} alt={prod.name} className="h-full w-full object-contain p-1" />
+                              <img src={prod.image || null} alt={prod.name} className="h-full w-full object-contain p-1" />
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -2093,7 +2093,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       <div key={prod.id} className="p-4 space-y-4 font-sans">
                         <div className="flex gap-3">
                           <div className="h-16 w-20 rounded border bg-checkerboard overflow-hidden flex items-center justify-center shrink-0">
-                            <img src={prod.image} alt={prod.name} className="h-full w-full object-contain p-1" />
+                            <img src={prod.image || null} alt={prod.name} className="h-full w-full object-contain p-1" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between mb-0.5">

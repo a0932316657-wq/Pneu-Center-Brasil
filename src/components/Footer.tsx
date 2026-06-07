@@ -38,9 +38,9 @@ export default function Footer({ onNavigate }: FooterProps) {
           {/* Column 1: Company Profile & CNPJ */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              {logo ? (
+              {logo && logo.trim() ? (
                 <img 
-                  src={logo} 
+                  src={logo.trim() || null} 
                   alt={settings.commercialName || 'Pneu Center Brasil Logo'} 
                   className="h-10 w-auto object-contain max-w-[150px] cursor-pointer"
                   onClick={() => onNavigate('home')}

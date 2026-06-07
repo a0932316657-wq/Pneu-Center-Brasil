@@ -64,9 +64,9 @@ export default function Navbar({ currentRoute, onNavigate }: NavbarProps) {
             className="flex cursor-pointer items-center gap-2.5 group" 
             onClick={() => handleNavClick('home')}
           >
-            {logo ? (
+            {logo && logo.trim() ? (
               <img 
-                src={logo} 
+                src={logo.trim() || null} 
                 alt={settings.commercialName || 'Pneu Center Brasil Logo'} 
                 className="h-11 w-auto object-contain max-w-[160px] cursor-pointer"
               />
@@ -162,8 +162,8 @@ export default function Navbar({ currentRoute, onNavigate }: NavbarProps) {
                 {/* Header within drawer */}
                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
                   <div className="flex items-center gap-2">
-                    {logo ? (
-                      <img src={logo} alt={settings.commercialName} className="h-8 w-auto object-contain max-w-[120px]" />
+                    {logo && logo.trim() ? (
+                      <img src={logo.trim() || null} alt={settings.commercialName} className="h-8 w-auto object-contain max-w-[120px]" />
                     ) : (
                       <>
                         <div className="h-8 w-8 flex items-center justify-center rounded bg-orange-500 font-display font-black text-sm text-slate-950">
