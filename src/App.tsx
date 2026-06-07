@@ -22,6 +22,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+// Newly generated hero tire stack image asset
+import heroTiresImage from './assets/images/hero_tires_1780836675879.png';
+
 // Shared types and data
 import { AppRoute, RouteState, Product } from './types';
 import { BRANDS } from './data';
@@ -50,6 +53,47 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>(getProducts());
   const [brands, setBrands] = useState<Brand[]>(getBrands());
   const [rimCards, setRimCards] = useState<RimCard[]>(getRimCards());
+  
+  // Minute counter to tick and auto-refresh the hourly rotate list and countdown
+  const [minutesCounter, setMinutesCounter] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMinutesCounter(prev => prev + 1);
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Deterministically selects 8 products that rotate every hour
+  const getHourlyFeaturedProducts = () => {
+    const activeProducts = products.filter(p => p.active !== false);
+    if (activeProducts.length === 0) return { list1: [], list2: [] };
+
+    // Get current hour index from epoch
+    const hourIndex = Math.floor(Date.now() / (3600 * 1000));
+
+    const selected: Product[] = [];
+    const tempActive = [...activeProducts];
+
+    // Select 8 unique products using deterministic LCG-like jump selection
+    for (let i = 0; i < 8; i++) {
+      if (tempActive.length === 0) break;
+      const pickIndex = (hourIndex + i * 3) % tempActive.length;
+      selected.push(tempActive[pickIndex]);
+      tempActive.splice(pickIndex, 1);
+    }
+
+    // In case we don't have enough to fill 8, repeat active list items safely
+    while (selected.length < 8 && activeProducts.length > 0) {
+      selected.push(activeProducts[selected.length % activeProducts.length]);
+    }
+
+    return {
+      list1: selected.slice(0, 4),
+      list2: selected.slice(4, 8)
+    };
+  };
+
+  const hourlyFeatured = getHourlyFeaturedProducts();
 
   // Filter & Search states for the Catalog Page
   const [searchQuery, setSearchQuery] = useState('');
@@ -367,74 +411,268 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-            >
-              {/* HERO SECTION */}
+            >              {/* HERO SECTION */}
               <section id="hero-block" className="relative overflow-hidden bg-radial from-slate-900 via-slate-950 to-slate-950 py-16 sm:py-24 border-b border-slate-900">
                 {/* Visual grid backdrop styling */}
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35" />
 
-                <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center space-y-8">
-                  {/* Small tag */}
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3.5 py-1 text-xs font-mono font-medium text-orange-400 border border-orange-500/15">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>Catálogo Autorizado de Reposição</span>
-                  </div>
+                <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-12">
+                  
+                  {/* Two-Column Responsive Split Layout with Text on Left and Animation on Right */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center text-center lg:text-left">
+                    
+                    {/* LEFT COLUMN: HERO CONTENT WITH DISPLAY HEADLINES, COUNTERS & CTAS */}
+                    <div className="lg:col-span-7 flex flex-col space-y-6 lg:items-start lg:text-left order-1 lg:order-1">
+                      {/* Small tag */}
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3.5 py-1 text-xs font-mono font-medium text-orange-400 border border-orange-500/15 mx-auto lg:mx-0">
+                        <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                        <span>Catálogo Autorizado de Reposição</span>
+                      </div>
 
-                  {/* Main Display Headlines */}
-                  <div className="space-y-4 max-w-3xl mx-auto">
-                    <h1 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl uppercase">
-                      Pneus multimarcas <br className="hidden sm:block" />
-                      <span className="text-orange-500">para o seu carro</span>
-                    </h1>
-                    <p className="text-base text-gray-300 md:text-lg leading-relaxed">
-                      Consulte modelos, medidas e disponibilidade com atendimento especializado. A Pneu Center Brasil funciona como catálogo digital de pneus automotivos, com atendimento via WhatsApp para dúvidas, orientações e condições de entrega.
-                    </p>
-                  </div>
+                      {/* Main Display Headlines */}
+                      <div className="space-y-4">
+                        <h1 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl uppercase leading-none">
+                          Pneus multimarcas <br className="hidden sm:block" />
+                          <span className="text-orange-500">para o seu carro</span>
+                        </h1>
+                        <p className="text-sm text-gray-300 md:text-base leading-relaxed max-w-2xl">
+                          Consulte modelos, medidas e disponibilidade com atendimento especializado. A Pneu Center Brasil funciona como catálogo digital de pneus automotivos, com atendimento via WhatsApp para dúvidas, orientações e condições de entrega.
+                        </p>
+                      </div>
 
-                  {/* Dynamic Product Counter display badge */}
-                  <div className="inline-flex flex-col sm:flex-row items-center gap-3 sm:gap-5 justify-center bg-orange-500/10 hover:bg-orange-500/15 border border-orange-500/20 rounded-2xl p-4 sm:p-5 max-w-xl mx-auto shadow-sm transition-all duration-300 text-left">
-                    <div className="flex items-center justify-center bg-orange-600 font-display font-black text-slate-950 text-xl sm:text-2xl h-12 w-12 rounded-xl shrink-0 shadow-md animate-pulse">
-                      {products.filter(p => p.active !== false).length}
+                      {/* Dynamic Product Counter display badge */}
+                      <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-5 bg-orange-500/10 hover:bg-orange-500/15 border border-orange-500/20 rounded-2xl p-4 sm:p-5 w-full max-w-xl shadow-sm transition-all duration-300 text-center sm:text-left mx-auto lg:mx-0">
+                        <div className="flex items-center justify-center bg-orange-600 font-display font-black text-slate-950 text-xl sm:text-2xl h-11 w-11 rounded-xl shrink-0 shadow-md animate-pulse">
+                          {products.filter(p => p.active !== false).length}
+                        </div>
+                        <div>
+                          <p className="text-xs sm:text-sm font-sans font-bold text-white uppercase tracking-wide">
+                            Pneus Multimarcas Disponíveis
+                          </p>
+                          <p className="text-[11px] sm:text-xs text-slate-300 font-sans mt-0.5 leading-tight">
+                            Temos mais de <span className="font-extrabold text-orange-500">{products.filter(p => p.active !== false).length}</span> pneus ativos cadastrados em nosso estoque multimarcas. Confira o catálogo completo abaixo!
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Call to Actions buttons */}
+                      <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md mx-auto lg:mx-0">
+                        <button
+                          id="hero-btn-catalog"
+                          onClick={() => navigateTo('catalogo')}
+                          className="w-full sm:w-auto rounded-xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-bold px-8 py-4 transition-all hover:shadow-lg hover:shadow-orange-500/15 cursor-pointer font-display uppercase tracking-wide text-xs"
+                        >
+                          Consultar Catálogo
+                        </button>
+                        <button
+                          id="hero-btn-whatsapp"
+                          onClick={() => openWhatsAppChat(DEFAULT_WHATSAPP_MESSAGE)}
+                          className="w-full sm:w-auto flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-555 text-white font-semibold px-8 py-4 transition-all hover:shadow-lg hover:shadow-emerald-500/20 cursor-pointer font-display uppercase tracking-wide text-xs"
+                        >
+                          <span>Tirar Dúvidas WhatsApp</span>
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-sans font-bold text-white uppercase tracking-wide">
-                        Pneus Multimarcas Disponíveis
-                      </p>
-                      <p className="text-xs text-slate-300 font-sans mt-0.5">
-                        Temos mais de <span className="font-extrabold text-orange-500">{products.filter(p => p.active !== false).length}</span> pneus ativos cadastrados em nosso estoque multimarcas. Confira o catálogo completo abaixo!
-                      </p>
+
+                    {/* RIGHT COLUMN: GORGEOUS ANIMATED TIRE WITH CIRCULATING BRANDS */}
+                    <div className="lg:col-span-5 flex flex-col items-center justify-center relative order-2 lg:order-2">
+                       <div className="relative w-full max-w-sm sm:max-w-md h-72 sm:h-96 flex items-center justify-center overflow-visible">
+                        
+                        {/* Radiant background glow behind the tire */}
+                        <div className="absolute h-48 w-48 sm:h-64 sm:w-64 rounded-full bg-orange-500/10 blur-3xl z-0" />
+                        
+                        {/* Orbiting brand cards - Only logos, appearing and disappearing */}
+                        {(() => {
+                          const displayOrbitingBrands = brands && brands.filter(b => b.active).length > 0 
+                            ? brands.filter(b => b.active)
+                            : [
+                                { id: '1', name: "Pirelli", logo: "" },
+                                { id: '2', name: "Michelin", logo: "" },
+                                { id: '3', name: "Goodyear", logo: "" },
+                                { id: '4', name: "Continental", logo: "" }
+                              ];
+
+                          return displayOrbitingBrands.map((brand, idx) => {
+                            const total = displayOrbitingBrands.length;
+                            const angleOffset = (idx * 2 * Math.PI) / total;
+                            
+                            // Generate keys for continuous beautiful 3D-circular path around the tire
+                            const steps = 8;
+                            const xArr = [];
+                            const yArr = [];
+                            const scaleArr = [];
+                            const opacityArr = [];
+                            const zIndexArr = [];
+                            
+                            for (let k = 0; k <= steps; k++) {
+                              const angle = angleOffset + (k * 2 * Math.PI) / steps;
+                              const sinAngle = Math.sin(angle);
+                              const cosAngle = Math.cos(angle);
+                              
+                              // Horizontal & Vertical perspectives
+                              xArr.push(cosAngle * 135);
+                              yArr.push(sinAngle * 45);
+                              
+                              // Scale perspective: larger on front, smaller on back
+                              const scale = 0.85 + sinAngle * 0.25;
+                              scaleArr.push(scale);
+                              
+                              // Opacity transitions: goes behind -> disappears ("some"), goes front -> shines ("aparece")
+                              const isBehind = sinAngle < -0.15;
+                              opacityArr.push(isBehind ? 0.05 : 0.95);
+                              zIndexArr.push(isBehind ? 5 : 20);
+                            }
+
+                            return (
+                              <motion.div
+                                key={brand.id || idx}
+                                onClick={() => filterByBrand(brand.name)}
+                                animate={{
+                                  x: xArr,
+                                  y: yArr,
+                                  scale: scaleArr,
+                                  zIndex: zIndexArr,
+                                  opacity: opacityArr,
+                                }}
+                                transition={{
+                                  duration: 16,
+                                  repeat: Infinity,
+                                  ease: "linear",
+                                }}
+                                className="absolute cursor-pointer select-none bg-slate-900/95 backdrop-blur-md border border-orange-500/20 text-white shadow-2xl rounded-2xl p-2 flex items-center justify-center hover:border-orange-500 transition-all hover:scale-110"
+                              >
+                                {brand.logo && brand.logo.trim() ? (
+                                  <div className="h-6 w-9 rounded-lg bg-white overflow-hidden flex items-center justify-center p-0.5">
+                                    <img src={brand.logo.trim() || null} alt={brand.name} className="h-full w-full object-contain" />
+                                  </div>
+                                ) : (
+                                  <span className="h-6 w-6 rounded-full bg-orange-600 text-slate-950 font-black text-xs flex items-center justify-center">
+                                    {brand.name.substring(0, 1).toUpperCase()}
+                                  </span>
+                                )}
+                              </motion.div>
+                            );
+                          });
+                        })()}
+
+                        {/* Central Floating/Hovering Premium Tire Stack wrapped in an elegant rounded glowing orange LED container */}
+                        <motion.div
+                          animate={{
+                            y: [0, -12, 0],
+                            rotate: [0, 0.5, -0.5, 0],
+                          }}
+                          transition={{
+                            duration: 5,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                          className="z-10 p-5 sm:p-6 rounded-[2.5rem] border border-orange-500 shadow-[0_0_25px_rgba(249,115,22,0.5),_inset_0_0_18px_rgba(249,115,22,0.3)] bg-slate-950/70 backdrop-blur-md flex items-center justify-center select-none pointer-events-none"
+                        >
+                          <img
+                            src={heroTiresImage}
+                            alt="Pneus Premium e Roda Esportiva"
+                            referrerPolicy="no-referrer"
+                            className="h-52 sm:h-72 w-auto object-contain mix-blend-lighten select-none pointer-events-none"
+                          />
+                        </motion.div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* HIGHLY OPTIMIZED TRUST BANNER (PAGUE NA ENTREGA, GARANTIAS & NOTA FISCAL) */}
+                  <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-slate-900/60">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+                      
+                      {/* CARD 1: PAGUE NA ENTREGA APENAS */}
+                      <div className="bg-emerald-950/45 border-2 border-emerald-500 rounded-2xl p-4 flex flex-col justify-between hover:bg-emerald-950/60 transition-all shadow-lg shadow-emerald-500/15">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 shrink-0">
+                            <CreditCard className="h-5 w-5 text-emerald-400" />
+                          </span>
+                          <span className="text-[10px] sm:text-[11px] font-sans font-extrabold text-emerald-400 uppercase tracking-widest">
+                            PAGAMENTO SEGURO
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-sans font-black text-white text-sm sm:text-base uppercase leading-tight text-emerald-400">
+                            Pague na Entrega Apenas
+                          </h4>
+                          <p className="text-xs text-gray-200 font-sans mt-1.5 leading-normal">
+                            Zero cobranças antecipadas. Pague com total segurança apenas no ato do recebimento após conferir fisicamente todos os pneus.
+                          </p>
+                        </div>
+                      </div>
+ 
+                      {/* CARD 2: 1 ANO DE GARANTIA DA LOJA */}
+                      <div className="bg-orange-950/45 border-2 border-orange-500 rounded-2xl p-4 flex flex-col justify-between hover:bg-orange-950/60 transition-all shadow-lg shadow-orange-500/15">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="p-2 rounded-lg bg-orange-500/15 text-orange-400 shrink-0">
+                            <ShieldCheck className="h-5 w-5 text-orange-400" />
+                          </span>
+                          <span className="text-[10px] sm:text-[11px] font-sans font-extrabold text-orange-400 uppercase tracking-widest">
+                            GARANTIA DA LOJA
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-sans font-black text-white text-sm sm:text-base uppercase leading-tight text-orange-400">
+                            1 Ano de Garantia Loja
+                          </h4>
+                          <p className="text-xs text-gray-200 font-sans mt-1.5 leading-normal">
+                            Suporte e garantia de 1 ano diretamente com a nossa loja física para máxima tranquilidade no seu dia a dia.
+                          </p>
+                        </div>
+                      </div>
+ 
+                      {/* CARD 3: 5 ANOS DE GARANTIA FABRICANTE */}
+                      <div className="bg-amber-950/45 border-2 border-amber-500 rounded-2xl p-4 flex flex-col justify-between hover:bg-amber-950/60 transition-all shadow-lg shadow-amber-500/15">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="p-2 rounded-lg bg-amber-500/15 text-amber-400 shrink-0">
+                            <Award className="h-5 w-5 text-amber-400" />
+                          </span>
+                          <span className="text-[10px] sm:text-[11px] font-sans font-extrabold text-amber-400 uppercase tracking-widest">
+                            GARANTIA OFICIAL
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-sans font-black text-white text-sm sm:text-base uppercase leading-tight text-amber-400">
+                            5 Anos do Fabricante
+                          </h4>
+                          <p className="text-xs text-gray-200 font-sans mt-1.5 leading-normal">
+                            Todos os pneus novos acompanham canais oficiais de garantia estendida de 5 anos de proteção oficial de fabricante.
+                          </p>
+                        </div>
+                      </div>
+ 
+                      {/* CARD 4: PNEU COM NOTA FISCAL TUDO CERTINHO (UPGRADED FOR VIVID SKY COLOR AND HIGH CONTRAST) */}
+                      <div className="bg-sky-950/45 border-2 border-sky-400 rounded-2xl p-4 flex flex-col justify-between hover:bg-sky-950/60 transition-all shadow-lg shadow-sky-450/15">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="p-2 rounded-lg bg-sky-500/15 text-sky-400 shrink-0">
+                            <ShieldCheck className="h-5 w-5 text-sky-400" />
+                          </span>
+                          <span className="text-[10px] sm:text-[11px] font-sans font-extrabold text-sky-400 uppercase tracking-widest">
+                            PRODUTO LEGAL
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-sans font-black text-white text-sm sm:text-base uppercase leading-tight text-sky-400">
+                            Com Nota Fiscal
+                          </h4>
+                          <p className="text-xs text-gray-200 font-sans mt-1.5 leading-normal">
+                            Aqui a entrega é em conformidade com a lei. Pneus 100% originais e novos, acompanhando sua respectiva Nota Fiscal.
+                          </p>
+                        </div>
+                      </div>
+ 
                     </div>
                   </div>
-
-                  {/* Call to Actions buttons */}
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-                    <button
-                      id="hero-btn-catalog"
-                      onClick={() => navigateTo('catalogo')}
-                      className="w-full sm:w-auto rounded-xl bg-orange-600 hover:bg-orange-500 text-slate-950 font-bold px-8 py-4 transition-all hover:shadow-lg hover:shadow-orange-500/10 cursor-pointer font-display"
-                    >
-                      Consultar Catálogo
-                    </button>
-                    <button
-                      id="hero-btn-whatsapp"
-                      onClick={() => openWhatsAppChat(DEFAULT_WHATSAPP_MESSAGE)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-8 py-4 transition-all hover:shadow-lg hover:shadow-emerald-500/15 cursor-pointer font-display"
-                    >
-                      <span>Tirar Dúvidas no WhatsApp</span>
-                    </button>
-                  </div>
-
-                  {/* Reinforcement of delivery/payment model legend requested */}
-                  <p className="text-xs font-semibold text-orange-400 max-w-xl mx-auto font-sans leading-normal mt-3 bg-orange-950/20 py-2.5 px-4 rounded-xl border border-orange-500/10 shadow-xs">
-                    *Modelo de Entrega Segura: Envio por transportadora parceira com pagamento feito apenas no ato do recebimento após conferir os pneus. Zero taxas antecipadas.*
-                  </p>
-
+ 
                   {/* Sane disclosure message */}
-                  <p className="text-[11px] sm:text-xs text-gray-400 max-w-lg mx-auto font-sans leading-normal">
-                    *Site informativo de catálogo. Não realizamos pagamento online, transações virtuais de faturamento ou cobranças antecipadas neste domínio eletrônico.
-                  </p>
+                   <p className="text-[11px] sm:text-xs text-gray-400 max-w-lg mx-auto font-sans leading-normal text-center">
+                     *Site informativo de catálogo. Não realizamos pagamento online, transações virtuais de faturamento ou cobranças antecipadas neste domínio eletrônico.*
+                   </p>
 
-                  {/* TRUST STRIP */}
+                   {/* TRUST STRIP */}
                   <div className="pt-8 border-t border-slate-900/85">
                     <div className="grid grid-cols-2 lg:grid-cols-5 gap-y-4 gap-x-2 text-center">
                       {[
@@ -595,15 +833,21 @@ export default function App() {
               </section>
 
               {/* HIGHLIGHT PRODUCTS */}
-              <section className="py-16 sm:py-20">
+              <section className="py-16 sm:py-20 bg-slate-50 border-t border-b border-slate-200">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  
+                  {/* Section Title with Hourly Rotation Notice */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4">
-                    <div>
+                    <div className="space-y-1.5">
                       <h2 className="font-sans text-2xl font-black uppercase text-slate-800 tracking-tight">
                         Pneus em Destaque
                       </h2>
-                      <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                        Alguns dos modelos mais procurados no Butantã e em toda São Paulo
+                      <p className="text-xs sm:text-sm text-slate-500 leading-normal flex flex-wrap items-center gap-2">
+                        <span>Alguns dos modelos mais procurados no Butantã e em toda São Paulo</span>
+                        <span className="inline-flex items-center gap-1 bg-orange-500/10 text-orange-700 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border border-orange-500/20 uppercase tracking-wider animate-pulse">
+                          <RefreshCw className="h-2.5 w-2.5 animate-spin duration-[6000ms]" />
+                          Vitrine Rotativa de Hora em Hora
+                        </span>
                       </p>
                     </div>
                     <button
@@ -615,20 +859,72 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Top 4 high profile tires mapping */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {(() => {
-                      const featured = products.filter((p) => p.active !== false && p.featured === true);
-                      const itemsToRender = featured.length > 0 ? featured.slice(0, 8) : products.filter((p) => p.active !== false).slice(0, 4);
-                      return itemsToRender.map((prod) => (
-                        <ProductCard
-                          key={prod.id}
-                          product={prod}
-                          onViewDetails={handleFeatureTireClick}
-                        />
-                      ));
-                    })()}
+                  {/* Two lists stacked: First Grid (Row 1) and Second Grid (Row 2) */}
+                  <div className="space-y-12">
+                    
+                    {/* Grid 1: Top selection of 4 tires */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                        <span className="text-xs font-mono font-black uppercase text-slate-450 tracking-widest">
+                          SELEÇÃO ROTATIVA • BLOCO A
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {hourlyFeatured.list1.map((prod) => (
+                          <ProductCard
+                            key={prod.id}
+                            product={prod}
+                            onViewDetails={handleFeatureTireClick}
+                          />
+                        ))}
+                        {hourlyFeatured.list1.length === 0 && (
+                          <p className="col-span-full text-center text-xs text-slate-400 font-sans py-6">
+                            Nenhum pneu ativo disponível nesta rotação.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Grid 2: Bottom selection of 4 tires */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                        <span className="text-xs font-mono font-black uppercase text-slate-450 tracking-widest">
+                          SELEÇÃO ROTATIVA • BLOCO B
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {hourlyFeatured.list2.map((prod) => (
+                          <ProductCard
+                            key={prod.id}
+                            product={prod}
+                            onViewDetails={handleFeatureTireClick}
+                          />
+                        ))}
+                        {hourlyFeatured.list2.length === 0 && (
+                          <p className="col-span-full text-center text-xs text-slate-400 font-sans py-6">
+                            Nenhum pneu ativo disponível nesta rotação.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
                   </div>
+
+                  {/* Big prominent centered bottom Catalog CTA Button */}
+                  <div className="mt-14 flex justify-center">
+                    <button
+                      id="btn-destaque-catalogo-completo-centered"
+                      onClick={() => navigateTo('catalogo')}
+                      className="inline-flex items-center justify-center gap-3 rounded-2xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-display font-black text-xs uppercase tracking-widest px-10 py-5 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:shadow-orange-500/15 cursor-pointer max-w-sm w-full sm:w-auto"
+                    >
+                      <Compass className="h-4.5 w-4.5 shrink-0" />
+                      <span>Ver Catálogo Completo</span>
+                      <ChevronRight className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:translate-x-1" />
+                    </button>
+                  </div>
+
                 </div>
               </section>
 
@@ -685,8 +981,8 @@ export default function App() {
                       <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-350 transition-colors flex flex-col justify-between min-h-[140px]">
                         <ShieldCheck className="h-7 w-7 text-emerald-600" />
                         <div>
-                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Garantia Comercial Integral</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-tight mt-1">Todos os pneus distribuídos de catálogo possuem cobertura contratual de garantia dos respectivos fabricantes.</p>
+                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Garantias & NF Confirmadas</h4>
+                          <p className="text-[11px] text-slate-500 font-sans leading-tight mt-1">1 ano de garantia total garantido pela nossa loja e 5 anos oficial direto de fábrica. Pneus novos originais com Nota Fiscal tudo certinho.</p>
                         </div>
                       </div>
 
