@@ -100,7 +100,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Dashboard navigation tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image' | 'midia-massa'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'sobre-empresa' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image' | 'midia-massa'>('overview');
   
   // App states loaded from store
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -223,6 +223,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [bulkPriceRimFilter, setBulkPriceRimFilter] = useState<string>('Todos');
   const [bulkPriceBrandFilter, setBulkPriceBrandFilter] = useState<string>('Todas');
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [selectedRimBulkTab, setSelectedRimBulkTab] = useState<number>(13);
 
   // Delete Confirmation ID Modal
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -2108,6 +2109,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               { id: 'cards-do-aro', label: 'Cards de Aro', icon: Database },
               { id: 'midia-massa', label: 'Mídias e Selos em Lote', icon: Folder },
               { id: 'logo-identity', label: 'Logo e Identidade', icon: ImageIcon },
+              { id: 'sobre-empresa', label: 'Sobre a Empresa', icon: Info },
               { id: 'site-settings', label: 'Configurações do Site', icon: SettingsIcon },
               { id: 'hero-image', label: 'Imagem de Destaque', icon: Sparkles },
             ].map((btn) => {
@@ -3509,6 +3511,106 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
             </form>
 
+          </motion.div>
+        )}
+
+        {/* TAB: SOBRE A EMPRESA */}
+        {activeTab === 'sobre-empresa' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6 text-slate-800"
+          >
+            <div>
+              <h1 className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                <Info className="h-7 w-7 text-orange-500" />
+                Sobre a Empresa (Mídia e Capa)
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Configure os textos corporativos de garantia e compliance, além da mídia vertical (imagem ou vídeo 9:16) do bloco "Distribuição de Alta Performance" do site.
+              </p>
+            </div>
+
+            {/* Quick texts section for easy context editing */}
+            <form onSubmit={handleSaveSettingsSubmit} className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+              <div>
+                <h3 className="text-md font-extrabold text-slate-800 uppercase tracking-tight flex items-center gap-2 font-sans">
+                  <Briefcase className="h-5 w-5 text-orange-500" />
+                  Textos Institucionais do Bloco Quem Somos
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Estes dados alteram em tempo real o cabeçalho técnico "Distribuição de Alta Performance" e as garantias mostradas no About Us.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Nome Comercial Portador *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={siteSettings.commercialName}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, commercialName: e.target.value })}
+                    placeholder="Ex: Pneu Center Brasil"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-sans"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Razão Social Legítima *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={siteSettings.corporateName}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, corporateName: e.target.value })}
+                    placeholder="Ex: CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-sans font-semibold text-slate-655"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    CNPJ Oficial Corporativo *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={siteSettings.cnpj}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, cnpj: e.target.value })}
+                    placeholder="Ex: 20.085.983/0001-13"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-mono font-semibold"
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Endereço de Sede Física Comercial *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={siteSettings.address}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, address: e.target.value })}
+                    placeholder="Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP..."
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3.5 text-xs font-bold uppercase cursor-pointer"
+                >
+                  Salvar Textos Institucionais
+                </button>
+              </div>
+            </form>
+
             {/* CARD: INSTITUTIONAL SECTION MEDIA */}
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
               <div>
@@ -3682,7 +3784,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   type="button"
                   onClick={handleSaveInstitutionalSettings}
                   disabled={isSavingInstitutional || isUploadingInstitutional}
-                  className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3.5 text-xs font-black uppercase cursor-pointer shadow-md shadow-orange-650/10 disabled:opacity-50"
+                  className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3.5 text-xs font-black uppercase cursor-pointer shadow-md shadow-orange-655/10 disabled:opacity-50"
                 >
                   {isSavingInstitutional ? 'Salvando...' : 'Salvar Mídia Institucional'}
                 </button>
@@ -4715,7 +4817,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
-              
+
               {/* SECTION: ADMIN BULK MEDIA & SEALS BY RIM */}
               <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
@@ -4736,25 +4838,52 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     </div>
                   )}
 
-                  <div className="space-y-4 max-h-[550px] overflow-y-auto pr-2">
-                    {[13, 14, 15, 16, 17, 18, 19, 20, 21, 22].map((rimNum) => {
+                  {/* Rim Selection Tabs */}
+                  <div className="space-y-2 pb-2">
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-sans">
+                      Selecione o Aro para Configurar:
+                    </label>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[13, 14, 15, 16, 17, 18, 19, 20, 21, 22].map((rNum) => (
+                        <button
+                          key={rNum}
+                          type="button"
+                          onClick={() => setSelectedRimBulkTab(rNum)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all border cursor-pointer ${
+                            selectedRimBulkTab === rNum
+                              ? 'bg-orange-600 text-slate-950 border-orange-600 shadow-md shadow-orange-500/10 font-bold'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-750 border-slate-200'
+                          }`}
+                        >
+                          Aro {rNum}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    {(() => {
+                      const rimNum = selectedRimBulkTab;
                       const mediaItem = rimDefaultMedia.find(m => m.rim === rimNum);
                       const sealItem = rimInmetroSeals.find(s => s.rim === rimNum);
 
                       return (
-                        <div key={rimNum} className="p-4 bg-slate-50 border border-slate-150 rounded-xl space-y-4">
-                          <div className="flex items-center justify-between border-b border-slate-200/65 pb-2">
-                            <span className="font-sans font-black text-slate-800 text-sm">ARO {rimNum}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">ID do Aro: {rimNum}</span>
+                        <div key={rimNum} className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-5 animate-fade-in text-slate-800">
+                          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                            <span className="font-sans font-black text-slate-800 text-sm uppercase tracking-wide">Mídias e Selo do Aro {rimNum}</span>
+                            <span className="text-[10px] text-slate-400 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">Aro {rimNum} Ativo</span>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             {/* BLOCK 1: DEFAULT IMAGE */}
-                            <div className="bg-white p-3 rounded-lg border border-slate-150 space-y-3 flex flex-col justify-between">
+                            <div className="bg-white p-4 rounded-xl border border-slate-200/80 space-y-4 flex flex-col justify-between">
                               <div>
-                                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1.5">Foto Padrão do Aro</h4>
+                                <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                  <ImageIcon className="h-4 w-4 text-orange-500" />
+                                  Foto Padrão do Aro {rimNum}
+                                </h4>
                                 {mediaItem?.image_url ? (
-                                  <div className="h-28 w-full border border-slate-200 rounded overflow-hidden p-1 bg-checkerboard flex items-center justify-center relative group">
+                                  <div className="h-32 w-full border border-slate-150 rounded-lg overflow-hidden p-1 bg-checkerboard flex items-center justify-center relative group">
                                     <img 
                                       src={mediaItem.image_url} 
                                       alt={`Preview Aro ${rimNum}`} 
@@ -4766,7 +4895,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                                         href={mediaItem.image_url} 
                                         target="_blank" 
                                         rel="noopener noreferrer" 
-                                        className="text-white text-[10px] font-bold underline"
+                                        className="text-white text-[11px] font-bold underline"
                                         referrerPolicy="no-referrer"
                                       >
                                         Ver original
@@ -4774,14 +4903,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="h-28 bg-slate-50 border border-dashed border-slate-200 rounded flex flex-col items-center justify-center text-slate-400">
-                                    <ImageIcon className="h-6 w-6 text-slate-300 mb-1" />
-                                    <span className="text-[9px] font-bold uppercase tracking-wider">Sem foto padrão</span>
+                                  <div className="h-32 bg-slate-50 border border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-400">
+                                    <ImageIcon className="h-7 w-7 text-slate-300 mb-1" />
+                                    <span className="text-[10px] font-semibold uppercase text-slate-40 tracking-wider">Sem foto padrão</span>
                                   </div>
                                 )}
                               </div>
 
-                              <div className="space-y-2.5 mt-2">
+                              <div className="space-y-3 mt-3">
                                 <label className="block">
                                   <span className="sr-only">Escolher foto</span>
                                   <input 
@@ -4792,29 +4921,29 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                                       const file = e.target.files?.[0];
                                       if (file) handleUploadRimMedia(rimNum, file);
                                     }}
-                                    className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
+                                    className="block w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
                                   />
                                 </label>
 
                                 {mediaItem?.image_url && (
-                                  <div className="flex gap-1.5 pt-1.5 border-t border-slate-100">
+                                  <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
                                     <button
                                       type="button"
                                       disabled={bulkProcessing}
                                       onClick={() => triggerBulkApplyImages(rimNum, 'only_empty')}
-                                      className="flex-1 bg-slate-100 hover:bg-slate-250 text-slate-750 text-[8.5px] font-semibold py-1.5 px-1 rounded uppercase tracking-wider text-center cursor-pointer"
+                                      className="w-full bg-slate-100 hover:bg-slate-200 text-slate-755 text-xs font-bold py-2 px-2 rounded-lg uppercase tracking-wider text-center cursor-pointer border border-slate-250 transition-colors"
                                       title="Aplica somente nos pneus que estão sem imagem"
                                     >
-                                      Apenas sem foto
+                                      Aplicar apenas nos sem foto (Aro {rimNum})
                                     </button>
                                     <button
                                       type="button"
                                       disabled={bulkProcessing}
                                       onClick={() => triggerBulkApplyImages(rimNum, 'replace_all')}
-                                      className="flex-1 bg-orange-100 hover:bg-orange-150 text-orange-850 text-[8.5px] font-bold py-1.5 px-1 rounded uppercase tracking-wider text-center cursor-pointer"
+                                      className="w-full bg-orange-500 hover:bg-orange-400 text-slate-950 text-xs font-black py-2 px-2 rounded-lg uppercase tracking-wider text-center cursor-pointer shadow-sm transition-colors"
                                       title="Substitui a imagem de todos os pneus deste aro com a foto padrão"
                                     >
-                                      Substituir todos
+                                      Substituir TODOS do Aro {rimNum}
                                     </button>
                                   </div>
                                 )}
@@ -4822,11 +4951,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                             </div>
 
                             {/* BLOCK 2: INMETRO SEAL */}
-                            <div className="bg-white p-3 rounded-lg border border-slate-150 space-y-3 flex flex-col justify-between">
+                            <div className="bg-white p-4 rounded-xl border border-slate-200/80 space-y-4 flex flex-col justify-between">
                               <div>
-                                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1.5">Selo INMETRO / CONPET</h4>
+                                <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                  <Award className="h-4 w-4 text-orange-500" />
+                                  Selo INMETRO / CONPET Aro {rimNum}
+                                </h4>
                                 {sealItem?.seal_url ? (
-                                  <div className="h-28 w-full border border-slate-200 rounded overflow-hidden p-1 bg-checkerboard flex items-center justify-center relative group">
+                                  <div className="h-32 w-full border border-slate-150 rounded-lg overflow-hidden p-1 bg-checkerboard flex items-center justify-center relative group">
                                     <img 
                                       src={sealItem.seal_url} 
                                       alt={`Selo Aro ${rimNum}`} 
@@ -4838,7 +4970,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                                         href={sealItem.seal_url} 
                                         target="_blank" 
                                         rel="noopener noreferrer" 
-                                        className="text-white text-[10px] font-bold underline"
+                                        className="text-white text-[11px] font-bold underline"
                                         referrerPolicy="no-referrer"
                                       >
                                         Ver original
@@ -4846,14 +4978,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="h-28 bg-slate-50 border border-dashed border-slate-200 rounded flex flex-col items-center justify-center text-slate-400">
-                                    <Award className="h-6 w-6 text-slate-300 mb-1" />
-                                    <span className="text-[9px] font-bold uppercase tracking-wider">Sem selo padrão</span>
+                                  <div className="h-32 bg-slate-50 border border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-400">
+                                    <Award className="h-7 w-7 text-slate-300 mb-1" />
+                                    <span className="text-[10px] font-semibold uppercase text-slate-45 tracking-wider">Sem selo padrão</span>
                                   </div>
                                 )}
                               </div>
 
-                              <div className="space-y-2.5 mt-2">
+                              <div className="space-y-3 mt-3">
                                 <label className="block">
                                   <span className="sr-only">Escolher selo</span>
                                   <input 
@@ -4864,29 +4996,29 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                                       const file = e.target.files?.[0];
                                       if (file) handleUploadRimSeal(rimNum, file);
                                     }}
-                                    className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
+                                    className="block w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
                                   />
                                 </label>
 
                                 {sealItem?.seal_url && (
-                                  <div className="flex gap-1.5 pt-1.5 border-t border-slate-100">
+                                  <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
                                     <button
                                       type="button"
                                       disabled={bulkProcessing}
                                       onClick={() => triggerBulkApplySeals(rimNum, 'only_empty')}
-                                      className="flex-1 bg-slate-100 hover:bg-slate-250 text-slate-750 text-[8.5px] font-semibold py-1.5 px-1 rounded uppercase tracking-wider text-center cursor-pointer"
+                                      className="w-full bg-slate-100 hover:bg-slate-200 text-slate-755 text-xs font-bold py-2 px-2 rounded-lg uppercase tracking-wider text-center cursor-pointer border border-slate-250 transition-colors"
                                       title="Associa o selo apenas aos pneus que não possuem selo ainda"
                                     >
-                                      Apenas sem selo
+                                      Aplicar apenas nos sem selo (Aro {rimNum})
                                     </button>
                                     <button
                                       type="button"
                                       disabled={bulkProcessing}
                                       onClick={() => triggerBulkApplySeals(rimNum, 'replace_all')}
-                                      className="flex-1 bg-orange-100 hover:bg-orange-150 text-orange-850 text-[8.5px] font-bold py-1.5 px-1 rounded uppercase tracking-wider text-center cursor-pointer"
+                                      className="w-full bg-orange-500 hover:bg-orange-400 text-slate-950 text-xs font-black py-2 px-2 rounded-lg uppercase tracking-wider text-center cursor-pointer shadow-sm transition-colors"
                                       title="Substitui o selo de todos os pneus deste aro pelo cadastrado"
                                     >
-                                      Substituir todos
+                                      Substituir TODOS do Aro {rimNum}
                                     </button>
                                   </div>
                                 )}
@@ -4895,7 +5027,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                           </div>
                         </div>
                       );
-                    })}
+                    })()}
                   </div>
                 </div>
               </div>

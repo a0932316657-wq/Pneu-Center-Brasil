@@ -166,54 +166,114 @@ function parseBrandFromUrl(part: string, brands: { name: string }[]): string {
   return matched ? matched.name : 'Todas';
 }
 
-export function getCatalogHash(rim: string, brand: string, measure: string): string {
+export interface CatalogFilters {
+  rim?: string;
+  brand?: string;
+  measure?: string;
+  search?: string;
+}
+
+export function buildCatalogUrl(filters: CatalogFilters): string {
   let hash = '#/catalogo';
-  const rimPart = formatRimForUrl(rim);
-  const brandPart = formatBrandForUrl(brand);
-  const measurePart = measure ? normalizeMeasure(measure) : '';
-  
-  if (rimPart) {
-    hash += `/${rimPart}`;
+  const { rim, brand, measure, search } = filters;
+
+  // 1. Rim
+  if (rim && rim !== 'Todos') {
+    if (rim === 'SUV') {
+      hash += '/aro-suv';
+    } else {
+      const match = rim.match(/\d+/);
+      if (match) {
+        hash += `/aro-${match[0]}`;
+      } else if (rim.startsWith('aro-')) {
+        hash += `/${rim}`;
+      }
+    }
   }
-  if (brandPart) {
-    hash += `/marca/${brandPart}`;
+
+  // 2. Brand
+  if (brand && brand !== 'Todas') {
+    const brandSlug = slugify(brand);
+    if (brandSlug) {
+      hash += `/marca/${brandSlug}`;
+    }
   }
-  if (measurePart) {
-    hash += `/medida/${measurePart}`;
+
+  // 3. Measure
+  if (measure) {
+    const measureSlug = normalizeMeasure(measure);
+    if (measureSlug) {
+      hash += `/medida/${measureSlug}`;
+    }
   }
+
+  // 4. Search query
+  if (search && search.trim() !== '') {
+    hash += `?q=${encodeURIComponent(search.trim())}`;
+  }
+
   return hash;
 }
 
-export function parseCatalogHash(hash: string, brands: { name: string }[]): { rim: string; brand: string; measure: string } {
+export function parseCatalogUrl(hash: string, brands: { name: string }[] = []): { rim: string; brand: string; measure: string; search: string } {
   let rim = 'Todos';
   let brand = 'Todas';
   let measure = '';
-  
-  if (!hash.startsWith('#/catalogo')) {
-    return { rim, brand, measure };
+  let search = '';
+
+  if (!hash || !hash.startsWith('#/catalogo')) {
+    return { rim, brand, measure, search };
   }
-  
-  const path = hash.replace('#/catalogo', '');
+
+  const qIndex = hash.indexOf('?');
+  let pathStr = hash;
+  if (qIndex >= 0) {
+    pathStr = hash.substring(0, qIndex);
+    const queryStr = hash.substring(qIndex + 1);
+    const params = new URLSearchParams(queryStr);
+    search = params.get('q') || '';
+  }
+
+  const path = pathStr.replace('#/catalogo', '');
   if (!path || path === '/') {
-    return { rim, brand, measure };
+    return { rim, brand, measure, search };
   }
-  
+
   const parts = path.split('/').map(p => p.trim()).filter(p => p && p !== '');
-  
+
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    if (part.startsWith('aro-')) {
-      rim = parseRimFromUrl(part);
+    if (part === 'aro-suv') {
+      rim = 'SUV';
+    } else if (part.startsWith('aro-')) {
+      const match = part.match(/^aro-(\d+)$/);
+      if (match) {
+        rim = `Aro ${match[1]}`;
+      }
     } else if (part === 'marca' && i + 1 < parts.length) {
-      brand = parseBrandFromUrl(parts[i + 1], brands);
+      const val = parts[i + 1].toLowerCase().trim();
+      const matched = brands.find(b => slugify(b.name) === val || b.name.toLowerCase().trim() === val);
+      brand = matched ? matched.name : parts[i + 1];
+      if (!matched && val) {
+        brand = val.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
       i++;
     } else if (part === 'medida' && i + 1 < parts.length) {
       measure = parts[i + 1];
       i++;
     }
   }
-  
-  return { rim, brand, measure };
+
+  return { rim, brand, measure, search };
+}
+
+export function getCatalogHash(rim: string, brand: string, measure: string): string {
+  return buildCatalogUrl({ rim, brand, measure });
+}
+
+export function parseCatalogHash(hash: string, brands: { name: string }[]): { rim: string; brand: string; measure: string } {
+  const parsed = parseCatalogUrl(hash, brands);
+  return { rim: parsed.rim, brand: parsed.brand, measure: parsed.measure };
 }
 
 /**

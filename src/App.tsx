@@ -28,7 +28,7 @@ import heroTiresImage from './assets/images/hero_tires_1780836675879.png';
 // Shared types and data
 import { AppRoute, RouteState, Product } from './types';
 import { BRANDS } from './data';
-import { getProducts, getBrands, getRimCards, getSettings, Brand, RimCard, getCatalogHash, parseCatalogHash, normalizeMeasure } from './lib/appStore';
+import { getProducts, getBrands, getRimCards, getSettings, Brand, RimCard, getCatalogHash, parseCatalogHash, normalizeMeasure, buildCatalogUrl, parseCatalogUrl, slugify } from './lib/appStore';
 
 // Custom components
 import Navbar from './components/Navbar';
@@ -142,6 +142,11 @@ export default function App() {
       return { path: 'produto', productId: id };
     }
 
+    if (hash.startsWith('#/product/')) {
+      const id = hash.replace('#/product/', '');
+      return { path: 'produto', productId: id };
+    }
+
     if (hash.startsWith('#/catalogo')) {
       return { path: 'catalogo' };
     }
@@ -187,13 +192,8 @@ export default function App() {
   const filterByRim = (rim: string, push = true) => {
     setSelectedRim(rim);
     if (push) {
-      const newHash = getCatalogHash(rim, selectedBrand, selectedMeasure);
-      window.history.pushState({
-        path: 'catalogo',
-        selectedRim: rim,
-        selectedBrand: selectedBrand,
-        selectedMeasure: selectedMeasure
-      }, '', newHash);
+      const newHash = buildCatalogUrl({ rim, brand: selectedBrand, measure: selectedMeasure, search: searchQuery });
+      window.location.hash = newHash;
       setRouteState({ path: 'catalogo' });
     }
   };
@@ -201,13 +201,8 @@ export default function App() {
   const filterByBrand = (brand: string, push = true) => {
     setSelectedBrand(brand);
     if (push) {
-      const newHash = getCatalogHash(selectedRim, brand, selectedMeasure);
-      window.history.pushState({
-        path: 'catalogo',
-        selectedRim: selectedRim,
-        selectedBrand: brand,
-        selectedMeasure: selectedMeasure
-      }, '', newHash);
+      const newHash = buildCatalogUrl({ rim: selectedRim, brand, measure: selectedMeasure, search: searchQuery });
+      window.location.hash = newHash;
       setRouteState({ path: 'catalogo' });
     }
   };
@@ -215,13 +210,8 @@ export default function App() {
   const filterByMeasure = (measure: string, push = true) => {
     setSelectedMeasure(measure);
     if (push) {
-      const newHash = getCatalogHash(selectedRim, selectedBrand, measure);
-      window.history.pushState({
-        path: 'catalogo',
-        selectedRim: selectedRim,
-        selectedBrand: selectedBrand,
-        selectedMeasure: measure
-      }, '', newHash);
+      const newHash = buildCatalogUrl({ rim: selectedRim, brand: selectedBrand, measure, search: searchQuery });
+      window.location.hash = newHash;
       setRouteState({ path: 'catalogo' });
     }
   };
@@ -385,13 +375,16 @@ export default function App() {
     const handleUrlFiltersSync = () => {
       const hash = window.location.hash;
       if (hash.startsWith('#/catalogo')) {
-        const { rim, brand, measure } = parseCatalogHash(hash, brands);
-        setSelectedRim(rim);
-        setSelectedBrand(brand);
-        setSelectedMeasure(measure);
+        const { rim, brand, measure, search } = parseCatalogUrl(hash, brands);
+        setSelectedRim(rim || 'Todos');
+        setSelectedBrand(brand || 'Todas');
+        setSelectedMeasure(measure || '');
+        if (search !== undefined) {
+          setSearchQuery(search);
+        }
         
         // Ativar aviso de filtro se houver algum filtro ativo
-        if (rim !== 'Todos' || brand !== 'Todas' || measure !== '') {
+        if (rim !== 'Todos' || brand !== 'Todas' || measure !== '' || (search && search.trim() !== '')) {
           setShowFilterNotice(true);
         } else {
           setShowFilterNotice(false);
@@ -409,22 +402,48 @@ export default function App() {
     };
   }, [brands]);
 
-  // Redirecionamento UUID para Slug Amigavel
+  // Synchronize searchQuery with hash silently using replaceState (avoiding history pollution)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#/catalogo')) {
+      const { search } = parseCatalogUrl(hash, brands);
+      if (search !== searchQuery) {
+        const newHash = buildCatalogUrl({
+          rim: selectedRim,
+          brand: selectedBrand,
+          measure: selectedMeasure,
+          search: searchQuery
+        });
+        window.history.replaceState(window.history.state, '', newHash);
+      }
+    }
+  }, [searchQuery, selectedRim, selectedBrand, selectedMeasure, brands]);
+
+  // Redirecionamento UUID para Slug Amigavel e rota /product para /produto
   useEffect(() => {
     if (routeState.path === 'produto' && routeState.productId && products.length > 0) {
       const productId = routeState.productId;
-      const match = products.find(p => p.id === productId);
-      if (match && match.slug && match.slug !== productId) {
-        window.history.replaceState({
-          path: 'produto',
-          productId: match.slug,
-          selectedRim,
-          selectedBrand
-        }, '', `#/produto/${match.slug}`);
-        setRouteState({ path: 'produto', productId: match.slug });
+      const hash = window.location.hash;
+      const isOldRoute = hash.startsWith('#/product/');
+
+      const matchById = products.find(p => p.id === productId);
+      const matchBySlug = products.find(p => (p.slug || slugify(p.name)) === productId);
+      const match = matchById || matchBySlug;
+
+      if (match) {
+        const targetSlug = match.slug || slugify(match.name);
+        if (productId === match.id || isOldRoute) {
+          window.history.replaceState({
+            path: 'produto',
+            productId: targetSlug,
+            selectedRim,
+            selectedBrand
+          }, '', `#/produto/${targetSlug}`);
+          setRouteState({ path: 'produto', productId: targetSlug });
+        }
       }
     }
-  }, [routeState, products]);
+  }, [routeState, products, selectedRim, selectedBrand]);
 
   // Catalog item filtering logic (excludes inactive items)
   const filteredProducts = products.filter((p) => p.active !== false).filter((product) => {
@@ -489,12 +508,7 @@ export default function App() {
     setShowFilterNotice(false);
     setSortBy('marca');
     
-    window.history.pushState({
-      path: 'catalogo',
-      selectedRim: 'Todos',
-      selectedBrand: 'Todas',
-      selectedMeasure: ''
-    }, '', '#/catalogo');
+    window.location.hash = '#/catalogo';
     setRouteState({ path: 'catalogo' });
   };
 

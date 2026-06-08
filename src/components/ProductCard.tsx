@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Product } from '../types';
 import { openWhatsAppChat, getProductMessage } from '../lib/whatsapp';
 import BrandBadge from './BrandBadge';
+import { slugify } from '../lib/appStore';
 
 interface ProductCardProps {
   product: Product;
@@ -18,6 +19,8 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
     openWhatsAppChat(msg);
   };
 
+  const productSlug = product.slug || slugify(product.name) || product.id;
+
   return (
     <motion.div
       id={`product-card-${product.id}`}
@@ -27,7 +30,7 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
       {/* Product Image Panel */}
       <div 
         className="relative aspect-video w-full overflow-hidden bg-checkerboard border-b border-slate-100 cursor-pointer"
-        onClick={() => onViewDetails(product.id)}
+        onClick={() => onViewDetails(productSlug)}
       >
         <img
           src={product.image || null}
@@ -57,7 +60,7 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
 
         <h3 
           className="font-sans text-base font-bold text-slate-800 group-hover:text-orange-600 transition-colors line-clamp-1 cursor-pointer mb-1"
-          onClick={() => onViewDetails(product.id)}
+          onClick={() => onViewDetails(productSlug)}
         >
           {product.name}
         </h3>
@@ -91,7 +94,7 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
         <div className="space-y-2 mt-auto">
           <button
             id={`btn-details-${product.id}`}
-            onClick={() => onViewDetails(product.id)}
+            onClick={() => onViewDetails(productSlug)}
             className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#0B1B32] hover:bg-slate-800 text-white font-bold text-xs px-4 py-2.5 transition-all text-center uppercase tracking-wider font-sans cursor-pointer"
           >
             <Eye className="h-4 w-4 text-slate-300" />
