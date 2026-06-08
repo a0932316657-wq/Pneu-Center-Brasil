@@ -32,6 +32,7 @@ import {
   Film
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { MediaRenderer } from './MediaRenderer';
 import { Product } from '../types';
 import { 
   getProducts, 
@@ -59,9 +60,13 @@ import {
   saveLogoDb,
   removeLogoDb,
   syncFromSupabase,
-  clearDemoProducts
+  clearDemoProducts,
+  getRimDefaultMedia,
+  saveRimDefaultMediaDb,
+  getRimInmetroSeals,
+  saveRimInmetroSealDb
 } from '../lib/appStore';
-import { supabase, uploadFile, isSupabaseUrlAbsent, isSupabaseKeyAbsent } from '../lib/supabaseClient';
+import { supabase, uploadFile, uploadMedia, isSupabaseUrlAbsent, isSupabaseKeyAbsent } from '../lib/supabaseClient';
 import { BRANDS } from '../data';
 
 export function isVideoUrl(url: string | undefined): boolean {
@@ -95,7 +100,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Dashboard navigation tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image' | 'midia-massa'>('overview');
   
   // App states loaded from store
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -141,6 +146,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [rimCardName, setRimCardName] = useState('');
   const [rimCardNumber, setRimCardNumber] = useState<number>(15);
   const [rimCardImage, setRimCardImage] = useState('');
+  const [rimCardMediaType, setRimCardMediaType] = useState<'image' | 'video'>('image');
   const [rimCardDesc, setRimCardDesc] = useState('');
   const [rimCardActive, setRimCardActive] = useState(true);
 
@@ -208,6 +214,15 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({ type: 'idle', message: '' });
+
+  // Bulk features state
+  const [rimDefaultMedia, setRimDefaultMediaState] = useState<any[]>(getRimDefaultMedia());
+  const [rimInmetroSeals, setRimInmetroSealsState] = useState<any[]>(getRimInmetroSeals());
+  const [bulkPriceAction, setBulkPriceAction] = useState<'add' | 'subtract'>('add');
+  const [bulkPricePercent, setBulkPricePercent] = useState<string>('');
+  const [bulkPriceRimFilter, setBulkPriceRimFilter] = useState<string>('Todos');
+  const [bulkPriceBrandFilter, setBulkPriceBrandFilter] = useState<string>('Todas');
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Delete Confirmation ID Modal
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -308,6 +323,19 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setCurrentLogo(getLogo());
     setBrandsList(getBrands());
     setRimCardsList(getRimCards());
+    setRimDefaultMediaState(getRimDefaultMedia());
+    setRimInmetroSealsState(getRimInmetroSeals());
+
+    const handleMediaUpdate = () => setRimDefaultMediaState(getRimDefaultMedia());
+    const handleSealsUpdate = () => setRimInmetroSealsState(getRimInmetroSeals());
+
+    window.addEventListener('pneu_center_rim_default_media_updated', handleMediaUpdate);
+    window.addEventListener('pneu_center_rim_inmetro_seals_updated', handleSealsUpdate);
+
+    return () => {
+      window.removeEventListener('pneu_center_rim_default_media_updated', handleMediaUpdate);
+      window.removeEventListener('pneu_center_rim_inmetro_seals_updated', handleSealsUpdate);
+    };
   }, []);
 
   const triggerFeedback = (message: string, type: 'success' | 'error' = 'success') => {
@@ -788,10 +816,11 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
     setIsUploadingHero(true);
     try {
-      const publicUrl = await uploadFile('pneu-center', 'hero', file);
+      const { publicUrl, mediaType } = await uploadMedia(file, 'hero');
       setSiteSettings(prev => ({
         ...prev,
-        heroImageUrl: publicUrl
+        heroImageUrl: publicUrl,
+        heroMediaType: mediaType
       }));
       triggerFeedback('Mídia de destaque (Imagem/Vídeo) enviada com sucesso! Lembre-se de clicar em salvar para aplicar.');
     } catch (err: any) {
@@ -805,9 +834,42 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const handleRemoveHeroImage = () => {
     setSiteSettings(prev => ({
       ...prev,
-      heroImageUrl: ''
+      heroImageUrl: '',
+      heroMediaType: 'image'
     }));
     triggerFeedback('Imagem de destaque removida. Clique em salvar para confirmar.');
+  };
+
+  const handleFeaturedMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!(await checkAuth())) return;
+
+    setIsUploadingHero(true);
+    try {
+      const { publicUrl, mediaType } = await uploadMedia(file, 'banners');
+      setSiteSettings(prev => ({
+        ...prev,
+        featuredMediaUrl: publicUrl,
+        featuredMediaType: mediaType
+      }));
+      triggerFeedback('Mídia de banner de destaque enviada com sucesso! Lembre-se de salvar.');
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao enviar mídia de banner: ${err.message || err}`, 'error');
+    } finally {
+      setIsUploadingHero(false);
+    }
+  };
+
+  const handleRemoveFeaturedMedia = () => {
+    setSiteSettings(prev => ({
+      ...prev,
+      featuredMediaUrl: '',
+      featuredMediaType: 'image'
+    }));
+    triggerFeedback('Mídia de banner removida. Clique em salvar para confirmar.');
   };
 
   const handleSaveHeroSettings = async () => {
@@ -835,13 +897,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
     setIsUploadingInstitutional(true);
     try {
-      const isVideoFile = file.type.toLowerCase().startsWith('video/');
-      const publicUrl = await uploadFile('pneu-center', 'institutional', file);
+      const { publicUrl, mediaType } = await uploadMedia(file, 'institutional');
       
       setSiteSettings(prev => ({
         ...prev,
         institutionalMediaUrl: publicUrl,
-        institutionalMediaType: isVideoFile ? 'video' : 'image'
+        institutionalMediaType: mediaType
       }));
       triggerFeedback('Mídia institucional enviada com sucesso! Lembre-se de clicar em salvar para aplicar.');
     } catch (err: any) {
@@ -1156,7 +1217,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         'mounting',
         'letter_color',
         'groove_depth',
-        'inmetro_label_url'
+        'inmetro_label_url',
+        'slug'
       ];
 
       const rows = productsList.map(p => {
@@ -1195,7 +1257,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
           p.mounting || '',
           p.letter_color || '',
           p.groove_depth || '',
-          p.inmetro_label_url || ''
+          p.inmetro_label_url || '',
+          p.slug || ''
         ].map(val => {
           const escaped = val.replace(/"/g, '""');
           return `"${escaped}"`;
@@ -1577,7 +1640,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         rim: Number(rimCardNumber),
         image: rimCardImage || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=400',
         description: rimCardDesc.trim(),
-        active: rimCardActive
+        active: rimCardActive,
+        mediaType: rimCardMediaType
       };
 
       await saveRimCardDb(cleanRimCard);
@@ -1590,6 +1654,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       setRimCardName('');
       setRimCardNumber(15);
       setRimCardImage('');
+      setRimCardMediaType('image');
       setRimCardDesc('');
       setRimCardActive(true);
 
@@ -1607,6 +1672,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setRimCardName(card.name);
     setRimCardNumber(card.rim);
     setRimCardImage(card.image);
+    setRimCardMediaType(card.mediaType || 'image');
     setRimCardDesc(card.description);
     setRimCardActive(card.active);
   };
@@ -1631,16 +1697,216 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     if (!(await checkAuth())) return;
 
     try {
-      const updated = { ...card, active: !card.active };
-      await saveRimCardDb(updated);
-      setRimCardsList(getRimCards());
-      onRefreshPublicData();
-      triggerFeedback(`Card de Aro "${card.name}" foi ${!card.active ? 'ativado' : 'desativado'}!`);
-      
-      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+       const updated = { ...card, active: !card.active };
+       await saveRimCardDb(updated);
+       setRimCardsList(getRimCards());
+       onRefreshPublicData();
+       triggerFeedback(`Card de Aro "${card.name}" foi ${!card.active ? 'ativado' : 'desativado'}!`);
+       
+       syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
+       console.error(err);
+       triggerFeedback(`Erro ao alterar status do aro: ${err.message || err}`, 'error');
+    }
+  };
+
+  // Bulk Media & Seal uploads / triggers
+  const handleUploadRimMedia = async (rim: number, file: File) => {
+    if (!(await checkAuth())) return;
+    if (!file) return;
+    
+    // Validate
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      triggerFeedback('Tipo de arquivo inválido. Use apenas JPG, PNG ou WEBP.', 'error');
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      triggerFeedback('Arquivo muito grande. O tamanho máximo permitido é 5MB.', 'error');
+      return;
+    }
+    
+    setBulkProcessing(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `bulk-rim-images/rim-${rim}-${Date.now()}.${fileExt}`;
+      const res = await uploadMedia(file, filePath);
+      await saveRimDefaultMediaDb(rim, res.publicUrl);
+      setRimDefaultMediaState(getRimDefaultMedia());
+      triggerFeedback(`Imagem padrão para o Aro ${rim} enviada com sucesso!`);
     } catch (err: any) {
       console.error(err);
-      triggerFeedback(`Erro ao alterar status do aro: ${err.message || err}`, 'error');
+      triggerFeedback(`Erro ao enviar imagem padrão: ${err.message || err}`, 'error');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleUploadRimSeal = async (rim: number, file: File) => {
+    if (!(await checkAuth())) return;
+    if (!file) return;
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      triggerFeedback('Tipo de arquivo inválido. Use apenas JPG, PNG ou WEBP.', 'error');
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      triggerFeedback('Arquivo muito grande. O tamanho máximo permitido é 5MB.', 'error');
+      return;
+    }
+    
+    setBulkProcessing(true);
+    try {
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `inmetro/seal-${rim}-${Date.now()}.${fileExt}`;
+      const res = await uploadMedia(file, filePath);
+      await saveRimInmetroSealDb(rim, res.publicUrl);
+      setRimInmetroSealsState(getRimInmetroSeals());
+      triggerFeedback(`Selo INMETRO para o Aro ${rim} enviado com sucesso!`);
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao enviar selo INMETRO: ${err.message || err}`, 'error');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const triggerBulkApplyImages = async (rim: number, mode: 'only_empty' | 'replace_all') => {
+    if (!(await checkAuth())) return;
+    
+    const defaults = getRimDefaultMedia();
+    const match = defaults.find(m => m.rim === rim);
+    if (!match || !match.image_url) {
+      triggerFeedback(`Nenhuma imagem padrão configurada para o Aro ${rim}.`, 'error');
+      return;
+    }
+    
+    const confirmPrompt = mode === 'only_empty'
+      ? `Deseja associar a imagem padrão do Aro ${rim} apenas aos pneus sem foto?`
+      : `Deseja SUBSTITUIR a imagem de TODOS os pneus do Aro ${rim} pela imagem padrão?`;
+      
+    if (!window.confirm(confirmPrompt)) return;
+    
+    setBulkProcessing(true);
+    let updatedCount = 0;
+    try {
+      for (const p of productsList) {
+        if (p.rim === rim) {
+          const hasNoImg = !p.image || p.image.trim() === '';
+          if (mode === 'replace_all' || (mode === 'only_empty' && hasNoImg)) {
+            const updated = { ...p, image: match.image_url, mediaType: 'image' as const };
+            await saveProductDb(updated);
+            updatedCount++;
+          }
+        }
+      }
+      triggerFeedback(`Processo concluído! ${updatedCount} pneus do Aro ${rim} foram atualizados.`);
+      setProductsList(getProducts());
+      onRefreshPublicData();
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao aplicar em lote: ${err.message || err}`, 'error');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const triggerBulkApplySeals = async (rim: number, mode: 'only_empty' | 'replace_all') => {
+    if (!(await checkAuth())) return;
+    
+    const seals = getRimInmetroSeals();
+    const match = seals.find(s => s.rim === rim);
+    if (!match || !match.seal_url) {
+      triggerFeedback(`Nenhum selo INMETRO configurado para o Aro ${rim}.`, 'error');
+      return;
+    }
+    
+    const confirmPrompt = mode === 'only_empty'
+      ? `Deseja associar o selo do Aro ${rim} apenas aos pneus sem selo configurado?`
+      : `Deseja SUBSTITUIR o selo de TODOS os pneus do Aro ${rim} pelo cadastrado?`;
+      
+    if (!window.confirm(confirmPrompt)) return;
+    
+    setBulkProcessing(true);
+    let updatedCount = 0;
+    try {
+      for (const p of productsList) {
+        if (p.rim === rim) {
+          const hasNoSeal = !p.inmetro_label_url || p.inmetro_label_url.trim() === '';
+          if (mode === 'replace_all' || (mode === 'only_empty' && hasNoSeal)) {
+            const updated = { ...p, inmetro_label_url: match.seal_url };
+            await saveProductDb(updated);
+            updatedCount++;
+          }
+        }
+      }
+      triggerFeedback(`Processo concluído! ${updatedCount} pneus do Aro ${rim} foram atualizados com o selo.`);
+      setProductsList(getProducts());
+      onRefreshPublicData();
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao aplicar selos em lote: ${err.message || err}`, 'error');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleBulkPriceAdjustment = async () => {
+    if (!(await checkAuth())) return;
+    
+    const percent = parseFloat(bulkPricePercent);
+    if (isNaN(percent) || percent <= 0) {
+      triggerFeedback('Insira uma porcentagem válida de reajuste (maior que zero).', 'error');
+      return;
+    }
+    
+    const confirmMsg = `Deseja aplicar um reajuste de ${bulkPriceAction === 'add' ? '+' : '-'}${percent}% ` +
+      `nos pneus com filtro de Aro: ${bulkPriceRimFilter} e Marca: ${bulkPriceBrandFilter}?`;
+      
+    if (!window.confirm(confirmMsg)) return;
+    
+    setBulkProcessing(true);
+    let updatedCount = 0;
+    try {
+      for (const p of productsList) {
+        const matchesRim = bulkPriceRimFilter === 'Todos' || String(p.rim) === bulkPriceRimFilter;
+        const matchesBrand = bulkPriceBrandFilter === 'Todas' || p.brand.trim().toLowerCase() === bulkPriceBrandFilter.trim().toLowerCase();
+        
+        if (matchesRim && matchesBrand) {
+          if (p.price && p.price > 0) {
+            let newPrice = p.price;
+            if (bulkPriceAction === 'add') {
+              newPrice = p.price * (1 + percent / 100);
+            } else {
+              newPrice = p.price * (1 - percent / 100);
+            }
+            
+            // Round to 2 decimal places
+            newPrice = Math.round(newPrice * 100) / 100;
+            
+            // Lower bounds check: price cannot drop below R$ 1,00
+            if (newPrice < 1.00) {
+               newPrice = 1.00;
+            }
+            
+            const updated = { ...p, price: newPrice };
+            await saveProductDb(updated);
+            updatedCount++;
+          }
+        }
+      }
+      triggerFeedback(`Sucesso! ${updatedCount} pneus foram reajustados em ${bulkPriceAction === 'add' ? '+' : '-'}${percent}%.`);
+      setProductsList(getProducts());
+      onRefreshPublicData();
+      setBulkPricePercent('');
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro no reajuste de preço: ${err.message || err}`, 'error');
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
@@ -1652,9 +1918,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
     setIsUploadingImage(true);
     try {
-      const publicUrl = await uploadFile('pneu-center', 'rims', file);
+      const { publicUrl, mediaType } = await uploadMedia(file, 'rims');
       setRimCardImage(publicUrl);
-      triggerFeedback('Imagem do card de aro enviada com sucesso!');
+      setRimCardMediaType(mediaType);
+      triggerFeedback('Mídia do card de aro enviada com sucesso!');
     } catch (err: any) {
       console.error(err);
       triggerFeedback(`Erro no upload da imagem do aro: ${err.message || err}`, 'error');
@@ -1839,6 +2106,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               { id: 'import-export', label: 'Importar / Exportar', icon: FileSpreadsheet },
               { id: 'marcas', label: 'Marcas', icon: Award },
               { id: 'cards-do-aro', label: 'Cards de Aro', icon: Database },
+              { id: 'midia-massa', label: 'Mídias e Selos em Lote', icon: Folder },
               { id: 'logo-identity', label: 'Logo e Identidade', icon: ImageIcon },
               { id: 'site-settings', label: 'Configurações do Site', icon: SettingsIcon },
               { id: 'hero-image', label: 'Imagem de Destaque', icon: Sparkles },
@@ -3636,6 +3904,119 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   </div>
 
                 </div>
+
+                {/* FEATURED BANNER CARD CONTROLS */}
+                <div id="banner-destaque-config" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
+                  <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider border-b border-slate-150 pb-2">
+                    Banner de Destaque Extra (Home)
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                    Gerencie aqui um banner visual de promoção ou propaganda em destaque na Home (suporta imagens ou vídeos em formato horizontal).
+                  </p>
+
+                  <div className="space-y-4">
+                    {/* URL Field input */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        URL do Banner Destaque
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettings.featuredMediaUrl || ''}
+                        onChange={(e) => setSiteSettings({ ...siteSettings, featuredMediaUrl: e.target.value })}
+                        placeholder="Ex: Link direto da imagem/vídeo ou faça o upload abaixo..."
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-orange-500 transition-all font-sans font-medium"
+                      />
+                    </div>
+
+                    {/* Alt Text field */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Texto Alternativo (Alt / Acessibilidade)
+                      </label>
+                      <input
+                        type="text"
+                        value={siteSettings.featuredMediaAlt || ''}
+                        onChange={(e) => setSiteSettings({ ...siteSettings, featuredMediaAlt: e.target.value })}
+                        placeholder="Ex: Oferta Especial Pneus Pirelli"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-orange-500 transition-all font-sans font-medium"
+                      />
+                    </div>
+
+                    {/* Type select */}
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Tipo de Mídia
+                      </label>
+                      <select
+                        value={siteSettings.featuredMediaType || 'image'}
+                        onChange={(e) => setSiteSettings({ ...siteSettings, featuredMediaType: e.target.value as 'image' | 'video' })}
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-800 outline-none focus:border-orange-500 transition-all font-sans font-medium"
+                      >
+                        <option value="image">Imagem (JPG, PNG, WEBP)</option>
+                        <option value="video">Vídeo (MP4, WEBM)</option>
+                      </select>
+                    </div>
+
+                    {/* Uploader */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                      <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-all ${
+                        siteSettings.featuredMediaUrl ? 'border-green-300 bg-green-50/20' : 'border-slate-350 hover:border-orange-400 bg-slate-50'
+                      }`}>
+                        <Upload className={`h-8 w-8 mb-2 ${siteSettings.featuredMediaUrl ? 'text-green-500 animate-bounce' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold uppercase text-slate-700 font-sans">
+                          {isUploadingHero ? 'Enviando...' : 'Subir Vídeo ou Imagem'}
+                        </span>
+                        <span className="text-[9px] text-slate-400 mt-1">PNG, JPG, WEBP, MP4, WEBM</span>
+                        <input
+                          type="file"
+                          accept="image/*,video/*"
+                          onChange={handleFeaturedMediaUpload}
+                          disabled={isUploadingHero}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {siteSettings.featuredMediaUrl ? (
+                        <div className="flex flex-col justify-center bg-slate-50 rounded-lg p-4 border border-slate-200">
+                          <span className="text-[10px] font-mono font-bold text-slate-400 uppercase mb-1">Previsualização do Banner:</span>
+                          <div className="relative h-20 w-full rounded border border-slate-200 bg-slate-100 flex items-center justify-center p-0.5 shrink-0 overflow-hidden mb-3">
+                            <MediaRenderer 
+                              src={siteSettings.featuredMediaUrl} 
+                              mediaType={siteSettings.featuredMediaType} 
+                              alt="Banner de Destaque" 
+                              className="h-full w-full object-cover rounded" 
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRemoveFeaturedMedia}
+                            className="text-center rounded-lg border border-red-200 hover:bg-red-50 hover:border-red-300 text-red-650 font-bold text-[10px] uppercase py-2 transition-colors cursor-pointer font-sans"
+                          >
+                            Remover Banner
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col justify-center items-center bg-slate-50 rounded-lg p-4 border border-slate-200 text-center">
+                          <span className="text-[11px] font-semibold text-slate-400 italic font-sans animate-fade-in">Nenhum banner ativo.</span>
+                          <span className="text-[10px] text-slate-400 mt-1 leading-normal font-sans">O banner de destaque não será exibido na página inicial se estiver vazio.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions Bar for Featured Banner */}
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-150">
+                    <button
+                      type="button"
+                      onClick={handleSaveHeroSettings}
+                      disabled={isSavingLogo}
+                      className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3.5 text-xs font-black uppercase cursor-pointer shadow-md shadow-orange-600/10 disabled:opacity-50"
+                    >
+                      {isSavingLogo ? 'Salvando...' : 'Salvar Banner Destaque'}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* LIVE DOCK PREVIEW CARD - 5 cols */}
@@ -3996,7 +4377,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       <div className="flex items-center gap-3">
                         {rimCardImage && (
                           <div className="relative h-14 w-20 rounded border border-slate-200 bg-slate-50 flex items-center justify-center p-0.5 shrink-0 overflow-hidden">
-                            <img src={rimCardImage} alt="Rim Preview" className="h-full w-full object-cover rounded" />
+                            <MediaRenderer src={rimCardImage} mediaType={rimCardMediaType} alt="Rim Preview" className="h-full w-full object-cover rounded" />
                           </div>
                         )}
                         
@@ -4005,7 +4386,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                           <span>Subir pelo Celular</span>
                           <input
                             type="file"
-                            accept="image/*"
+                            accept="image/*,video/*"
                             onChange={handleRimCardImageUpload}
                             className="hidden"
                           />
@@ -4095,7 +4476,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                       }`}
                     >
                       <div className="h-16 w-16 bg-checkerboard border border-slate-200 rounded overflow-hidden p-0.5 shrink-0 flex items-center justify-center">
-                        <img src={card.image} alt={card.name} className="h-full w-full object-contain rounded" />
+                        <MediaRenderer src={card.image} mediaType={card.mediaType} alt={card.name} className="h-full w-full object-contain rounded animate-fade-in" />
                       </div>
                       
                       <div className="flex-grow min-w-0">
@@ -4316,6 +4697,333 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                 )}
               </div>
             )}
+          </motion.div>
+        )}
+
+        {/* TAB 10: BULK ADJUSTMENTS & MEDIA */}
+        {activeTab === 'midia-massa' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6 animate-fade-in text-slate-800"
+          >
+            <div>
+              <h1 className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight">Ajustes e Processamento em Lote</h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Configure mídias e selos padrão por aro para aplicação em massa ou realize reajustes de preço globais rapidamente com filtros avançados.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
+              
+              {/* SECTION: ADMIN BULK MEDIA & SEALS BY RIM */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                  <div>
+                    <h3 className="font-sans font-bold text-slate-800 text-sm flex items-center gap-2 border-b border-slate-100 pb-2 uppercase tracking-wide">
+                      <Folder className="h-4.5 w-4.5 text-orange-500" />
+                      Mídias e Selos Padrão por Aro
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Defina uma foto padrão do pneu ou um selo do INMETRO/CONPET específico para cada Aro. Ao clicar nas ações de lote, todos os pneus correspondentes serão atualizados automaticamente.
+                    </p>
+                  </div>
+
+                  {bulkProcessing && (
+                    <div className="p-4 bg-orange-50 border border-orange-200 text-orange-850 rounded-lg flex items-center gap-2.5 animate-pulse text-xs font-bold uppercase tracking-wider">
+                      <Clock className="h-4.5 w-4.5 text-orange-600 animate-spin" />
+                      Processando alterações em lote na base de dados... Por favor, aguarde.
+                    </div>
+                  )}
+
+                  <div className="space-y-4 max-h-[550px] overflow-y-auto pr-2">
+                    {[13, 14, 15, 16, 17, 18, 19, 20, 21, 22].map((rimNum) => {
+                      const mediaItem = rimDefaultMedia.find(m => m.rim === rimNum);
+                      const sealItem = rimInmetroSeals.find(s => s.rim === rimNum);
+
+                      return (
+                        <div key={rimNum} className="p-4 bg-slate-50 border border-slate-150 rounded-xl space-y-4">
+                          <div className="flex items-center justify-between border-b border-slate-200/65 pb-2">
+                            <span className="font-sans font-black text-slate-800 text-sm">ARO {rimNum}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">ID do Aro: {rimNum}</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* BLOCK 1: DEFAULT IMAGE */}
+                            <div className="bg-white p-3 rounded-lg border border-slate-150 space-y-3 flex flex-col justify-between">
+                              <div>
+                                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1.5">Foto Padrão do Aro</h4>
+                                {mediaItem?.image_url ? (
+                                  <div className="h-28 w-full border border-slate-200 rounded overflow-hidden p-1 bg-checkerboard flex items-center justify-center relative group">
+                                    <img 
+                                      src={mediaItem.image_url} 
+                                      alt={`Preview Aro ${rimNum}`} 
+                                      className="h-full w-full object-contain rounded" 
+                                      referrerPolicy="no-referrer"
+                                    />
+                                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <a 
+                                        href={mediaItem.image_url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="text-white text-[10px] font-bold underline"
+                                        referrerPolicy="no-referrer"
+                                      >
+                                        Ver original
+                                      </a>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="h-28 bg-slate-50 border border-dashed border-slate-200 rounded flex flex-col items-center justify-center text-slate-400">
+                                    <ImageIcon className="h-6 w-6 text-slate-300 mb-1" />
+                                    <span className="text-[9px] font-bold uppercase tracking-wider">Sem foto padrão</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="space-y-2.5 mt-2">
+                                <label className="block">
+                                  <span className="sr-only">Escolher foto</span>
+                                  <input 
+                                    type="file" 
+                                    accept="image/*"
+                                    disabled={bulkProcessing}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleUploadRimMedia(rimNum, file);
+                                    }}
+                                    className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
+                                  />
+                                </label>
+
+                                {mediaItem?.image_url && (
+                                  <div className="flex gap-1.5 pt-1.5 border-t border-slate-100">
+                                    <button
+                                      type="button"
+                                      disabled={bulkProcessing}
+                                      onClick={() => triggerBulkApplyImages(rimNum, 'only_empty')}
+                                      className="flex-1 bg-slate-100 hover:bg-slate-250 text-slate-750 text-[8.5px] font-semibold py-1.5 px-1 rounded uppercase tracking-wider text-center cursor-pointer"
+                                      title="Aplica somente nos pneus que estão sem imagem"
+                                    >
+                                      Apenas sem foto
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={bulkProcessing}
+                                      onClick={() => triggerBulkApplyImages(rimNum, 'replace_all')}
+                                      className="flex-1 bg-orange-100 hover:bg-orange-150 text-orange-850 text-[8.5px] font-bold py-1.5 px-1 rounded uppercase tracking-wider text-center cursor-pointer"
+                                      title="Substitui a imagem de todos os pneus deste aro com a foto padrão"
+                                    >
+                                      Substituir todos
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* BLOCK 2: INMETRO SEAL */}
+                            <div className="bg-white p-3 rounded-lg border border-slate-150 space-y-3 flex flex-col justify-between">
+                              <div>
+                                <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1.5">Selo INMETRO / CONPET</h4>
+                                {sealItem?.seal_url ? (
+                                  <div className="h-28 w-full border border-slate-200 rounded overflow-hidden p-1 bg-checkerboard flex items-center justify-center relative group">
+                                    <img 
+                                      src={sealItem.seal_url} 
+                                      alt={`Selo Aro ${rimNum}`} 
+                                      className="h-full w-full object-contain rounded" 
+                                      referrerPolicy="no-referrer"
+                                    />
+                                    <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <a 
+                                        href={sealItem.seal_url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="text-white text-[10px] font-bold underline"
+                                        referrerPolicy="no-referrer"
+                                      >
+                                        Ver original
+                                      </a>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="h-28 bg-slate-50 border border-dashed border-slate-200 rounded flex flex-col items-center justify-center text-slate-400">
+                                    <Award className="h-6 w-6 text-slate-300 mb-1" />
+                                    <span className="text-[9px] font-bold uppercase tracking-wider">Sem selo padrão</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="space-y-2.5 mt-2">
+                                <label className="block">
+                                  <span className="sr-only">Escolher selo</span>
+                                  <input 
+                                    type="file" 
+                                    accept="image/*"
+                                    disabled={bulkProcessing}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleUploadRimSeal(rimNum, file);
+                                    }}
+                                    className="block w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
+                                  />
+                                </label>
+
+                                {sealItem?.seal_url && (
+                                  <div className="flex gap-1.5 pt-1.5 border-t border-slate-100">
+                                    <button
+                                      type="button"
+                                      disabled={bulkProcessing}
+                                      onClick={() => triggerBulkApplySeals(rimNum, 'only_empty')}
+                                      className="flex-1 bg-slate-100 hover:bg-slate-250 text-slate-750 text-[8.5px] font-semibold py-1.5 px-1 rounded uppercase tracking-wider text-center cursor-pointer"
+                                      title="Associa o selo apenas aos pneus que não possuem selo ainda"
+                                    >
+                                      Apenas sem selo
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={bulkProcessing}
+                                      onClick={() => triggerBulkApplySeals(rimNum, 'replace_all')}
+                                      className="flex-1 bg-orange-100 hover:bg-orange-150 text-orange-850 text-[8.5px] font-bold py-1.5 px-1 rounded uppercase tracking-wider text-center cursor-pointer"
+                                      title="Substitui o selo de todos os pneus deste aro pelo cadastrado"
+                                    >
+                                      Substituir todos
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* SIDE SECTION: BULK PRICE ADJUSTMENTS */}
+              <div className="space-y-6">
+                <div className="bg-[#0B1B32] text-white rounded-xl border border-slate-700/60 p-6 shadow-md space-y-6">
+                  <div>
+                    <h3 className="font-sans font-bold text-white text-sm flex items-center gap-2 border-b border-slate-700/60 pb-2 uppercase tracking-wide">
+                      <Wrench className="h-4.5 w-4.5 text-orange-500" />
+                      Reajuste de Preço em Massa
+                    </h3>
+                    <p className="text-xs text-slate-350 mt-1 leading-relaxed">
+                      Efetue reajustes de preço globais ou direcionados em massa na base de dados de forma instantânea.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* OPERATION: ADD / SUBTRACT */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-350 block">Operação Comercial</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setBulkPriceAction('add')}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            bulkPriceAction === 'add'
+                              ? 'bg-orange-500 text-slate-950 font-black shadow-md'
+                              : 'bg-slate-800 text-slate-400 hover:bg-slate-750'
+                          }`}
+                        >
+                          Acrescentar % (+)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBulkPriceAction('subtract')}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            bulkPriceAction === 'subtract'
+                              ? 'bg-orange-500 text-slate-950 font-black shadow-md'
+                              : 'bg-slate-800 text-slate-400 hover:bg-slate-750'
+                          }`}
+                        >
+                          Descontar % (-)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* VALOR PERCENTUAL */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-350 block" htmlFor="bulk-percent">Porcentagem do Ajuste (%)</label>
+                      <div className="relative">
+                        <input
+                          id="bulk-percent"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          placeholder="Ex: 5 ou 11.5"
+                          value={bulkPricePercent}
+                          onChange={(e) => setBulkPricePercent(e.target.value)}
+                          className="w-full bg-[#132742] hover:bg-[#162d4c] focus:bg-[#183256] text-white border border-slate-700 rounded-lg py-2.5 px-4 text-sm font-bold placeholder-slate-500 outline-hidden transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="absolute right-3.5 top-2.5 text-slate-400 font-bold text-sm select-none">%</span>
+                      </div>
+                    </div>
+
+                    {/* FILTER ARO */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-350 block" htmlFor="bulk-rim">Filtrar por Aro</label>
+                      <select
+                        id="bulk-rim"
+                        value={bulkPriceRimFilter}
+                        onChange={(e) => setBulkPriceRimFilter(e.target.value)}
+                        className="w-full bg-[#132742] border border-slate-700 text-slate-200 rounded-lg py-2.5 px-3 text-xs font-bold block outline-hidden cursor-pointer"
+                      >
+                        <option value="Todos">Todos os Aros</option>
+                        {[13, 14, 15, 16, 17, 18, 19, 20, 21, 22].map(rim => (
+                          <option key={rim} value={String(rim)}>Aro {rim}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* FILTER MARCA */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-350 block" htmlFor="bulk-brand">Filtrar por Marca</label>
+                      <select
+                        id="bulk-brand"
+                        value={bulkPriceBrandFilter}
+                        onChange={(e) => setBulkPriceBrandFilter(e.target.value)}
+                        className="w-full bg-[#132742] border border-slate-700 text-slate-200 rounded-lg py-2.5 px-3 text-xs font-bold block outline-hidden cursor-pointer"
+                      >
+                        <option value="Todas">Todas as Marcas</option>
+                        {brandsList.map(brand => (
+                          <option key={brand.id} value={brand.name}>{brand.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-700/60 !mt-6 space-y-3.5">
+                      <button
+                        type="button"
+                        disabled={bulkProcessing || !bulkPricePercent}
+                        onClick={handleBulkPriceAdjustment}
+                        className="w-full bg-orange-500 hover:bg-orange-450 disabled:bg-slate-750 disabled:text-slate-500 text-slate-950 font-extrabold text-xs uppercase tracking-widest rounded-lg py-3 transition-colors cursor-pointer text-center flex items-center justify-center gap-2"
+                      >
+                        {bulkProcessing ? (
+                          <>
+                            <Clock className="w-4 h-4 animate-spin text-slate-950" />
+                            Processando...
+                          </>
+                        ) : (
+                          'Aplicar Reajuste em Lote'
+                        )}
+                      </button>
+
+                      <div className="p-3 bg-[#132742] border border-slate-700 rounded-lg space-y-1.5 select-none animate-fade-in">
+                        <span className="block text-[8px] font-black uppercase tracking-widest text-orange-400">Regras de Validação</span>
+                        <ul className="text-[9.5px] text-slate-350 leading-relaxed font-mono list-disc list-inside space-y-1">
+                          <li>Preço nunca será menor que R$ 1,00.</li>
+                          <li>Preços sofrem arredondamento de 2 casas decimais.</li>
+                          <li>Aparece de forma nativa no site (reajuste interno, sem tags de desconto ou promoção).</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </motion.div>
         )}
 

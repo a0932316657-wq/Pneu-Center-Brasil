@@ -38,6 +38,7 @@ export interface Product {
   letter_color?: string;
   groove_depth?: string;
   inmetro_label_url?: string;
+  slug?: string;
 }
 
 export type AppRoute =

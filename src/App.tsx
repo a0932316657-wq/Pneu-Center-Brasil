@@ -28,11 +28,12 @@ import heroTiresImage from './assets/images/hero_tires_1780836675879.png';
 // Shared types and data
 import { AppRoute, RouteState, Product } from './types';
 import { BRANDS } from './data';
-import { getProducts, getBrands, getRimCards, getSettings, Brand, RimCard } from './lib/appStore';
+import { getProducts, getBrands, getRimCards, getSettings, Brand, RimCard, getCatalogHash, parseCatalogHash, normalizeMeasure } from './lib/appStore';
 
 // Custom components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import { MediaRenderer } from './components/MediaRenderer';
 import ProductCard from './components/ProductCard';
 import ProductDetails from './components/ProductDetails';
 import ContactForm from './components/ContactForm';
@@ -124,6 +125,8 @@ export default function App() {
   const [selectedRim, setSelectedRim] = useState('Todos');
   const [selectedBrand, setSelectedBrand] = useState('Todas');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [selectedMeasure, setSelectedMeasure] = useState('');
+  const [showFilterNotice, setShowFilterNotice] = useState(false);
   const [sortBy, setSortBy] = useState('marca');
 
   // Parse path hash to support standard browser hist back/forward actions
@@ -137,6 +140,10 @@ export default function App() {
     if (hash.startsWith('#/produto/')) {
       const id = hash.replace('#/produto/', '');
       return { path: 'produto', productId: id };
+    }
+
+    if (hash.startsWith('#/catalogo')) {
+      return { path: 'catalogo' };
     }
 
     const pathPart = hash.replace('#/', '') as AppRoute;
@@ -180,11 +187,13 @@ export default function App() {
   const filterByRim = (rim: string, push = true) => {
     setSelectedRim(rim);
     if (push) {
+      const newHash = getCatalogHash(rim, selectedBrand, selectedMeasure);
       window.history.pushState({
         path: 'catalogo',
         selectedRim: rim,
-        selectedBrand: selectedBrandRef.current
-      }, '', '#/catalogo');
+        selectedBrand: selectedBrand,
+        selectedMeasure: selectedMeasure
+      }, '', newHash);
       setRouteState({ path: 'catalogo' });
     }
   };
@@ -192,11 +201,27 @@ export default function App() {
   const filterByBrand = (brand: string, push = true) => {
     setSelectedBrand(brand);
     if (push) {
+      const newHash = getCatalogHash(selectedRim, brand, selectedMeasure);
       window.history.pushState({
         path: 'catalogo',
-        selectedRim: selectedRimRef.current,
-        selectedBrand: brand
-      }, '', '#/catalogo');
+        selectedRim: selectedRim,
+        selectedBrand: brand,
+        selectedMeasure: selectedMeasure
+      }, '', newHash);
+      setRouteState({ path: 'catalogo' });
+    }
+  };
+
+  const filterByMeasure = (measure: string, push = true) => {
+    setSelectedMeasure(measure);
+    if (push) {
+      const newHash = getCatalogHash(selectedRim, selectedBrand, measure);
+      window.history.pushState({
+        path: 'catalogo',
+        selectedRim: selectedRim,
+        selectedBrand: selectedBrand,
+        selectedMeasure: measure
+      }, '', newHash);
       setRouteState({ path: 'catalogo' });
     }
   };
@@ -244,14 +269,17 @@ export default function App() {
     }
 
     if (route === 'catalogo') {
-      window.history.pushState({ path: 'catalogo', selectedRim: currentRim, selectedBrand: currentBrand }, '', '#/catalogo');
+      const newHash = getCatalogHash(currentRim, currentBrand, selectedMeasure);
+      window.history.pushState({ path: 'catalogo', selectedRim: currentRim, selectedBrand: currentBrand, selectedMeasure }, '', newHash);
       setRouteState({ path: 'catalogo' });
       return;
     }
 
     if (route === 'produto' && productId) {
-      window.history.pushState({ path: 'produto', productId, selectedRim: currentRim, selectedBrand: currentBrand }, '', `#/produto/${productId}`);
-      setRouteState({ path: 'produto', productId });
+      const match = products.find(p => p.id === productId || p.slug === productId);
+      const targetParam = (match && match.slug) ? match.slug : productId;
+      window.history.pushState({ path: 'produto', productId: targetParam, selectedRim: currentRim, selectedBrand: currentBrand }, '', `#/produto/${targetParam}`);
+      setRouteState({ path: 'produto', productId: targetParam });
       return;
     }
 
@@ -352,6 +380,52 @@ export default function App() {
     }
   }, [routeState]);
 
+  // Coordenador de Url Filtros do Catalogo
+  useEffect(() => {
+    const handleUrlFiltersSync = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/catalogo')) {
+        const { rim, brand, measure } = parseCatalogHash(hash, brands);
+        setSelectedRim(rim);
+        setSelectedBrand(brand);
+        setSelectedMeasure(measure);
+        
+        // Ativar aviso de filtro se houver algum filtro ativo
+        if (rim !== 'Todos' || brand !== 'Todas' || measure !== '') {
+          setShowFilterNotice(true);
+        } else {
+          setShowFilterNotice(false);
+        }
+      } else {
+        setShowFilterNotice(false);
+      }
+    };
+
+    handleUrlFiltersSync();
+
+    window.addEventListener('hashchange', handleUrlFiltersSync);
+    return () => {
+      window.removeEventListener('hashchange', handleUrlFiltersSync);
+    };
+  }, [brands]);
+
+  // Redirecionamento UUID para Slug Amigavel
+  useEffect(() => {
+    if (routeState.path === 'produto' && routeState.productId && products.length > 0) {
+      const productId = routeState.productId;
+      const match = products.find(p => p.id === productId);
+      if (match && match.slug && match.slug !== productId) {
+        window.history.replaceState({
+          path: 'produto',
+          productId: match.slug,
+          selectedRim,
+          selectedBrand
+        }, '', `#/produto/${match.slug}`);
+        setRouteState({ path: 'produto', productId: match.slug });
+      }
+    }
+  }, [routeState, products]);
+
   // Catalog item filtering logic (excludes inactive items)
   const filteredProducts = products.filter((p) => p.active !== false).filter((product) => {
     const matchesSearch = 
@@ -373,7 +447,9 @@ export default function App() {
 
     const matchesCategory = selectedCategory === 'Todas' || product.category === selectedCategory;
 
-    return matchesSearch && matchesBrand && matchesRim && matchesCategory;
+    const matchesMeasure = !selectedMeasure || normalizeMeasure(product.measure) === selectedMeasure;
+
+    return matchesSearch && matchesBrand && matchesRim && matchesCategory && matchesMeasure;
   });
 
   // Category / Brand sorting
@@ -409,7 +485,17 @@ export default function App() {
     setSelectedRim('Todos');
     setSelectedBrand('Todas');
     setSelectedCategory('Todas');
+    setSelectedMeasure('');
+    setShowFilterNotice(false);
     setSortBy('marca');
+    
+    window.history.pushState({
+      path: 'catalogo',
+      selectedRim: 'Todos',
+      selectedBrand: 'Todas',
+      selectedMeasure: ''
+    }, '', '#/catalogo');
+    setRouteState({ path: 'catalogo' });
   };
 
   // Quick navigation shortcut for home featured items
@@ -587,7 +673,7 @@ export default function App() {
                           const gIntensity = parseFloat(siteSettings.heroGlowIntensity || '0.4');
                           const hasCustomHero = siteSettings.heroImageUrl && siteSettings.heroImageUrl.trim() !== '';
                           const activeHeroUrl = hasCustomHero ? siteSettings.heroImageUrl : heroTiresImage;
-                          const isCustomVideo = hasCustomHero && isVideoUrl(siteSettings.heroImageUrl);
+                          const isCustomVideo = hasCustomHero && (siteSettings.heroMediaType === 'video' || isVideoUrl(siteSettings.heroImageUrl));
 
                           return (
                             <motion.div
@@ -830,6 +916,44 @@ export default function App() {
                 </div>
               </section>
 
+              {/* FEATURED BANNER EXTRA */}
+              {siteSettings.featuredMediaUrl && siteSettings.featuredMediaUrl.trim() !== '' && (
+                <section id="banner-destaque-home" className="py-12 bg-slate-100/30 border-b border-slate-200">
+                  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <motion.div
+                      initial={{ opacity: 0, y: 15 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      className="group relative h-48 sm:h-64 rounded-3xl overflow-hidden border border-slate-200/80 hover:border-orange-500/50 hover:shadow-2xl transition-all duration-300 shadow-lg flex flex-col justify-end p-6 sm:p-8 text-left bg-slate-900"
+                    >
+                      {/* Background Visual Banner */}
+                      <div className="absolute inset-0 z-0">
+                        <MediaRenderer
+                          src={siteSettings.featuredMediaUrl}
+                          mediaType={siteSettings.featuredMediaType}
+                          alt={siteSettings.featuredMediaAlt || 'Destaque Pneu Center Brasil'}
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-transparent" />
+                      </div>
+
+                      {/* Foreground Promotion message */}
+                      <div className="relative z-10 max-w-xl space-y-2">
+                        <span className="inline-flex items-center rounded-md bg-orange-500/25 px-2.5 py-0.5 text-[10px] font-mono font-black text-orange-400 border border-orange-500/20 uppercase tracking-widest animate-pulse">
+                          Destaque do Mês
+                        </span>
+                        <h3 className="font-sans font-black text-xl sm:text-2xl text-white uppercase tracking-tight leading-none drop-shadow-md">
+                          {siteSettings.featuredMediaAlt || 'Condições Especiais Pneu Center Brasil'}
+                        </h3>
+                        <p className="text-xs text-slate-300 leading-normal max-w-md drop-shadow font-sans">
+                          Confira com nossos especialistas os modelos participantes e as melhores taxas de mercado no atendimento pelo WhatsApp.
+                        </p>
+                      </div>
+                    </motion.div>
+                  </div>
+                </section>
+              )}
+
               {/* BUSQUE PELO ARO */}
               <section id="aros-section" className="py-16 bg-slate-50 border-b border-slate-200">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -854,10 +978,10 @@ export default function App() {
                         {/* Background Image of standard tire */}
                         <div className="absolute inset-0 z-0">
                           {card.image && card.image.trim() ? (
-                            <img
-                              src={card.image.trim() || null}
+                            <MediaRenderer
+                              src={card.image.trim()}
+                              mediaType={card.mediaType}
                               alt={card.name}
-                              referrerPolicy="no-referrer"
                               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-40 group-hover:opacity-50"
                             />
                           ) : null}
@@ -1036,23 +1160,12 @@ export default function App() {
                         <div className="absolute inset-0 bg-gradient-to-t from-orange-500/5 via-transparent to-transparent opacity-40 group-hover/inst:opacity-60 transition-opacity duration-300 pointer-events-none z-10" />
 
                         {siteSettings.institutionalMediaUrl ? (
-                          siteSettings.institutionalMediaType === 'video' ? (
-                            <video
-                              src={siteSettings.institutionalMediaUrl}
-                              autoPlay
-                              loop
-                              muted
-                              playsInline
-                              className="w-full h-full object-cover select-none pointer-events-none block"
-                            />
-                          ) : (
-                            <img
-                              src={siteSettings.institutionalMediaUrl}
-                              alt={siteSettings.institutionalMediaAlt || 'Distribuição Digital de Pneus'}
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover select-none pointer-events-none block"
-                            />
-                          )
+                          <MediaRenderer
+                            src={siteSettings.institutionalMediaUrl}
+                            mediaType={siteSettings.institutionalMediaType || (isVideoUrl(siteSettings.institutionalMediaUrl) ? 'video' : 'image')}
+                            alt={siteSettings.institutionalMediaAlt || 'Distribuição Digital de Pneus'}
+                            className="w-full h-full object-cover select-none pointer-events-none block"
+                          />
                         ) : (
                           // Premium fallback 9:16 card when no custom media is configured
                           <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 p-6 flex flex-col justify-between">
@@ -1174,6 +1287,26 @@ export default function App() {
               </div>
 
               {/* Filter Controls block */}
+              {showFilterNotice && (
+                <div className="mb-4 rounded-xl bg-orange-600/10 border border-orange-500/20 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs text-orange-905 font-sans">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 rounded-full bg-orange-600 animate-pulse" />
+                    <span>
+                      <strong className="text-orange-950 font-extrabold uppercase text-[10px] tracking-wide inline-block bg-orange-600/20 px-1.5 py-0.5 rounded mr-1.5">Filtro Ativo</strong>
+                      {selectedRim !== 'Todos' ? `Aro: ${selectedRim}` : ''}
+                      {selectedBrand !== 'Todas' ? ` • Marca: ${selectedBrand}` : ''}
+                      {selectedMeasure ? ` • Medida: ${selectedMeasure.replace(/-/g, ' ').toUpperCase()}` : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={resetFilters}
+                    className="text-[11px] font-bold uppercase underline hover:text-orange-700 transition cursor-pointer"
+                  >
+                    Limpar filtros
+                  </button>
+                </div>
+              )}
+
               <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <span className="font-sans text-sm font-extrabold text-slate-800 tracking-wide uppercase flex items-center gap-1.5 text-orange-600">

@@ -3,6 +3,7 @@ import { ArrowLeft, MessageSquare, ShieldAlert, BadgeCheck, Compass, Settings, A
 import { motion } from 'motion/react';
 import { Product } from '../types';
 import { openWhatsAppChat, getProductMessage } from '../lib/whatsapp';
+import { getRimInmetroSeals } from '../lib/appStore';
 import BrandBadge from './BrandBadge';
 
 interface ProductDetailsProps {
@@ -222,23 +223,27 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
             )}
 
             {/* INMETRO homologation seal if present */}
-            {product.inmetro_label_url && (
-              <div className="rounded-xl border border-slate-150 p-4 bg-white flex items-center gap-4 shadow-xs animate-fade-in mt-4">
-                <div className="h-20 w-16 bg-white flex items-center justify-center border border-slate-100 p-1 shrink-0 rounded">
-                  <img
-                    src={product.inmetro_label_url || null}
-                    alt="Selo de homologação INMETRO"
-                    className="h-full w-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
+            {(() => {
+              const effectiveSealUrl = product.inmetro_label_url || getRimInmetroSeals().find(s => s.rim === product.rim)?.seal_url;
+              if (!effectiveSealUrl) return null;
+              return (
+                <div className="rounded-xl border border-slate-150 p-4 bg-white flex items-center gap-4 shadow-xs animate-fade-in mt-4">
+                  <div className="h-20 w-16 bg-white flex items-center justify-center border border-slate-100 p-1 shrink-0 rounded">
+                    <img
+                      src={effectiveSealUrl}
+                      alt="Selo de homologação INMETRO"
+                      className="h-full w-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-mono tracking-wider font-extrabold text-orange-600 uppercase">Selo de Eficiência</span>
+                    <h4 className="font-sans text-xs font-bold text-slate-800 uppercase mt-0.5 leading-tight">Homologado pelo INMETRO / CONPET</h4>
+                    <p className="text-[11px] text-slate-500 leading-normal mt-1 leading-snug">Este model passou pelos testes nacionais obrigatórios de resistência ao rolamento, aderência em pista molhada e ruído externo.</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="block text-[9px] font-mono tracking-wider font-extrabold text-orange-600 uppercase">Selo de Eficiência</span>
-                  <h4 className="font-sans text-xs font-bold text-slate-800 uppercase mt-0.5 leading-tight">Homologado pelo INMETRO / CONPET</h4>
-                  <p className="text-[11px] text-slate-500 leading-normal mt-1 leading-snug">Este modelo passou pelos testes nacionais obrigatórios de resistência ao rolamento, aderência em pista molhada e ruído externo.</p>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
           </div>
 

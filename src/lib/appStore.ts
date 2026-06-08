@@ -13,6 +13,7 @@ export interface SiteSettings {
   hours: string;
   slogan: string;
   heroImageUrl?: string;
+  heroMediaType?: 'image' | 'video';
   heroBorderColor?: string;
   heroGlowColor?: string;
   heroBorderRadius?: string;
@@ -20,6 +21,9 @@ export interface SiteSettings {
   institutionalMediaUrl?: string;
   institutionalMediaType?: 'image' | 'video';
   institutionalMediaAlt?: string;
+  featuredMediaUrl?: string;
+  featuredMediaType?: 'image' | 'video';
+  featuredMediaAlt?: string;
 }
 
 export interface Brand {
@@ -36,6 +40,7 @@ export interface RimCard {
   image: string;
   description: string;
   active: boolean;
+  mediaType?: 'image' | 'video';
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {
@@ -49,6 +54,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   hours: 'Segunda a sexta, das 8h às 18h. Sábado, das 8h às 13h.',
   slogan: 'Catálogo Oficial Multimarcas',
   heroImageUrl: '',
+  heroMediaType: 'image',
   heroBorderColor: '#f97316',
   heroGlowColor: '#f97316',
   heroBorderRadius: '24',
@@ -56,6 +62,9 @@ const DEFAULT_SETTINGS: SiteSettings = {
   institutionalMediaUrl: '',
   institutionalMediaType: 'image',
   institutionalMediaAlt: 'Pneu Center Brasil • Distribuição Digital',
+  featuredMediaUrl: '',
+  featuredMediaType: 'image',
+  featuredMediaAlt: 'Destaque Especial Pneu Center Brasil'
 };
 
 const DEFAULT_BRANDS: Brand[] = [
@@ -94,6 +103,117 @@ export function isValidUUID(id: string): boolean {
   if (!id) return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(id);
+}
+
+export function slugify(text: string): string {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/[\/\\_]/g, '-') // replace slash and underbar with dash
+    .replace(/[^a-z0-9\- ]/g, '') // remove other special chars
+    .replace(/\s+/g, '-') // spaces to hyphen
+    .replace(/-+/g, '-') // remove double hyphens
+    .replace(/^-+|-+$/g, ''); // trim hyphens
+}
+
+export function generateUniqueSlug(name: string, productId?: string, existingProducts?: Product[]): string {
+  const baseSlug = slugify(name);
+  if (!baseSlug) return 'pneu';
+  
+  const prods = existingProducts || getProducts();
+  let candidate = baseSlug;
+  let suffix = 2;
+  
+  while (prods.some(p => p.slug === candidate && p.id !== productId)) {
+    candidate = `${baseSlug}-${suffix}`;
+    suffix++;
+  }
+  return candidate;
+}
+
+export function normalizeMeasure(m: string): string {
+  if (!m) return '';
+  return m.toLowerCase().replace(/[\/\s]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function formatRimForUrl(rim: string): string {
+  if (!rim || rim === 'Todos') return '';
+  if (rim === 'SUV') return 'aro-suv';
+  const match = rim.match(/\d+/);
+  if (match) return `aro-${match[0]}`;
+  return '';
+}
+
+function parseRimFromUrl(part: string): string {
+  if (!part) return 'Todos';
+  if (part === 'aro-suv') return 'SUV';
+  const match = part.match(/^aro-(\d+)$/);
+  if (match) return `Aro ${match[1]}`;
+  return 'Todos';
+}
+
+function formatBrandForUrl(brand: string): string {
+  if (!brand || brand === 'Todas') return '';
+  return brand.toLowerCase().trim();
+}
+
+function parseBrandFromUrl(part: string, brands: { name: string }[]): string {
+  if (!part) return 'Todas';
+  const matched = brands.find(b => b.name.toLowerCase().trim() === part.toLowerCase().trim());
+  return matched ? matched.name : 'Todas';
+}
+
+export function getCatalogHash(rim: string, brand: string, measure: string): string {
+  let hash = '#/catalogo';
+  const rimPart = formatRimForUrl(rim);
+  const brandPart = formatBrandForUrl(brand);
+  const measurePart = measure ? normalizeMeasure(measure) : '';
+  
+  if (rimPart) {
+    hash += `/${rimPart}`;
+  }
+  if (brandPart) {
+    hash += `/marca/${brandPart}`;
+  }
+  if (measurePart) {
+    hash += `/medida/${measurePart}`;
+  }
+  return hash;
+}
+
+export function parseCatalogHash(hash: string, brands: { name: string }[]): { rim: string; brand: string; measure: string } {
+  let rim = 'Todos';
+  let brand = 'Todas';
+  let measure = '';
+  
+  if (!hash.startsWith('#/catalogo')) {
+    return { rim, brand, measure };
+  }
+  
+  const path = hash.replace('#/catalogo', '');
+  if (!path || path === '/') {
+    return { rim, brand, measure };
+  }
+  
+  const parts = path.split('/').map(p => p.trim()).filter(p => p && p !== '');
+  
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (part.startsWith('aro-')) {
+      rim = parseRimFromUrl(part);
+    } else if (part === 'marca' && i + 1 < parts.length) {
+      brand = parseBrandFromUrl(parts[i + 1], brands);
+      i++;
+    } else if (part === 'medida' && i + 1 < parts.length) {
+      measure = parts[i + 1];
+      i++;
+    }
+  }
+  
+  return { rim, brand, measure };
 }
 
 /**
@@ -221,7 +341,8 @@ function mapProductFromRow(row: any): Product {
     mounting: row.mounting || '',
     letter_color: row.letter_color || '',
     groove_depth: row.groove_depth || '',
-    inmetro_label_url: row.inmetro_label_url || ''
+    inmetro_label_url: row.inmetro_label_url || '',
+    slug: row.slug || ''
   };
 }
 
@@ -264,7 +385,8 @@ function buildProductPayload(p: Product): any {
     mounting: p.mounting || '',
     letter_color: p.letter_color || '',
     groove_depth: p.groove_depth || '',
-    inmetro_label_url: p.inmetro_label_url || ''
+    inmetro_label_url: p.inmetro_label_url || '',
+    slug: p.slug || ''
   };
 }
 
@@ -284,7 +406,8 @@ function mapRimCardFromRow(row: any): RimCard {
     rim: Number(row.rim) || 15,
     image: row.image_url || row.image || '',
     description: row.description || '',
-    active: row.active !== false
+    active: row.active !== false,
+    mediaType: row.media_type || row.mediaType || 'image'
   };
 }
 
@@ -343,6 +466,22 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
         case 'heroImageUrl':
           resultSettings.heroImageUrl = val;
           break;
+        case 'hero_media_type':
+        case 'heroMediaType':
+          resultSettings.heroMediaType = val;
+          break;
+        case 'featured_media_url':
+        case 'featuredMediaUrl':
+          resultSettings.featuredMediaUrl = val;
+          break;
+        case 'featured_media_type':
+        case 'featuredMediaType':
+          resultSettings.featuredMediaType = val;
+          break;
+        case 'featured_media_alt':
+        case 'featuredMediaAlt':
+          resultSettings.featuredMediaAlt = val;
+          break;
         case 'hero_border_color':
         case 'heroBorderColor':
           resultSettings.heroBorderColor = val;
@@ -385,6 +524,10 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
     resultSettings.hours = row.hours || resultSettings.hours;
     resultSettings.slogan = row.slogan || resultSettings.slogan;
     resultSettings.heroImageUrl = row.hero_image_url || row.heroImageUrl || resultSettings.heroImageUrl;
+    resultSettings.heroMediaType = row.hero_media_type || row.heroMediaType || resultSettings.heroMediaType;
+    resultSettings.featuredMediaUrl = row.featured_media_url || row.featuredMediaUrl || resultSettings.featuredMediaUrl;
+    resultSettings.featuredMediaType = row.featured_media_type || row.featuredMediaType || resultSettings.featuredMediaType;
+    resultSettings.featuredMediaAlt = row.featured_media_alt || row.featuredMediaAlt || resultSettings.featuredMediaAlt;
     resultSettings.heroBorderColor = row.hero_border_color || row.heroBorderColor || resultSettings.heroBorderColor;
     resultSettings.heroGlowColor = row.hero_glow_color || row.heroGlowColor || resultSettings.heroGlowColor;
     resultSettings.heroBorderRadius = row.hero_border_radius || row.heroBorderRadius || resultSettings.heroBorderRadius;
@@ -672,6 +815,22 @@ export async function syncFromSupabase(): Promise<void> {
  */
 
 export async function saveProductDb(product: Product): Promise<Product> {
+  // Auto-generate or update slug if creation, name changed, or slug is empty
+  const localProducts = getProducts();
+  const original = localProducts.find(p => p.id === product.id);
+  if (!product.slug || !original || original.name !== product.name) {
+    product.slug = generateUniqueSlug(product.name, product.id, localProducts);
+  }
+
+  // Automatic default rim image assignment if none is specified
+  if (!product.image || product.image.trim() === '') {
+    const defaults = getRimDefaultMedia();
+    const match = defaults.find(m => m.rim === product.rim);
+    if (match && match.image_url) {
+      product.image = match.image_url;
+    }
+  }
+
   const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
   const payload = buildProductPayload(product);
   let resultRow: any = null;
@@ -719,7 +878,7 @@ export async function saveProductDb(product: Product): Promise<Product> {
           'speed_index', 'max_speed', 'compatible_rims', 'width_mm',
           'diameter_mm', 'treadwear', 'traction', 'temperature',
           'runflat', 'extra_load', 'rim_protector', 'ply_quantity',
-          'mounting', 'letter_color', 'groove_depth', 'inmetro_label_url'
+          'mounting', 'letter_color', 'groove_depth', 'inmetro_label_url', 'slug'
         ];
         technicalKeys.forEach(k => {
           delete stripped[k];
@@ -842,6 +1001,22 @@ export async function saveRimCardDb(card: RimCard): Promise<RimCard> {
     active: card.active
   };
 
+  try {
+    const { data: colsCheck } = await supabase.from('rim_cards').select('*').limit(1);
+    if (colsCheck && colsCheck.length > 0) {
+      if ('media_type' in colsCheck[0]) {
+        payload.media_type = card.mediaType || 'image';
+      } else if ('mediaType' in colsCheck[0]) {
+        payload.mediaType = card.mediaType || 'image';
+      }
+    } else {
+      // If table is empty, we try setting media_type and we can fallback if it fails
+      payload.media_type = card.mediaType || 'image';
+    }
+  } catch (err) {
+    console.warn('Could not check rim_cards columns:', err);
+  }
+
   let resultRow: any = null;
   const isIdReal = isRimCardIdReal(card.id);
   const numericId = isIdReal && !isNaN(Number(card.id)) ? Number(card.id) : null;
@@ -924,6 +1099,14 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
         { key: 'slogan', value: settings.slogan },
         { key: 'hero_image_url', value: settings.heroImageUrl || '' },
         { key: 'heroImageUrl', value: settings.heroImageUrl || '' },
+        { key: 'hero_media_type', value: settings.heroMediaType || 'image' },
+        { key: 'heroMediaType', value: settings.heroMediaType || 'image' },
+        { key: 'featured_media_url', value: settings.featuredMediaUrl || '' },
+        { key: 'featuredMediaUrl', value: settings.featuredMediaUrl || '' },
+        { key: 'featured_media_type', value: settings.featuredMediaType || 'image' },
+        { key: 'featuredMediaType', value: settings.featuredMediaType || 'image' },
+        { key: 'featured_media_alt', value: settings.featuredMediaAlt || '' },
+        { key: 'featuredMediaAlt', value: settings.featuredMediaAlt || '' },
         { key: 'hero_border_color', value: settings.heroBorderColor || '' },
         { key: 'heroBorderColor', value: settings.heroBorderColor || '' },
         { key: 'hero_glow_color', value: settings.heroGlowColor || '' },
@@ -964,6 +1147,10 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
           { key: 'hours', value: settings.hours },
           { key: 'slogan', value: settings.slogan },
           { key: 'hero_image_url', value: settings.heroImageUrl || '' },
+          { key: 'hero_media_type', value: settings.heroMediaType || 'image' },
+          { key: 'featured_media_url', value: settings.featuredMediaUrl || '' },
+          { key: 'featured_media_type', value: settings.featuredMediaType || 'image' },
+          { key: 'featured_media_alt', value: settings.featuredMediaAlt || '' },
           { key: 'hero_border_color', value: settings.heroBorderColor || '' },
           { key: 'hero_glow_color', value: settings.heroGlowColor || '' },
           { key: 'hero_border_radius', value: settings.heroBorderRadius || '' },
@@ -997,6 +1184,14 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
       setField('slogan', settings.slogan);
       setField('hero_image_url', settings.heroImageUrl || '');
       setField('heroImageUrl', settings.heroImageUrl || '');
+      setField('hero_media_type', settings.heroMediaType || 'image');
+      setField('heroMediaType', settings.heroMediaType || 'image');
+      setField('featured_media_url', settings.featuredMediaUrl || '');
+      setField('featuredMediaUrl', settings.featuredMediaUrl || '');
+      setField('featured_media_type', settings.featuredMediaType || 'image');
+      setField('featuredMediaType', settings.featuredMediaType || 'image');
+      setField('featured_media_alt', settings.featuredMediaAlt || '');
+      setField('featuredMediaAlt', settings.featuredMediaAlt || '');
       setField('hero_border_color', settings.heroBorderColor || '');
       setField('heroBorderColor', settings.heroBorderColor || '');
       setField('hero_glow_color', settings.heroGlowColor || '');
@@ -1166,5 +1361,179 @@ export function compressImage(file: File, maxWidth = 800, maxHeight = 600, quali
 if (typeof window !== 'undefined') {
   setTimeout(() => {
     syncFromSupabase();
+    fetchRimDefaultMediaDb().catch(() => {});
+    fetchRimInmetroSealsDb().catch(() => {});
   }, 150);
+}
+
+export interface RimDefaultMedia {
+  id?: string;
+  rim: number;
+  image_url: string;
+}
+
+const RIM_DEFAULT_MEDIA_KEY = 'pneu_center_rim_default_media_v1';
+
+export function getRimDefaultMedia(): RimDefaultMedia[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(RIM_DEFAULT_MEDIA_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (err) {
+    console.error('Error reading rim default media:', err);
+    return [];
+  }
+}
+
+export function saveRimDefaultMedia(items: RimDefaultMedia[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(RIM_DEFAULT_MEDIA_KEY, JSON.stringify(items));
+    window.dispatchEvent(new Event('pneu_center_rim_default_media_updated'));
+  } catch (err) {
+    console.error('Error saving rim default media:', err);
+  }
+}
+
+export async function fetchRimDefaultMediaDb(): Promise<RimDefaultMedia[]> {
+  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
+  if (!isSupabaseConnected) return getRimDefaultMedia();
+  
+  try {
+    const { data, error } = await supabase.from('rim_default_media').select('*');
+    if (!error && data) {
+      const mapped = data.map((row: any) => ({
+        id: row.id?.toString(),
+        rim: Number(row.rim),
+        image_url: row.image_url || ''
+      }));
+      saveRimDefaultMedia(mapped);
+      return mapped;
+    }
+  } catch (err) {
+    console.warn('rim_default_media table does not exist or fetch failed. Falling back to local storage:', err);
+  }
+  return getRimDefaultMedia();
+}
+
+export async function saveRimDefaultMediaDb(rim: number, imageUrl: string): Promise<void> {
+  const current = getRimDefaultMedia();
+  const index = current.findIndex(m => m.rim === rim);
+  if (index >= 0) {
+    current[index].image_url = imageUrl;
+  } else {
+    current.push({ rim, image_url: imageUrl });
+  }
+  saveRimDefaultMedia(current);
+
+  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
+  if (isSupabaseConnected) {
+    try {
+      const { data, error } = await supabase
+        .from('rim_default_media')
+        .select('*')
+        .eq('rim', rim);
+        
+      if (!error) {
+        if (data && data.length > 0) {
+          await supabase
+            .from('rim_default_media')
+            .update({ image_url: imageUrl, updated_at: new Date().toISOString() })
+            .eq('rim', rim);
+        } else {
+          await supabase
+            .from('rim_default_media')
+            .insert({ rim, image_url: imageUrl });
+        }
+      }
+    } catch (err) {
+      console.warn('Could not write to rim_default_media table in Supabase:', err);
+    }
+  }
+}
+
+export interface RimInmetroSeal {
+  id?: string;
+  rim: number;
+  seal_url: string;
+}
+
+const RIM_INMETRO_SEALS_KEY = 'pneu_center_rim_inmetro_seals_v1';
+
+export function getRimInmetroSeals(): RimInmetroSeal[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(RIM_INMETRO_SEALS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (err) {
+    console.error('Error reading rim inmetro seals:', err);
+    return [];
+  }
+}
+
+export function saveRimInmetroSeals(items: RimInmetroSeal[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(RIM_INMETRO_SEALS_KEY, JSON.stringify(items));
+    window.dispatchEvent(new Event('pneu_center_rim_inmetro_seals_updated'));
+  } catch (err) {
+    console.error('Error saving rim inmetro seals:', err);
+  }
+}
+
+export async function fetchRimInmetroSealsDb(): Promise<RimInmetroSeal[]> {
+  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
+  if (!isSupabaseConnected) return getRimInmetroSeals();
+  
+  try {
+    const { data, error } = await supabase.from('rim_inmetro_seals').select('*');
+    if (!error && data) {
+      const mapped = data.map((row: any) => ({
+        id: row.id?.toString(),
+        rim: Number(row.rim),
+        seal_url: row.seal_url || ''
+      }));
+      saveRimInmetroSeals(mapped);
+      return mapped;
+    }
+  } catch (err) {
+    console.warn('rim_inmetro_seals table does not exist or fetch failed. Falling back to local storage:', err);
+  }
+  return getRimInmetroSeals();
+}
+
+export async function saveRimInmetroSealDb(rim: number, sealUrl: string): Promise<void> {
+  const current = getRimInmetroSeals();
+  const index = current.findIndex(m => m.rim === rim);
+  if (index >= 0) {
+    current[index].seal_url = sealUrl;
+  } else {
+    current.push({ rim, seal_url: sealUrl });
+  }
+  saveRimInmetroSeals(current);
+
+  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
+  if (isSupabaseConnected) {
+    try {
+      const { data, error } = await supabase
+        .from('rim_inmetro_seals')
+        .select('*')
+        .eq('rim', rim);
+        
+      if (!error) {
+        if (data && data.length > 0) {
+          await supabase
+            .from('rim_inmetro_seals')
+            .update({ seal_url: sealUrl, updated_at: new Date().toISOString() })
+            .eq('rim', rim);
+        } else {
+          await supabase
+            .from('rim_inmetro_seals')
+            .insert({ rim, seal_url: sealUrl });
+        }
+      }
+    } catch (err) {
+      console.warn('Could not write to rim_inmetro_seals table in Supabase:', err);
+    }
+  }
 }
