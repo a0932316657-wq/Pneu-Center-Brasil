@@ -214,6 +214,16 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({ type: 'idle', message: '' });
+  const [connectionDetails, setConnectionDetails] = useState<{
+    supabaseUrl: 'conectada' | 'ausente';
+    supabaseKey: 'conectada' | 'ausente';
+    authSession: 'conectado' | 'não conectado';
+    productsTable: 'ok' | string;
+    brandsTable: 'ok' | string;
+    rimCardsTable: 'ok' | string;
+    siteSettingsTable: 'ok' | string;
+    storageBucket: 'ok' | 'sem permissão' | 'Bucket não encontrado' | 'Teste não conclusivo' | string;
+  } | null>(null);
 
   // Bulk features state
   const [rimDefaultMedia, setRimDefaultMediaState] = useState<any[]>(getRimDefaultMedia());
@@ -304,17 +314,11 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         if (session) {
           setIsLoggedIn(true);
         } else {
-          const authSession = localStorage.getItem('pneu_center_admin_session');
-          if (authSession === 'authenticated_117711') {
-            setIsLoggedIn(true);
-          }
+          setIsLoggedIn(false);
         }
       } catch (err) {
         console.warn('Erro ao checar sessao do Supabase:', err);
-        const authSession = localStorage.getItem('pneu_center_admin_session');
-        if (authSession === 'authenticated_117711') {
-          setIsLoggedIn(true);
-        }
+        setIsLoggedIn(false);
       }
     };
     checkSession();
@@ -346,7 +350,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     }, 5000);
   };
 
-  // Handle login challenge using Supabase Auth with hardcoded credentials and local backup
+  // Handle login challenge using Supabase Auth with password
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
@@ -358,27 +362,21 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       });
 
       if (error) {
-        // Safe robust fallback for local review / sandbox sessions
-        if (email.trim() === 'contato.pneucenterbrasil@gmail.com' && password.trim() === '117711') {
-          localStorage.setItem('pneu_center_admin_session', 'authenticated_117711');
-          setIsLoggedIn(true);
-          triggerFeedback('Painel Administrativo liberado (Credenciais locais corretas)!');
-        } else {
-          setLoginError(error.message || 'Senha incorreta ou erro de login no Supabase Auth.');
-        }
-      } else {
-        setIsLoggedIn(true);
-        triggerFeedback('Login efetuado com sucesso via Supabase Auth!');
+        setLoginError(error.message || 'Sessão Supabase ausente. Faça login novamente.');
+        return;
       }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setLoginError('Sessão Supabase ausente. Faça login novamente.');
+        return;
+      }
+
+      setIsLoggedIn(true);
+      triggerFeedback('Login efetuado com sucesso via Supabase Auth!');
     } catch (err: any) {
       console.error(err);
-      if (email.trim() === 'contato.pneucenterbrasil@gmail.com' && password.trim() === '117711') {
-        localStorage.setItem('pneu_center_admin_session', 'authenticated_117711');
-        setIsLoggedIn(true);
-        triggerFeedback('Painel Administrativo liberado (Modo local/offline de seguranca)!');
-      } else {
-        setLoginError('Falha no servico de autenticacao do Supabase.');
-      }
+      setLoginError('Sessão Supabase ausente. Faça login novamente.');
     } finally {
       setIsLoggingIn(false);
     }
@@ -488,23 +486,16 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        const localSession = localStorage.getItem('pneu_center_admin_session');
-        if (localSession !== 'authenticated_117711') {
-          setIsLoggedIn(false);
-          triggerFeedback('Sessão expirada. Faça login novamente.', 'error');
-          return false;
-        }
+        setIsLoggedIn(false);
+        triggerFeedback('Sessão Supabase ausente. Faça login novamente.', 'error');
+        return false;
       }
       return true;
     } catch (e) {
       console.warn('Erro ao verificar sessão do Supabase:', e);
-      const localSession = localStorage.getItem('pneu_center_admin_session');
-      if (localSession !== 'authenticated_117711') {
-        setIsLoggedIn(false);
-        triggerFeedback('Sessão expirada. Faça login novamente.', 'error');
-        return false;
-      }
-      return true;
+      setIsLoggedIn(false);
+      triggerFeedback('Sessão Supabase ausente. Faça login novamente.', 'error');
+      return false;
     }
   };
 
@@ -513,57 +504,144 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setIsTestingConnection(true);
     setConnectionStatus({ type: 'idle', message: 'Iniciando testes de conectividade...' });
     
+    const details: any = {
+      supabaseUrl: isSupabaseUrlAbsent ? 'ausente' : 'conectada',
+      supabaseKey: isSupabaseKeyAbsent ? 'ausente' : 'conectada',
+      authSession: 'não conectado',
+      productsTable: 'ok',
+      brandsTable: 'ok',
+      rimCardsTable: 'ok',
+      siteSettingsTable: 'ok',
+      storageBucket: 'ok'
+    };
+
     try {
       if (isSupabaseUrlAbsent || isSupabaseKeyAbsent) {
+        setConnectionDetails({
+          supabaseUrl: isSupabaseUrlAbsent ? 'ausente' : 'conectada',
+          supabaseKey: isSupabaseKeyAbsent ? 'ausente' : 'conectada',
+          authSession: 'não conectado',
+          productsTable: 'Chaves ausentes',
+          brandsTable: 'Chaves ausentes',
+          rimCardsTable: 'Chaves ausentes',
+          siteSettingsTable: 'Chaves ausentes',
+          storageBucket: 'Chaves ausentes'
+        });
         setConnectionStatus({
           type: 'error',
-          message: 'Falha crítica: As chaves do Supabase (VITE_SUPABASE_URL e VITE_SUPABASE_KEY) não estão preenchidas no ambiente atual.'
+          message: 'Falha no Diagnóstico: Variáveis Supabase ausentes ou incompletas.'
         });
         setIsTestingConnection(false);
         return;
       }
 
-      const authOk = await checkAuth();
-      if (!authOk) {
+      // Check auth session
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        details.authSession = session ? 'conectado' : 'não conectado';
+      } catch (e) {
+        details.authSession = 'não conectado';
+      }
+
+      let hasError = false;
+
+      // Check site_settings table
+      try {
+        const { error: errSettings } = await supabase.from('site_settings').select('id').limit(1);
+        if (errSettings) {
+          details.siteSettingsTable = errSettings.message || 'Erro de permissão/leitura';
+          hasError = true;
+        } else {
+          details.siteSettingsTable = 'ok';
+        }
+      } catch (e: any) {
+        details.siteSettingsTable = e.message || 'Erro de rede';
+        hasError = true;
+      }
+
+      // Check brands table
+      try {
+        const { error: errBrands } = await supabase.from('brands').select('id').limit(1);
+        if (errBrands) {
+          details.brandsTable = errBrands.message || 'Erro de permissão/leitura';
+          hasError = true;
+        } else {
+          details.brandsTable = 'ok';
+        }
+      } catch (e: any) {
+        details.brandsTable = e.message || 'Erro de rede';
+        hasError = true;
+      }
+
+      // Check rim_cards table
+      try {
+        const { error: errRims } = await supabase.from('rim_cards').select('id').limit(1);
+        if (errRims) {
+          details.rimCardsTable = errRims.message || 'Erro de permissão/leitura';
+          hasError = true;
+        } else {
+          details.rimCardsTable = 'ok';
+        }
+      } catch (e: any) {
+        details.rimCardsTable = e.message || 'Erro de rede';
+        hasError = true;
+      }
+
+      // Check products table
+      try {
+        const { error: errProducts } = await supabase.from('products').select('id').limit(1);
+        if (errProducts) {
+          details.productsTable = errProducts.message || 'Erro de permissão/leitura';
+          hasError = true;
+        } else {
+          details.productsTable = 'ok';
+        }
+      } catch (e: any) {
+        details.productsTable = e.message || 'Erro de rede';
+        hasError = true;
+      }
+
+      // Check Storage pneu-center bucket
+      try {
+        const { data: listData, error: listError } = await supabase.storage.from('pneu-center').list('', { limit: 1 });
+        if (listError) {
+          const errMsg = listError.message || '';
+          if (errMsg.toLowerCase().includes('bucket not found') || errMsg.toLowerCase().includes('does not exist')) {
+            details.storageBucket = 'Bucket não encontrado';
+            hasError = true;
+          } else if (errMsg.toLowerCase().includes('permission') || errMsg.toLowerCase().includes('policy') || errMsg.toLowerCase().includes('not authorized')) {
+            details.storageBucket = 'sem permissão';
+            hasError = true;
+          } else {
+            details.storageBucket = errMsg || 'Erro desconhecido';
+            hasError = true;
+          }
+        } else {
+          details.storageBucket = 'ok';
+        }
+      } catch (e: any) {
+        const errMsg = e.message || '';
+        if (errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('network')) {
+          details.storageBucket = 'Erro de rede';
+        } else {
+          details.storageBucket = 'Teste não conclusivo';
+        }
+        hasError = true;
+      }
+
+      setConnectionDetails(details);
+
+      if (hasError) {
         setConnectionStatus({
           type: 'error',
-          message: 'Falha de Autenticação: Sua sessão administrativa local ou no Supabase está corrompida. Desconecte e faça login novamente.'
+          message: 'Diagnóstico concluído com falhas parciais. Consulte o relatório de conexões abaixo para detalhes.'
         });
-        setIsTestingConnection(false);
-        return;
+      } else {
+        setConnectionStatus({
+          type: 'success',
+          message: 'Supabase conectado como banco principal do catálogo.'
+        });
       }
-
-      // Step 1: Query site_settings
-      const { error: errSettings } = await supabase.from('site_settings').select('id').limit(1);
-      if (errSettings) throw new Error(`Banco conectado, mas a tabela 'site_settings' está inacessível: ${errSettings.message}`);
-
-      // Step 2: Query brands
-      const { error: errBrands } = await supabase.from('brands').select('id').limit(1);
-      if (errBrands) throw new Error(`Banco conectado, mas a tabela 'brands' está inacessível: ${errBrands.message}`);
-
-      // Step 3: Query rim_cards
-      const { error: errRims } = await supabase.from('rim_cards').select('id').limit(1);
-      if (errRims) throw new Error(`Banco conectado, mas a tabela 'rim_cards' está inacessível: ${errRims.message}`);
-
-      // Step 4: Query products
-      const { error: errProducts } = await supabase.from('products').select('id').limit(1);
-      if (errProducts) throw new Error(`Banco conectado, mas a tabela 'products' está inacessível: ${errProducts.message}`);
-
-      // Step 5: Test Storage buckets lists
-      const { data: buckets, error: errBucket } = await supabase.storage.listBuckets();
-      if (errBucket) {
-        throw new Error(`Falha ao acessar o serviço de armazenamento de mídias (Storage): ${errBucket.message}`);
-      }
-      
-      const hasBucket = buckets ? buckets.some(b => b.name === 'pneu-center') : false;
-      if (!hasBucket) {
-        throw new Error(`O bucket de fotos 'pneu-center' não está criado no seu Storage do Supabase. Crie-o como público para salvar as logos e fotos.`);
-      }
-
-      setConnectionStatus({
-        type: 'success',
-        message: 'Conectado com sucesso! Comunicação de dados ao Supabase, tabelas de controle e bucket de arquivos públicos de mídia testados e operacionais.'
-      });
     } catch (err: any) {
       console.error('Supabase connection diagnostics failed:', err);
       setConnectionStatus({
@@ -1730,9 +1808,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     
     setBulkProcessing(true);
     try {
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const filePath = `bulk-rim-images/rim-${rim}-${Date.now()}.${fileExt}`;
-      const res = await uploadMedia(file, filePath);
+      const res = await uploadMedia(file, 'bulk-rim-images');
       await saveRimDefaultMediaDb(rim, res.publicUrl);
       setRimDefaultMediaState(getRimDefaultMedia());
       triggerFeedback(`Imagem padrão para o Aro ${rim} enviada com sucesso!`);
@@ -1761,9 +1837,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     
     setBulkProcessing(true);
     try {
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const filePath = `inmetro/seal-${rim}-${Date.now()}.${fileExt}`;
-      const res = await uploadMedia(file, filePath);
+      const res = await uploadMedia(file, 'inmetro');
       await saveRimInmetroSealDb(rim, res.publicUrl);
       setRimInmetroSealsState(getRimInmetroSeals());
       triggerFeedback(`Selo INMETRO para o Aro ${rim} enviado com sucesso!`);
@@ -2163,7 +2237,24 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl mx-auto w-full space-y-6 animate-fade-in">
         
         {/* Banner with clear status of Supabase configuration */}
-        {(isSupabaseUrlAbsent || isSupabaseKeyAbsent) && (
+        {(!isSupabaseUrlAbsent && !isSupabaseKeyAbsent) ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex gap-3.5 items-start">
+              <div className="bg-emerald-100 p-2.5 rounded-lg text-emerald-600 shrink-0">
+                <Database className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-sans font-black text-emerald-800 text-sm uppercase tracking-wider">Status do Sistema: Sincronizado</h4>
+                <p className="text-xs sm:text-sm text-emerald-700 leading-relaxed font-sans font-medium">
+                  Supabase conectado as banco principal do catálogo.
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] uppercase tracking-widest font-black text-emerald-600 shrink-0 self-end sm:self-center bg-emerald-100/80 px-2.5 py-1 rounded-full border border-emerald-200">
+              Supabase Ativo
+            </span>
+          </div>
+        ) : (
           <div className="rounded-xl border border-red-200 bg-red-50 p-5 shadow-xs flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex gap-3.5 items-start">
               <div className="bg-red-100 p-2.5 rounded-lg text-red-650 shrink-0">
@@ -2228,51 +2319,56 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   <Database className="h-6 w-6" />
                 </div>
                 <div className="space-y-2 text-left">
-                  <h4 className="font-sans font-extrabold text-slate-800 text-sm uppercase tracking-wider">Persistência, Arquitetura e Demonstração</h4>
+                  <h4 className="font-sans font-extrabold text-slate-800 text-sm uppercase tracking-wider">Persistência e Sincronização Sinuosa</h4>
                   <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-3xl">
-                    Seu portal suporta modo híbrido local/nuvem. Ao conectar as credenciais do Supabase, o catálogo irá priorizar somente os dados sincronizados em nuvem. Se restarem produtos de demonstração antigos no navegador, você pode removê-los com segurança usando o botão abaixo.
+                    Supabase conectado como banco principal do catálogo. Suas operações salvam diretamente na nuvem em tempo real e de forma segura.
                   </p>
                   <p className="text-xs text-slate-400 font-medium italic mt-1 leading-normal">
-                    *Para que as alterações fiquem visíveis globalmente para todos os visitantes da internet, lembre de conectar este painel administrativo a um banco de dados persistente em nuvem (como Firebase Firestore ou PostgreSQL) seguindo a estrutura pré-preparada em /src/lib/appStore.ts.
+                    *O banco de dados do Supabase é a fonte principal de dados. O localStorage só é tratado como fallback ou para limpeza de produtos antigos de demonstração gravados no navegador.
                   </p>
                 </div>
               </div>
               
-              <div className="pt-4 border-t border-slate-100 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  id="btn-clear-demo"
-                  onClick={async () => {
-                    if (window.confirm("Deseja realmente remover do navegador todos os produtos de demonstração do catálogo? (Esta ação não afeta produtos reais no Supabase)")) {
-                      try {
-                        clearDemoProducts();
-                        setProductsList(getProducts());
-                        onRefreshPublicData();
-                        triggerFeedback("Produtos de demonstração removidos com sucesso!", "success");
-                      } catch (err: any) {
-                        triggerFeedback(`Erro ao limpar demonstração: ${err.message || err}`, "error");
+              <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
+                <div className="flex flex-wrap gap-3 items-center">
+                  <button
+                    type="button"
+                    id="btn-clear-demo"
+                    onClick={async () => {
+                      if (window.confirm("Deseja realmente remover do navegador todos os produtos de demonstração do catálogo? (Esta ação não afeta produtos reais no Supabase)")) {
+                        try {
+                          clearDemoProducts();
+                          setProductsList(getProducts());
+                          onRefreshPublicData();
+                          triggerFeedback("Produtos de demonstração removidos com sucesso!", "success");
+                        } catch (err: any) {
+                          triggerFeedback(`Erro ao limpar demonstração: ${err.message || err}`, "error");
+                        }
                       }
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs uppercase px-4 py-2 transition-all cursor-pointer shadow-xs"
-                >
-                  <Trash2 className="h-4 w-4 text-red-600" />
-                  <span>Limpar produtos de demonstração / localStorage</span>
-                </button>
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs uppercase px-4 py-2 transition-all cursor-pointer shadow-xs"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-600" />
+                    <span>Limpar produtos de demonstração / localStorage</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={handleTestConnection}
-                  disabled={isTestingConnection}
-                  className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs uppercase px-4 py-2 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-                >
-                  <Database className={`h-4 w-4 text-teal-650 ${isTestingConnection ? 'animate-spin' : ''}`} />
-                  <span>{isTestingConnection ? 'Verificando...' : 'Testar Conexão Supabase'}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleTestConnection}
+                    disabled={isTestingConnection}
+                    className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs uppercase px-4 py-2 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    <Database className={`h-4 w-4 text-teal-650 ${isTestingConnection ? 'animate-spin' : ''}`} />
+                    <span>{isTestingConnection ? 'Verificando...' : 'Testar Conexão Supabase'}</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium italic">
+                  *Use apenas para apagar dados antigos salvos no navegador.
+                </p>
               </div>
 
               {connectionStatus.type !== 'idle' && (
-                <div className={`mt-3 rounded-lg p-3 text-xs font-sans font-bold leading-relaxed border ${
+                <div className={`mt-3 rounded-lg p-4 text-xs font-sans font-bold leading-relaxed border space-y-3 ${
                   connectionStatus.type === 'success' 
                     ? 'bg-teal-50 border-teal-250 text-teal-800' 
                     : 'bg-rose-50 border-rose-250 text-rose-700'
@@ -2287,6 +2383,59 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     </div>
                     <span>{connectionStatus.message}</span>
                   </div>
+
+                  {connectionDetails && (
+                    <div className="mt-3 pt-3 border-t border-dashed border-slate-200/50 space-y-1.5 font-mono text-[11px]">
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-100/10">
+                        <span className="text-slate-500">SUPABASE URL:</span>
+                        <span className={connectionDetails.supabaseUrl === 'conectada' ? 'text-teal-600 font-extrabold uppercase' : 'text-rose-600 font-extrabold uppercase'}>
+                          {connectionDetails.supabaseUrl}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-100/10">
+                        <span className="text-slate-500">SUPABASE KEY:</span>
+                        <span className={connectionDetails.supabaseKey === 'conectada' ? 'text-teal-600 font-extrabold uppercase' : 'text-rose-600 font-extrabold uppercase'}>
+                          {connectionDetails.supabaseKey}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-100/10">
+                        <span className="text-slate-500">AUTH SESSION:</span>
+                        <span className={connectionDetails.authSession === 'conectado' ? 'text-teal-600 font-extrabold uppercase' : 'text-amber-600 font-extrabold uppercase'}>
+                          {connectionDetails.authSession}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-100/10">
+                        <span className="text-slate-500">TABELA PRODUCTS:</span>
+                        <span className={connectionDetails.productsTable === 'ok' ? 'text-teal-600 font-extrabold uppercase' : 'text-rose-600 font-extrabold'}>
+                          {connectionDetails.productsTable === 'ok' ? 'OK' : connectionDetails.productsTable}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-100/10">
+                        <span className="text-slate-500">TABELA BRANDS:</span>
+                        <span className={connectionDetails.brandsTable === 'ok' ? 'text-teal-600 font-extrabold uppercase' : 'text-rose-600 font-extrabold'}>
+                          {connectionDetails.brandsTable === 'ok' ? 'OK' : connectionDetails.brandsTable}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-100/10">
+                        <span className="text-slate-500">TABELA RIM_CARDS:</span>
+                        <span className={connectionDetails.rimCardsTable === 'ok' ? 'text-teal-600 font-extrabold uppercase' : 'text-rose-600 font-extrabold'}>
+                          {connectionDetails.rimCardsTable === 'ok' ? 'OK' : connectionDetails.rimCardsTable}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5 border-b border-slate-100/10">
+                        <span className="text-slate-500">TABELA SITE_SETTINGS:</span>
+                        <span className={connectionDetails.siteSettingsTable === 'ok' ? 'text-teal-600 font-extrabold uppercase' : 'text-rose-600 font-extrabold'}>
+                          {connectionDetails.siteSettingsTable === 'ok' ? 'OK' : connectionDetails.siteSettingsTable}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-0.5">
+                        <span className="text-slate-500">STORAGE PNEU-CENTER:</span>
+                        <span className={connectionDetails.storageBucket === 'ok' ? 'text-teal-600 font-extrabold uppercase' : 'text-rose-600 font-extrabold'}>
+                          {connectionDetails.storageBucket === 'ok' ? 'OK' : connectionDetails.storageBucket}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
