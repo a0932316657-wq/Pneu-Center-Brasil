@@ -3,7 +3,7 @@ import { ArrowLeft, MessageSquare, ShieldAlert, BadgeCheck, Compass, Settings, A
 import { motion } from 'motion/react';
 import { Product } from '../types';
 import { openWhatsAppChat, getProductMessage } from '../lib/whatsapp';
-import { getRimInmetroSeals } from '../lib/appStore';
+import { getRimInmetroSeals, resolveProductImage } from '../lib/appStore';
 import BrandBadge from './BrandBadge';
 
 interface ProductDetailsProps {
@@ -64,7 +64,7 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
           <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-checkerboard shadow-xs">
             {/* Dynamic support for multiple gallery images if they exist - otherwise show main single image */}
             <img
-              src={product.image || null}
+              src={resolveProductImage(product)}
               alt={`Foto detalhada do pneu ${product.name}`}
               referrerPolicy="no-referrer"
               className="h-full w-full object-contain p-8 object-center"
@@ -84,7 +84,7 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
               <span className="block text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold">Galeria do Produto:</span>
               <div className="flex gap-2 bg-slate-100 p-2 rounded-xl overflow-x-auto">
                 <div className="h-14 w-18 border-2 border-orange-500 bg-checkerboard rounded overflow-hidden flex items-center justify-center shrink-0">
-                  <img src={product.image || null} alt="principal" className="h-full w-full object-contain p-1" />
+                  <img src={resolveProductImage(product)} alt="principal" className="h-full w-full object-contain p-1" />
                 </div>
                 {product.gallery.map((galleryImg, idx) => (
                   <div key={idx} className="h-14 w-18 border border-slate-200 bg-checkerboard rounded overflow-hidden flex items-center justify-center shrink-0 hover:border-slate-400 transition-colors">

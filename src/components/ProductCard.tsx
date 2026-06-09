@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { Product } from '../types';
 import { openWhatsAppChat, getProductMessage } from '../lib/whatsapp';
 import BrandBadge from './BrandBadge';
-import { slugify } from '../lib/appStore';
+import { slugify, resolveProductImage } from '../lib/appStore';
 
 interface ProductCardProps {
   product: Product;
@@ -33,7 +33,7 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
         onClick={() => onViewDetails(productSlug)}
       >
         <img
-          src={product.image || null}
+          src={resolveProductImage(product)}
           alt={`Pneu ${product.name}`}
           referrerPolicy="no-referrer"
           className="h-full w-full object-contain p-4 object-center transition-transform duration-500 group-hover:scale-105"

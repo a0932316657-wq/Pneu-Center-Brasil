@@ -576,6 +576,26 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
         case 'institutionalText':
           resultSettings.institutionalText = val;
           break;
+        case 'rim_default_media_fallback':
+          try {
+            if (val) {
+              localStorage.setItem('pneu_center_rim_default_media_v1', val);
+              window.dispatchEvent(new Event('pneu_center_rim_default_media_updated'));
+            }
+          } catch (e) {
+            console.warn('Error reading fallback media:', e);
+          }
+          break;
+        case 'rim_inmetro_seals_fallback':
+          try {
+            if (val) {
+              localStorage.setItem('pneu_center_rim_inmetro_seals_v1', val);
+              window.dispatchEvent(new Event('pneu_center_rim_inmetro_seals_updated'));
+            }
+          } catch (e) {
+            console.warn('Error reading fallback seals:', e);
+          }
+          break;
       }
     }
   } else {
@@ -603,6 +623,19 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
     resultSettings.institutionalMediaType = row.institutional_media_type || row.institutionalMediaType || resultSettings.institutionalMediaType;
     resultSettings.institutionalMediaAlt = row.institutional_media_alt || row.institutionalMediaAlt || resultSettings.institutionalMediaAlt;
     resultLogo = row.logo_url || row.logoUrl || row.logo || null;
+
+    if (row.rim_default_media_fallback) {
+      try {
+        localStorage.setItem('pneu_center_rim_default_media_v1', row.rim_default_media_fallback);
+        window.dispatchEvent(new Event('pneu_center_rim_default_media_updated'));
+      } catch (e) {}
+    }
+    if (row.rim_inmetro_seals_fallback) {
+      try {
+        localStorage.setItem('pneu_center_rim_inmetro_seals_v1', row.rim_inmetro_seals_fallback);
+        window.dispatchEvent(new Event('pneu_center_rim_inmetro_seals_updated'));
+      } catch (e) {}
+    }
   }
 
   return { settings: resultSettings, logo: resultLogo };
@@ -1473,7 +1506,7 @@ export async function fetchRimDefaultMediaDb(): Promise<RimDefaultMedia[]> {
   
   try {
     const { data, error } = await supabase.from('rim_default_media').select('*');
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       const mapped = data.map((row: any) => ({
         id: row.id?.toString(),
         rim: Number(row.rim),
@@ -1481,11 +1514,84 @@ export async function fetchRimDefaultMediaDb(): Promise<RimDefaultMedia[]> {
       }));
       saveRimDefaultMedia(mapped);
       return mapped;
+    } else {
+      // Fallback query matching site_settings key
+      const { data: settingsData } = await supabase.from('site_settings').select('*');
+      if (settingsData && settingsData.length > 0) {
+        const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
+        if (isKeyValue) {
+          const fallback = settingsData.find(r => r.key === 'rim_default_media_fallback');
+          if (fallback && fallback.value) {
+            const parsed = JSON.parse(fallback.value);
+            saveRimDefaultMedia(parsed);
+            return parsed;
+          }
+        } else {
+          const row = settingsData[0];
+          if (row.rim_default_media_fallback) {
+            const parsed = JSON.parse(row.rim_default_media_fallback);
+            saveRimDefaultMedia(parsed);
+            return parsed;
+          }
+        }
+      }
     }
   } catch (err) {
-    console.warn('rim_default_media table does not exist or fetch failed. Falling back to local storage:', err);
+    console.warn('rim_default_media table does not exist or fetch failed. Falling back to site_settings:', err);
+    try {
+      const { data: settingsData } = await supabase.from('site_settings').select('*');
+      if (settingsData && settingsData.length > 0) {
+        const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
+        if (isKeyValue) {
+          const fallback = settingsData.find(r => r.key === 'rim_default_media_fallback');
+          if (fallback && fallback.value) {
+            const parsed = JSON.parse(fallback.value);
+            saveRimDefaultMedia(parsed);
+            return parsed;
+          }
+        } else {
+          const row = settingsData[0];
+          if (row.rim_default_media_fallback) {
+            const parsed = JSON.parse(row.rim_default_media_fallback);
+            saveRimDefaultMedia(parsed);
+            return parsed;
+          }
+        }
+      }
+    } catch (_) {}
   }
   return getRimDefaultMedia();
+}
+
+async function saveFallbackSetting(key: string, value: string) {
+  try {
+    const { data: rows } = await supabase.from('site_settings').select('*');
+    if (rows && rows.length > 0) {
+      const isKeyValue = 'key' in rows[0] && 'value' in rows[0];
+      if (isKeyValue) {
+        const existing = rows.find(r => r.key === key);
+        if (existing) {
+          await supabase
+            .from('site_settings')
+            .upsert({ id: existing.id, key, value });
+        } else {
+          await supabase
+            .from('site_settings')
+            .insert({ key, value });
+        }
+      } else {
+        const rowId = rows[0].id;
+        const cols = Object.keys(rows[0]);
+        const payload: any = {};
+        if (cols.includes(key)) {
+          payload[key] = value;
+          await supabase.from('site_settings').update(payload).eq('id', rowId);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`Failed to save fallback setting for ${key}:`, err);
+  }
 }
 
 export async function saveRimDefaultMediaDb(rim: number, imageUrl: string): Promise<void> {
@@ -1521,6 +1627,9 @@ export async function saveRimDefaultMediaDb(rim: number, imageUrl: string): Prom
     } catch (err) {
       console.warn('Could not write to rim_default_media table in Supabase:', err);
     }
+
+    // Save fallback inside site_settings
+    await saveFallbackSetting('rim_default_media_fallback', JSON.stringify(current));
   }
 }
 
@@ -1559,7 +1668,7 @@ export async function fetchRimInmetroSealsDb(): Promise<RimInmetroSeal[]> {
   
   try {
     const { data, error } = await supabase.from('rim_inmetro_seals').select('*');
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       const mapped = data.map((row: any) => ({
         id: row.id?.toString(),
         rim: Number(row.rim),
@@ -1567,9 +1676,51 @@ export async function fetchRimInmetroSealsDb(): Promise<RimInmetroSeal[]> {
       }));
       saveRimInmetroSeals(mapped);
       return mapped;
+    } else {
+      // Fallback: check site_settings for fallback
+      const { data: settingsData } = await supabase.from('site_settings').select('*');
+      if (settingsData && settingsData.length > 0) {
+        const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
+        if (isKeyValue) {
+          const fallback = settingsData.find(r => r.key === 'rim_inmetro_seals_fallback');
+          if (fallback && fallback.value) {
+            const parsed = JSON.parse(fallback.value);
+            saveRimInmetroSeals(parsed);
+            return parsed;
+          }
+        } else {
+          const row = settingsData[0];
+          if (row.rim_inmetro_seals_fallback) {
+            const parsed = JSON.parse(row.rim_inmetro_seals_fallback);
+            saveRimInmetroSeals(parsed);
+            return parsed;
+          }
+        }
+      }
     }
   } catch (err) {
-    console.warn('rim_inmetro_seals table does not exist or fetch failed. Falling back to local storage:', err);
+    console.warn('rim_inmetro_seals table does not exist or fetch failed. Falling back to site_settings:', err);
+    try {
+      const { data: settingsData } = await supabase.from('site_settings').select('*');
+      if (settingsData && settingsData.length > 0) {
+        const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
+        if (isKeyValue) {
+          const fallback = settingsData.find(r => r.key === 'rim_inmetro_seals_fallback');
+          if (fallback && fallback.value) {
+            const parsed = JSON.parse(fallback.value);
+            saveRimInmetroSeals(parsed);
+            return parsed;
+          }
+        } else {
+          const row = settingsData[0];
+          if (row.rim_inmetro_seals_fallback) {
+            const parsed = JSON.parse(row.rim_inmetro_seals_fallback);
+            saveRimInmetroSeals(parsed);
+            return parsed;
+          }
+        }
+      }
+    } catch (_) {}
   }
   return getRimInmetroSeals();
 }
@@ -1607,5 +1758,30 @@ export async function saveRimInmetroSealDb(rim: number, sealUrl: string): Promis
     } catch (err) {
       console.warn('Could not write to rim_inmetro_seals table in Supabase:', err);
     }
+
+    // Save fallback inside site_settings
+    await saveFallbackSetting('rim_inmetro_seals_fallback', JSON.stringify(current));
   }
+}
+
+/**
+ * Resolves the primary image to display for a tire, including dynamic fallback to the rim-default media.
+ */
+export function resolveProductImage(product: { image?: string; rim?: number } | undefined | null): string {
+  if (!product) {
+    return 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
+  }
+  if (product.image && product.image.trim() !== '') {
+    return product.image;
+  }
+  try {
+    const defaults = getRimDefaultMedia();
+    const match = defaults.find(m => Number(m.rim) === Number(product.rim));
+    if (match && match.image_url && match.image_url.trim() !== '') {
+      return match.image_url;
+    }
+  } catch (err) {
+    console.warn('Failed to resolve custom brand media:', err);
+  }
+  return 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
 }

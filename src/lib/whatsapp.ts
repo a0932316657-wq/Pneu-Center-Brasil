@@ -10,34 +10,40 @@ export function openWhatsAppChat(message: string) {
   // Using the requested number 5511995946993, falling back to database setting if customized
   const phone = settings.whatsappRaw || '5511995946993';
   const encodedText = encodeURIComponent(message);
-  const deepLink = `whatsapp://send?phone=${phone}&text=${encodedText}`;
   const webUrl = `https://wa.me/${phone}?text=${encodedText}`;
 
-  // Check if mobile device
+  // Push to GTM dataLayer to ensure 100% reliable tracking on other devices and browsers
+  if (typeof window !== 'undefined') {
+    // Initialize dataLayer if it doesn't exist
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    
+    // 1. Send simulated standard GTM linkClick event so generic wa.me triggers identify it perfectly
+    (window as any).dataLayer.push({
+      'event': 'gtm.linkClick',
+      'gtm.elementUrl': webUrl,
+      'gtm.element': document.activeElement || null,
+      'gtm.elementClasses': 'whatsapp-btn shadow-teal',
+      'gtm.elementId': 'whatsapp-action-btn',
+      'click_url': webUrl,
+      'clickUrl': webUrl
+    });
+
+    // 2. Also send a dedicated custom event for advanced and reliable tag tracking
+    (window as any).dataLayer.push({
+      'event': 'whatsapp_click',
+      'whatsapp_phone': phone,
+      'whatsapp_message': message,
+      'destination_url': webUrl
+    });
+  }
+
+  // Universal wa.me links are modern, fast and automatically switch to native app on iOS/Android
   const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     window.navigator.userAgent
   );
 
   if (isMobile) {
-    let windowBlurred = false;
-
-    // Listener to check if the browser window lost focus (indicating the app opened)
-    const handleBlur = () => {
-      windowBlurred = true;
-    };
-
-    window.addEventListener('blur', handleBlur);
-
-    // Try deep link directly for native application
-    window.location.href = deepLink;
-
-    // Wait 1000ms, if window did not blur (app didn't launch), fall back to HTTPS wa.me
-    setTimeout(() => {
-      window.removeEventListener('blur', handleBlur);
-      if (!windowBlurred) {
-        window.location.href = webUrl;
-      }
-    }, 1000);
+    window.location.href = webUrl;
   } else {
     // Desktop: Open in new window/tab
     window.open(webUrl, '_blank', 'noopener,noreferrer');
