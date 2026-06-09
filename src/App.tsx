@@ -51,17 +51,20 @@ import { openWhatsAppChat, DEFAULT_WHATSAPP_MESSAGE, getProductMessage } from '.
 
 function isVideoUrl(url: string | undefined): boolean {
   if (!url) return false;
-  const lowercase = url.toLowerCase();
+  const cleanUrl = url.split('?')[0].split('#')[0];
+  const lowercase = cleanUrl.toLowerCase();
   return (
     lowercase.endsWith('.mp4') ||
     lowercase.endsWith('.webm') ||
     lowercase.endsWith('.ogg') ||
     lowercase.endsWith('.mov') ||
     lowercase.endsWith('.m4v') ||
-    lowercase.includes('video/mp4') ||
-    lowercase.includes('video/webm') ||
-    lowercase.includes('video/ogg') ||
-    lowercase.includes('video/quicktime')
+    lowercase.endsWith('.3gp') ||
+    lowercase.endsWith('.quicktime') ||
+    url.toLowerCase().includes('video/mp4') ||
+    url.toLowerCase().includes('video/webm') ||
+    url.toLowerCase().includes('video/ogg') ||
+    url.toLowerCase().includes('video/quicktime')
   );
 }
 
@@ -336,6 +339,10 @@ export default function App() {
       setRimCards(getRimCards());
     };
 
+    const handleSettingsChange = () => {
+      setSiteSettings(getSettings());
+    };
+
     // Parse initial hash scrolls
     const initialHash = window.location.hash;
     if (initialHash === '#marcas') {
@@ -351,6 +358,7 @@ export default function App() {
     window.addEventListener('pneu_center_products_updated', handleProductsChange);
     window.addEventListener('pneu_center_brands_updated', handleBrandsChange);
     window.addEventListener('pneu_center_rimcards_updated', handleRimCardsChange);
+    window.addEventListener('pneu_center_settings_updated', handleSettingsChange);
     
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
@@ -358,6 +366,7 @@ export default function App() {
       window.removeEventListener('pneu_center_products_updated', handleProductsChange);
       window.removeEventListener('pneu_center_brands_updated', handleBrandsChange);
       window.removeEventListener('pneu_center_rimcards_updated', handleRimCardsChange);
+      window.removeEventListener('pneu_center_settings_updated', handleSettingsChange);
     };
   }, []);
 

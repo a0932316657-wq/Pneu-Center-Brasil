@@ -33,14 +33,21 @@ export function MediaRenderer({
   }
 
   // Detect type if not provided explicitly or defaulted
+  const cleanUrl = src ? src.split('?')[0].split('#')[0] : '';
   const isVideo = mediaType === 'video' || (!mediaType && (
-    src.toLowerCase().endsWith('.mp4') ||
-    src.toLowerCase().endsWith('.webm') ||
-    src.toLowerCase().endsWith('.ogg') ||
-    src.toLowerCase().endsWith('.mov') ||
-    src.toLowerCase().endsWith('.m4v') ||
-    src.includes('video/mp4') ||
-    src.includes('video/webm')
+    cleanUrl.toLowerCase().endsWith('.mp4') ||
+    cleanUrl.toLowerCase().endsWith('.webm') ||
+    cleanUrl.toLowerCase().endsWith('.ogg') ||
+    cleanUrl.toLowerCase().endsWith('.mov') ||
+    cleanUrl.toLowerCase().endsWith('.m4v') ||
+    cleanUrl.toLowerCase().endsWith('.3gp') ||
+    cleanUrl.toLowerCase().endsWith('.quicktime') ||
+    (src && (
+      src.toLowerCase().includes('video/mp4') ||
+      src.toLowerCase().includes('video/webm') ||
+      src.toLowerCase().includes('video/ogg') ||
+      src.toLowerCase().includes('video/quicktime')
+    ))
   ));
 
   if (isVideo) {
