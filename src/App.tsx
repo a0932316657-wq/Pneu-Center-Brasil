@@ -1460,7 +1460,7 @@ export default function App() {
           {routeState.path === 'produto' && (
             <div key="produto-detalhes-container">
               {(() => {
-                const item = products.find((p) => p.id === routeState.productId);
+                const item = products.find((p) => p.slug === routeState.productId || p.id === routeState.productId);
                 if (item) {
                   return (
                     <ProductDetails
@@ -1635,11 +1635,11 @@ export default function App() {
 
               <div className="max-w-none text-sm md:text-base text-slate-650 space-y-5 leading-relaxed font-sans">
                 <p>
-                  A <strong>Pneu Center Brasil</strong> é o nome comercial da empresa registrada legalmente sob a razão social <strong>CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA</strong>, constituída sob o CNPJ <strong>20.085.983/0001-13</strong>, com sede física estabelecida na Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP, CEP 05513-200.
+                  A <strong>{siteSettings.commercialName || 'Pneu Center Brasil'}</strong> é o nome comercial da empresa registrada comercialmente sob a razão social <strong>{siteSettings.corporateName || 'CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA'}</strong>, constituída sob o CNPJ <strong>{siteSettings.cnpj || '20.085.983/0001-13'}</strong>, com sede física estabelecida no seguinte endereço cadastral: {siteSettings.address || 'Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP, CEP 05513-200'}.
                 </p>
                 
                 <p>
-                  Atuamos com catálogo online moderno e atendimento técnico humanizado especializado para reposição de pneus automotivos multimarcas, auxiliando motoristas, frotistas e proprietários de veículos na escolha de modelos de pneus perfeitamente compatíveis com as medidas indicadas pelas respectivas montadoras de automóveis.
+                  {siteSettings.institutionalText || 'Atuamos com catálogo online moderno e atendimento técnico humanizado especializado para reposição de pneus automotivos multimarcas, auxiliando motoristas, frotistas e proprietários de veículos na escolha de modelos de pneus perfeitamente compatíveis com as medidas indicadas pelas respectivas montadoras de automóveis.'}
                 </p>
 
                 <p>
@@ -1647,7 +1647,7 @@ export default function App() {
                 </p>
 
                 <p className="border-l-4 border-orange-500 bg-white border border-slate-200 p-5 rounded-r-xl text-slate-650 shadow-xs">
-                  Nosso site tem finalidade estritamente informativa de catálogo digital e facilita o contato inicial rápido com a equipe comercial. Não realizamos checkout eletrônico neste domínio, não solicitamos dados financeiros dos usuários pelo ar de nosso site e não efetuamos cobranças antecipadas em ambiente virtual.
+                  Nosso site tem finalidade estritamente informativa de catálogo digital e facilita o contato inicial rápido com a equipe comercial. Não realizamos checkout eletrônico neste domínio, não solicitamos dados financeiros dos usuários através de nosso site e não efetuamos cobranças antecipadas em ambiente virtual.
                 </p>
               </div>
 

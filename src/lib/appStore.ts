@@ -24,6 +24,7 @@ export interface SiteSettings {
   featuredMediaUrl?: string;
   featuredMediaType?: 'image' | 'video';
   featuredMediaAlt?: string;
+  institutionalText?: string;
 }
 
 export interface Brand {
@@ -53,6 +54,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   email: 'contato.pneucenterbrasil@gmail.com',
   hours: 'Segunda a sexta, das 8h às 18h. Sábado, das 8h às 13h.',
   slogan: 'Catálogo Oficial Multimarcas',
+  institutionalText: 'A Pneu Center Brasil é especialista independente no comércio e distribuição de pneus de alta performance. Atuando com seriedade, transparência e agilidade logística, nossa equipe comercial auxilia cada cliente na escolha ideal para o modelo de seu veículo conversando diretamente pelo WhatsApp.',
   heroImageUrl: '',
   heroMediaType: 'image',
   heroBorderColor: '#f97316',
@@ -570,6 +572,10 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
         case 'institutionalMediaAlt':
           resultSettings.institutionalMediaAlt = val;
           break;
+        case 'institutional_text':
+        case 'institutionalText':
+          resultSettings.institutionalText = val;
+          break;
       }
     }
   } else {
@@ -583,6 +589,7 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
     resultSettings.email = row.email || resultSettings.email;
     resultSettings.hours = row.hours || resultSettings.hours;
     resultSettings.slogan = row.slogan || resultSettings.slogan;
+    resultSettings.institutionalText = row.institutional_text || row.institutionalText || resultSettings.institutionalText;
     resultSettings.heroImageUrl = row.hero_image_url || row.heroImageUrl || resultSettings.heroImageUrl;
     resultSettings.heroMediaType = row.hero_media_type || row.heroMediaType || resultSettings.heroMediaType;
     resultSettings.featuredMediaUrl = row.featured_media_url || row.featuredMediaUrl || resultSettings.featuredMediaUrl;
@@ -1180,7 +1187,9 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
         { key: 'institutional_media_type', value: settings.institutionalMediaType || 'image' },
         { key: 'institutionalMediaType', value: settings.institutionalMediaType || 'image' },
         { key: 'institutional_media_alt', value: settings.institutionalMediaAlt || '' },
-        { key: 'institutionalMediaAlt', value: settings.institutionalMediaAlt || '' }
+        { key: 'institutionalMediaAlt', value: settings.institutionalMediaAlt || '' },
+        { key: 'institutional_text', value: settings.institutionalText || '' },
+        { key: 'institutionalText', value: settings.institutionalText || '' }
       ];
       
       const validDbKeys = rows.map(r => r.key);
@@ -1217,7 +1226,8 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
           { key: 'hero_glow_intensity', value: settings.heroGlowIntensity || '' },
           { key: 'institutional_media_url', value: settings.institutionalMediaUrl || '' },
           { key: 'institutional_media_type', value: settings.institutionalMediaType || 'image' },
-          { key: 'institutional_media_alt', value: settings.institutionalMediaAlt || '' }
+          { key: 'institutional_media_alt', value: settings.institutionalMediaAlt || '' },
+          { key: 'institutional_text', value: settings.institutionalText || '' }
         ];
         await supabase.from('site_settings').upsert(initialKeys);
       }
@@ -1266,6 +1276,8 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
       setField('institutionalMediaType', settings.institutionalMediaType || 'image');
       setField('institutional_media_alt', settings.institutionalMediaAlt || '');
       setField('institutionalMediaAlt', settings.institutionalMediaAlt || '');
+      setField('institutional_text', settings.institutionalText || '');
+      setField('institutionalText', settings.institutionalText || '');
 
       if (rows && rows.length > 0) {
         const rowId = rows[0].id;

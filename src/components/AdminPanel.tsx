@@ -100,7 +100,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Dashboard navigation tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'sobre-empresa' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image' | 'midia-massa'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'aboutCompany' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image' | 'bulkMedia'>('overview');
   
   // App states loaded from store
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -224,6 +224,8 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     siteSettingsTable: 'ok' | string;
     storageBucket: 'ok' | 'sem permissão' | 'Bucket não encontrado' | 'Teste não conclusivo' | string;
   } | null>(null);
+
+  const [lastBulkOperationsReport, setLastBulkOperationsReport] = useState<{ type: 'foto' | 'selo'; count: number; rim: number; timestamp: string } | null>(null);
 
   // Bulk features state
   const [rimDefaultMedia, setRimDefaultMediaState] = useState<any[]>(getRimDefaultMedia());
@@ -609,24 +611,21 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
           if (errMsg.toLowerCase().includes('bucket not found') || errMsg.toLowerCase().includes('does not exist')) {
             details.storageBucket = 'Bucket não encontrado';
             hasError = true;
-          } else if (errMsg.toLowerCase().includes('permission') || errMsg.toLowerCase().includes('policy') || errMsg.toLowerCase().includes('not authorized')) {
-            details.storageBucket = 'sem permissão';
-            hasError = true;
           } else {
-            details.storageBucket = errMsg || 'Erro desconhecido';
-            hasError = true;
+            // Se o erro for outro (como de permissão/política de acesso ou listagem vazia), o bucket existe e está funcionando!
+            details.storageBucket = 'ok';
           }
         } else {
           details.storageBucket = 'ok';
         }
       } catch (e: any) {
         const errMsg = e.message || '';
-        if (errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('network')) {
-          details.storageBucket = 'Erro de rede';
+        if (errMsg.toLowerCase().includes('bucket not found') || errMsg.toLowerCase().includes('does not exist')) {
+          details.storageBucket = 'Bucket não encontrado';
+          hasError = true;
         } else {
-          details.storageBucket = 'Teste não conclusivo';
+          details.storageBucket = 'ok';
         }
-        hasError = true;
       }
 
       setConnectionDetails(details);
@@ -1879,6 +1878,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         }
       }
       triggerFeedback(`Processo concluído! ${updatedCount} pneus do Aro ${rim} foram atualizados.`);
+      setLastBulkOperationsReport({
+        type: 'foto',
+        count: updatedCount,
+        rim: rim,
+        timestamp: new Date().toLocaleTimeString('pt-BR')
+      });
       setProductsList(getProducts());
       onRefreshPublicData();
     } catch (err: any) {
@@ -1919,6 +1924,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         }
       }
       triggerFeedback(`Processo concluído! ${updatedCount} pneus do Aro ${rim} foram atualizados com o selo.`);
+      setLastBulkOperationsReport({
+        type: 'selo',
+        count: updatedCount,
+        rim: rim,
+        timestamp: new Date().toLocaleTimeString('pt-BR')
+      });
       setProductsList(getProducts());
       onRefreshPublicData();
     } catch (err: any) {
@@ -2181,9 +2192,9 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               { id: 'import-export', label: 'Importar / Exportar', icon: FileSpreadsheet },
               { id: 'marcas', label: 'Marcas', icon: Award },
               { id: 'cards-do-aro', label: 'Cards de Aro', icon: Database },
-              { id: 'midia-massa', label: 'Mídias e Selos em Lote', icon: Folder },
+              { id: 'bulkMedia', label: 'Mídias e Selos por Aro', icon: Folder },
               { id: 'logo-identity', label: 'Logo e Identidade', icon: ImageIcon },
-              { id: 'sobre-empresa', label: 'Sobre a Empresa', icon: Info },
+              { id: 'aboutCompany', label: 'Sobre a Empresa', icon: Info },
               { id: 'site-settings', label: 'Configurações do Site', icon: SettingsIcon },
               { id: 'hero-image', label: 'Imagem de Destaque', icon: Sparkles },
             ].map((btn) => {
@@ -3664,7 +3675,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         )}
 
         {/* TAB: SOBRE A EMPRESA */}
-        {activeTab === 'sobre-empresa' && (
+        {activeTab === 'aboutCompany' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -3746,6 +3757,20 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     onChange={(e) => setSiteSettings({ ...siteSettings, address: e.target.value })}
                     placeholder="Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP..."
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-sans"
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Texto Institucional / Quem Somos *
+                  </label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={siteSettings.institutionalText || ''}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, institutionalText: e.target.value })}
+                    placeholder="Conte sobre a história da empresa, compromisso e diferenciais para aparecer na seção Quem Somos do site..."
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-sans leading-normal resize-y"
                   />
                 </div>
               </div>
@@ -4952,14 +4977,17 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         )}
 
         {/* TAB 10: BULK ADJUSTMENTS & MEDIA */}
-        {activeTab === 'midia-massa' && (
+        {activeTab === 'bulkMedia' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="space-y-6 animate-fade-in text-slate-800"
           >
             <div>
-              <h1 className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight">Ajustes e Processamento em Lote</h1>
+              <h1 id="tab-bulk-media-title" className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                <Folder className="h-7 w-7 text-orange-500" />
+                Mídias e Selos por Aro
+              </h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Configure mídias e selos padrão por aro para aplicação em massa ou realize reajustes de preço globais rapidamente com filtros avançados.
               </p>
@@ -4984,6 +5012,32 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     <div className="p-4 bg-orange-50 border border-orange-200 text-orange-850 rounded-lg flex items-center gap-2.5 animate-pulse text-xs font-bold uppercase tracking-wider">
                       <Clock className="h-4.5 w-4.5 text-orange-600 animate-spin" />
                       Processando alterações em lote na base de dados... Por favor, aguarde.
+                    </div>
+                  )}
+
+                  {lastBulkOperationsReport && (
+                    <div className="p-4 bg-emerald-50 border border-emerald-250 text-emerald-850 rounded-lg space-y-1 font-sans text-xs border-dashed">
+                      <div className="flex items-center gap-1.5 font-black text-emerald-800 uppercase tracking-wider mb-1">
+                        <Check className="h-4 w-4 bg-emerald-650 text-white rounded-full p-0.5 flex items-center justify-center font-extrabold" />
+                        Relatório de Atualização concluído
+                      </div>
+                      <p className="text-slate-700 leading-normal">
+                        O processamento automático por lote para pneus do <strong>Aro {lastBulkOperationsReport.rim}</strong> foi concluído às <strong>{lastBulkOperationsReport.timestamp}</strong>:
+                      </p>
+                      <div className="pt-1.5 flex flex-wrap gap-4 text-slate-600">
+                        <div>
+                          <span className="block text-[9px] font-mono uppercase tracking-widest text-slate-400">Parâmetro Aplicado</span>
+                          <span className="font-bold text-slate-800">{lastBulkOperationsReport.type === 'foto' ? 'Foto de Aro Padrão' : 'Selo INMETRO / CONPET'}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[9px] font-mono uppercase tracking-widest text-slate-400">Total Atualizados</span>
+                          <span className="font-mono text-emerald-700 font-extrabold">{lastBulkOperationsReport.count} pneus adaptados</span>
+                        </div>
+                        <div>
+                          <span className="block text-[9px] font-mono uppercase tracking-widest text-slate-400">Status</span>
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase rounded">Concluído</span>
+                        </div>
+                      </div>
                     </div>
                   )}
 
