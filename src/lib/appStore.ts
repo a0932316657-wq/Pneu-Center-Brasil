@@ -461,13 +461,43 @@ function mapBrandFromRow(row: any): Brand {
   };
 }
 
+export function cleanDescription(desc: string | undefined | null): string {
+  if (!desc) return '';
+  return desc.replace(/\[INMETRO_SEAL:.*?\]/g, '').replace(/\[DEFAULT_MEDIA:.*?\]/g, '').trim();
+}
+
+export function extractTag(desc: string | undefined | null, tagPrefix: string): string | null {
+  if (!desc) return null;
+  const regex = new RegExp(`\\[${tagPrefix}:([^\\]]*)\\]`);
+  const match = desc.match(regex);
+  return match ? match[1] : null;
+}
+
+export function preserveMetadataTags(newDesc: string, oldDesc: string | undefined | null): string {
+  if (!oldDesc) return newDesc;
+  let finalDesc = newDesc;
+  const sealMatch = oldDesc.match(/\[INMETRO_SEAL:.*?\]/);
+  if (sealMatch) {
+    if (!finalDesc.includes('[INMETRO_SEAL:')) {
+      finalDesc += ' ' + sealMatch[0];
+    }
+  }
+  const mediaMatch = oldDesc.match(/\[DEFAULT_MEDIA:.*?\]/);
+  if (mediaMatch) {
+    if (!finalDesc.includes('[DEFAULT_MEDIA:')) {
+      finalDesc += ' ' + mediaMatch[0];
+    }
+  }
+  return finalDesc.trim();
+}
+
 function mapRimCardFromRow(row: any): RimCard {
   return {
     id: row.id?.toString() || '',
     name: row.title || row.name || '',
     rim: Number(row.rim) || 15,
     image: row.image_url || row.image || '',
-    description: row.description || '',
+    description: cleanDescription(row.description),
     active: row.active !== false,
     mediaType: row.media_type || row.mediaType || 'image'
   };
@@ -901,6 +931,32 @@ export async function syncFromSupabase(): Promise<void> {
     if (!rimError && rimData) {
       const mappedRims = rimData.map(mapRimCardFromRow);
       localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(mappedRims));
+
+      // Parse inline inmetro seals and fallback media from rim cards description column
+      const fallbackSeals: RimInmetroSeal[] = [];
+      const fallbackMedia: RimDefaultMedia[] = [];
+
+      for (const row of rimData) {
+        const rimNum = Number(row.rim);
+        if (rimNum) {
+          const sealUrl = extractTag(row.description, 'INMETRO_SEAL');
+          if (sealUrl) {
+            fallbackSeals.push({ rim: rimNum, seal_url: sealUrl });
+          }
+          const mediaUrl = extractTag(row.description, 'DEFAULT_MEDIA');
+          if (mediaUrl) {
+            fallbackMedia.push({ rim: rimNum, image_url: mediaUrl });
+          }
+        }
+      }
+
+      if (fallbackSeals.length > 0) {
+        saveRimInmetroSeals(fallbackSeals);
+      }
+      if (fallbackMedia.length > 0) {
+        saveRimDefaultMedia(fallbackMedia);
+      }
+
       window.dispatchEvent(new Event('pneu_center_rimcards_updated'));
     }
   } catch (error) {
@@ -1093,11 +1149,25 @@ export async function deleteBrandDb(id: string): Promise<void> {
 }
 
 export async function saveRimCardDb(card: RimCard): Promise<RimCard> {
+  // Let's fetch the existing description from the database to preserve any inline configuration tags
+  let existingDescription: string | null = null;
+  try {
+    const { data } = await supabase
+      .from('rim_cards')
+      .select('description')
+      .eq('rim', card.rim.toString());
+    if (data && data.length > 0) {
+      existingDescription = data[0].description;
+    }
+  } catch (_) {}
+
+  const finalDescription = preserveMetadataTags(card.description, existingDescription);
+
   const payload: any = {
     title: card.name,
     rim: card.rim,
     image_url: card.image,
-    description: card.description,
+    description: finalDescription,
     active: card.active
   };
 
@@ -1514,52 +1584,53 @@ export async function fetchRimDefaultMediaDb(): Promise<RimDefaultMedia[]> {
       }));
       saveRimDefaultMedia(mapped);
       return mapped;
-    } else {
-      // Fallback query matching site_settings key
-      const { data: settingsData } = await supabase.from('site_settings').select('*');
-      if (settingsData && settingsData.length > 0) {
-        const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
-        if (isKeyValue) {
-          const fallback = settingsData.find(r => r.key === 'rim_default_media_fallback');
-          if (fallback && fallback.value) {
-            const parsed = JSON.parse(fallback.value);
-            saveRimDefaultMedia(parsed);
-            return parsed;
-          }
-        } else {
-          const row = settingsData[0];
-          if (row.rim_default_media_fallback) {
-            const parsed = JSON.parse(row.rim_default_media_fallback);
-            saveRimDefaultMedia(parsed);
-            return parsed;
-          }
+    }
+  } catch (err) {
+    console.warn('rim_default_media table query failed, trying other fallbacks:', err);
+  }
+
+  // Fallback 1: check site_settings for fallback
+  try {
+    const { data: settingsData } = await supabase.from('site_settings').select('*');
+    if (settingsData && settingsData.length > 0) {
+      const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
+      if (isKeyValue) {
+        const fallback = settingsData.find(r => r.key === 'rim_default_media_fallback');
+        if (fallback && fallback.value) {
+          const parsed = JSON.parse(fallback.value);
+          saveRimDefaultMedia(parsed);
+          return parsed;
+        }
+      } else {
+        const row = settingsData[0];
+        if (row.rim_default_media_fallback) {
+          const parsed = JSON.parse(row.rim_default_media_fallback);
+          saveRimDefaultMedia(parsed);
+          return parsed;
         }
       }
     }
-  } catch (err) {
-    console.warn('rim_default_media table does not exist or fetch failed. Falling back to site_settings:', err);
-    try {
-      const { data: settingsData } = await supabase.from('site_settings').select('*');
-      if (settingsData && settingsData.length > 0) {
-        const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
-        if (isKeyValue) {
-          const fallback = settingsData.find(r => r.key === 'rim_default_media_fallback');
-          if (fallback && fallback.value) {
-            const parsed = JSON.parse(fallback.value);
-            saveRimDefaultMedia(parsed);
-            return parsed;
-          }
-        } else {
-          const row = settingsData[0];
-          if (row.rim_default_media_fallback) {
-            const parsed = JSON.parse(row.rim_default_media_fallback);
-            saveRimDefaultMedia(parsed);
-            return parsed;
-          }
+  } catch (_) {}
+
+  // Fallback 2: check rim_cards descriptions for fallback tags! (extremely robust across devices)
+  try {
+    const { data: rimCards, error } = await supabase.from('rim_cards').select('*');
+    if (!error && rimCards && rimCards.length > 0) {
+      const fallbackMedia: RimDefaultMedia[] = [];
+      for (const row of rimCards) {
+        const rimNum = Number(row.rim);
+        const url = extractTag(row.description, 'DEFAULT_MEDIA');
+        if (rimNum && url) {
+          fallbackMedia.push({ rim: rimNum, image_url: url });
         }
       }
-    } catch (_) {}
-  }
+      if (fallbackMedia.length > 0) {
+        saveRimDefaultMedia(fallbackMedia);
+        return fallbackMedia;
+      }
+    }
+  } catch (_) {}
+
   return getRimDefaultMedia();
 }
 
@@ -1630,6 +1701,30 @@ export async function saveRimDefaultMediaDb(rim: number, imageUrl: string): Prom
 
     // Save fallback inside site_settings
     await saveFallbackSetting('rim_default_media_fallback', JSON.stringify(current));
+
+    // Save fallback inside rim_cards description field as a tag
+    try {
+      const { data: rimCards, error: rimError } = await supabase
+        .from('rim_cards')
+        .select('*')
+        .eq('rim', rim.toString());
+        
+      if (!rimError && rimCards && rimCards.length > 0) {
+        const oldDesc = rimCards[0].description || '';
+        let newDesc = oldDesc;
+        if (newDesc.includes('[DEFAULT_MEDIA:')) {
+          newDesc = newDesc.replace(/\[DEFAULT_MEDIA:.*?\]/g, `[DEFAULT_MEDIA:${imageUrl}]`);
+        } else {
+          newDesc = `${newDesc} [DEFAULT_MEDIA:${imageUrl}]`.trim();
+        }
+        await supabase
+          .from('rim_cards')
+          .update({ description: newDesc, updated_at: new Date().toISOString() })
+          .eq('rim', rim.toString());
+      }
+    } catch (err) {
+      console.warn('Error saving fallback media to rim_cards row:', err);
+    }
   }
 }
 
@@ -1676,52 +1771,53 @@ export async function fetchRimInmetroSealsDb(): Promise<RimInmetroSeal[]> {
       }));
       saveRimInmetroSeals(mapped);
       return mapped;
-    } else {
-      // Fallback: check site_settings for fallback
-      const { data: settingsData } = await supabase.from('site_settings').select('*');
-      if (settingsData && settingsData.length > 0) {
-        const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
-        if (isKeyValue) {
-          const fallback = settingsData.find(r => r.key === 'rim_inmetro_seals_fallback');
-          if (fallback && fallback.value) {
-            const parsed = JSON.parse(fallback.value);
-            saveRimInmetroSeals(parsed);
-            return parsed;
-          }
-        } else {
-          const row = settingsData[0];
-          if (row.rim_inmetro_seals_fallback) {
-            const parsed = JSON.parse(row.rim_inmetro_seals_fallback);
-            saveRimInmetroSeals(parsed);
-            return parsed;
-          }
+    }
+  } catch (err) {
+    console.warn('rim_inmetro_seals table query failed, trying other fallbacks:', err);
+  }
+
+  // Fallback 1: check site_settings for fallback
+  try {
+    const { data: settingsData } = await supabase.from('site_settings').select('*');
+    if (settingsData && settingsData.length > 0) {
+      const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
+      if (isKeyValue) {
+        const fallback = settingsData.find(r => r.key === 'rim_inmetro_seals_fallback');
+        if (fallback && fallback.value) {
+          const parsed = JSON.parse(fallback.value);
+          saveRimInmetroSeals(parsed);
+          return parsed;
+        }
+      } else {
+        const row = settingsData[0];
+        if (row.rim_inmetro_seals_fallback) {
+          const parsed = JSON.parse(row.rim_inmetro_seals_fallback);
+          saveRimInmetroSeals(parsed);
+          return parsed;
         }
       }
     }
-  } catch (err) {
-    console.warn('rim_inmetro_seals table does not exist or fetch failed. Falling back to site_settings:', err);
-    try {
-      const { data: settingsData } = await supabase.from('site_settings').select('*');
-      if (settingsData && settingsData.length > 0) {
-        const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
-        if (isKeyValue) {
-          const fallback = settingsData.find(r => r.key === 'rim_inmetro_seals_fallback');
-          if (fallback && fallback.value) {
-            const parsed = JSON.parse(fallback.value);
-            saveRimInmetroSeals(parsed);
-            return parsed;
-          }
-        } else {
-          const row = settingsData[0];
-          if (row.rim_inmetro_seals_fallback) {
-            const parsed = JSON.parse(row.rim_inmetro_seals_fallback);
-            saveRimInmetroSeals(parsed);
-            return parsed;
-          }
+  } catch (_) {}
+
+  // Fallback 2: check rim_cards descriptions for fallback tags! (extremely robust across devices)
+  try {
+    const { data: rimCards, error } = await supabase.from('rim_cards').select('*');
+    if (!error && rimCards && rimCards.length > 0) {
+      const fallbackSeals: RimInmetroSeal[] = [];
+      for (const row of rimCards) {
+        const rimNum = Number(row.rim);
+        const url = extractTag(row.description, 'INMETRO_SEAL');
+        if (rimNum && url) {
+          fallbackSeals.push({ rim: rimNum, seal_url: url });
         }
       }
-    } catch (_) {}
-  }
+      if (fallbackSeals.length > 0) {
+        saveRimInmetroSeals(fallbackSeals);
+        return fallbackSeals;
+      }
+    }
+  } catch (_) {}
+
   return getRimInmetroSeals();
 }
 
@@ -1761,6 +1857,30 @@ export async function saveRimInmetroSealDb(rim: number, sealUrl: string): Promis
 
     // Save fallback inside site_settings
     await saveFallbackSetting('rim_inmetro_seals_fallback', JSON.stringify(current));
+
+    // Save fallback inside rim_cards description field as a tag
+    try {
+      const { data: rimCards, error: rimError } = await supabase
+        .from('rim_cards')
+        .select('*')
+        .eq('rim', rim.toString());
+        
+      if (!rimError && rimCards && rimCards.length > 0) {
+        const oldDesc = rimCards[0].description || '';
+        let newDesc = oldDesc;
+        if (newDesc.includes('[INMETRO_SEAL:')) {
+          newDesc = newDesc.replace(/\[INMETRO_SEAL:.*?\]/g, `[INMETRO_SEAL:${sealUrl}]`);
+        } else {
+          newDesc = `${newDesc} [INMETRO_SEAL:${sealUrl}]`.trim();
+        }
+        await supabase
+          .from('rim_cards')
+          .update({ description: newDesc, updated_at: new Date().toISOString() })
+          .eq('rim', rim.toString());
+      }
+    } catch (err) {
+      console.warn('Error saving seal fallback to rim_cards row:', err);
+    }
   }
 }
 
