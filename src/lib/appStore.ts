@@ -870,6 +870,12 @@ export function saveRimCards(rimCards: RimCard[]): void {
   }
 }
 
+let isSupabaseSynced = false;
+
+export function isSyncedWithSupabase(): boolean {
+  return isSupabaseSynced;
+}
+
 /**
  * ------------------------------------------------------------------------
  * ASYNCHRONOUS CLOUD SYNCHRONIZER (BACKGROUND OR EXPLICIT PULLS)
@@ -959,8 +965,16 @@ export async function syncFromSupabase(): Promise<void> {
 
       window.dispatchEvent(new Event('pneu_center_rimcards_updated'));
     }
+    isSupabaseSynced = true;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('pneu_center_sync_completed'));
+    }
   } catch (error) {
     console.error('Error synchronizing with Supabase database:', error);
+    isSupabaseSynced = true;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('pneu_center_sync_completed'));
+    }
   }
 }
 
@@ -1149,25 +1163,11 @@ export async function deleteBrandDb(id: string): Promise<void> {
 }
 
 export async function saveRimCardDb(card: RimCard): Promise<RimCard> {
-  // Let's fetch the existing description from the database to preserve any inline configuration tags
-  let existingDescription: string | null = null;
-  try {
-    const { data } = await supabase
-      .from('rim_cards')
-      .select('description')
-      .eq('rim', card.rim.toString());
-    if (data && data.length > 0) {
-      existingDescription = data[0].description;
-    }
-  } catch (_) {}
-
-  const finalDescription = preserveMetadataTags(card.description, existingDescription);
-
   const payload: any = {
     title: card.name,
     rim: card.rim,
     image_url: card.image,
-    description: finalDescription,
+    description: card.description,
     active: card.active
   };
 
@@ -1536,9 +1536,18 @@ export function compressImage(file: File, maxWidth = 800, maxHeight = 600, quali
 if (typeof window !== 'undefined') {
   setTimeout(() => {
     syncFromSupabase();
-    fetchRimDefaultMediaDb().catch(() => {});
-    fetchRimInmetroSealsDb().catch(() => {});
+    fetchRimMediaSettingsDb().catch(() => {});
   }, 150);
+}
+
+export interface RimMediaSetting {
+  id?: string;
+  rim: string;
+  default_image_url?: string | null;
+  inmetro_label_url?: string | null;
+  default_image_type?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface RimDefaultMedia {
@@ -1547,341 +1556,338 @@ export interface RimDefaultMedia {
   image_url: string;
 }
 
-const RIM_DEFAULT_MEDIA_KEY = 'pneu_center_rim_default_media_v1';
-
-export function getRimDefaultMedia(): RimDefaultMedia[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = localStorage.getItem(RIM_DEFAULT_MEDIA_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (err) {
-    console.error('Error reading rim default media:', err);
-    return [];
-  }
-}
-
-export function saveRimDefaultMedia(items: RimDefaultMedia[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(RIM_DEFAULT_MEDIA_KEY, JSON.stringify(items));
-    window.dispatchEvent(new Event('pneu_center_rim_default_media_updated'));
-  } catch (err) {
-    console.error('Error saving rim default media:', err);
-  }
-}
-
-export async function fetchRimDefaultMediaDb(): Promise<RimDefaultMedia[]> {
-  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
-  if (!isSupabaseConnected) return getRimDefaultMedia();
-  
-  try {
-    const { data, error } = await supabase.from('rim_default_media').select('*');
-    if (!error && data && data.length > 0) {
-      const mapped = data.map((row: any) => ({
-        id: row.id?.toString(),
-        rim: Number(row.rim),
-        image_url: row.image_url || ''
-      }));
-      saveRimDefaultMedia(mapped);
-      return mapped;
-    }
-  } catch (err) {
-    console.warn('rim_default_media table query failed, trying other fallbacks:', err);
-  }
-
-  // Fallback 1: check site_settings for fallback
-  try {
-    const { data: settingsData } = await supabase.from('site_settings').select('*');
-    if (settingsData && settingsData.length > 0) {
-      const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
-      if (isKeyValue) {
-        const fallback = settingsData.find(r => r.key === 'rim_default_media_fallback');
-        if (fallback && fallback.value) {
-          const parsed = JSON.parse(fallback.value);
-          saveRimDefaultMedia(parsed);
-          return parsed;
-        }
-      } else {
-        const row = settingsData[0];
-        if (row.rim_default_media_fallback) {
-          const parsed = JSON.parse(row.rim_default_media_fallback);
-          saveRimDefaultMedia(parsed);
-          return parsed;
-        }
-      }
-    }
-  } catch (_) {}
-
-  // Fallback 2: check rim_cards descriptions for fallback tags! (extremely robust across devices)
-  try {
-    const { data: rimCards, error } = await supabase.from('rim_cards').select('*');
-    if (!error && rimCards && rimCards.length > 0) {
-      const fallbackMedia: RimDefaultMedia[] = [];
-      for (const row of rimCards) {
-        const rimNum = Number(row.rim);
-        const url = extractTag(row.description, 'DEFAULT_MEDIA');
-        if (rimNum && url) {
-          fallbackMedia.push({ rim: rimNum, image_url: url });
-        }
-      }
-      if (fallbackMedia.length > 0) {
-        saveRimDefaultMedia(fallbackMedia);
-        return fallbackMedia;
-      }
-    }
-  } catch (_) {}
-
-  return getRimDefaultMedia();
-}
-
-async function saveFallbackSetting(key: string, value: string) {
-  try {
-    const { data: rows } = await supabase.from('site_settings').select('*');
-    if (rows && rows.length > 0) {
-      const isKeyValue = 'key' in rows[0] && 'value' in rows[0];
-      if (isKeyValue) {
-        const existing = rows.find(r => r.key === key);
-        if (existing) {
-          await supabase
-            .from('site_settings')
-            .upsert({ id: existing.id, key, value });
-        } else {
-          await supabase
-            .from('site_settings')
-            .insert({ key, value });
-        }
-      } else {
-        const rowId = rows[0].id;
-        const cols = Object.keys(rows[0]);
-        const payload: any = {};
-        if (cols.includes(key)) {
-          payload[key] = value;
-          await supabase.from('site_settings').update(payload).eq('id', rowId);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn(`Failed to save fallback setting for ${key}:`, err);
-  }
-}
-
-export async function saveRimDefaultMediaDb(rim: number, imageUrl: string): Promise<void> {
-  const current = getRimDefaultMedia();
-  const index = current.findIndex(m => m.rim === rim);
-  if (index >= 0) {
-    current[index].image_url = imageUrl;
-  } else {
-    current.push({ rim, image_url: imageUrl });
-  }
-  saveRimDefaultMedia(current);
-
-  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
-  if (isSupabaseConnected) {
-    try {
-      const { data, error } = await supabase
-        .from('rim_default_media')
-        .select('*')
-        .eq('rim', rim);
-        
-      if (!error) {
-        if (data && data.length > 0) {
-          await supabase
-            .from('rim_default_media')
-            .update({ image_url: imageUrl, updated_at: new Date().toISOString() })
-            .eq('rim', rim);
-        } else {
-          await supabase
-            .from('rim_default_media')
-            .insert({ rim, image_url: imageUrl });
-        }
-      }
-    } catch (err) {
-      console.warn('Could not write to rim_default_media table in Supabase:', err);
-    }
-
-    // Save fallback inside site_settings
-    await saveFallbackSetting('rim_default_media_fallback', JSON.stringify(current));
-
-    // Save fallback inside rim_cards description field as a tag
-    try {
-      const { data: rimCards, error: rimError } = await supabase
-        .from('rim_cards')
-        .select('*')
-        .eq('rim', rim.toString());
-        
-      if (!rimError && rimCards && rimCards.length > 0) {
-        const oldDesc = rimCards[0].description || '';
-        let newDesc = oldDesc;
-        if (newDesc.includes('[DEFAULT_MEDIA:')) {
-          newDesc = newDesc.replace(/\[DEFAULT_MEDIA:.*?\]/g, `[DEFAULT_MEDIA:${imageUrl}]`);
-        } else {
-          newDesc = `${newDesc} [DEFAULT_MEDIA:${imageUrl}]`.trim();
-        }
-        await supabase
-          .from('rim_cards')
-          .update({ description: newDesc, updated_at: new Date().toISOString() })
-          .eq('rim', rim.toString());
-      }
-    } catch (err) {
-      console.warn('Error saving fallback media to rim_cards row:', err);
-    }
-  }
-}
-
 export interface RimInmetroSeal {
   id?: string;
   rim: number;
   seal_url: string;
 }
 
+// Global in-memory state which serves as the active cache across all pages
+let rimMediaSettingsMemory: RimMediaSetting[] = [];
+
+export function getRimMediaSettings(): RimMediaSetting[] {
+  return rimMediaSettingsMemory;
+}
+
+export function saveRimMediaSettingsLocal(items: RimMediaSetting[]): void {
+  rimMediaSettingsMemory = items;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('pneu_center_rim_media_settings_updated'));
+    window.dispatchEvent(new Event('pneu_center_rim_default_media_updated'));
+    window.dispatchEvent(new Event('pneu_center_rim_inmetro_seals_updated'));
+  }
+}
+
+// Deprecated local storage helper only kept for compatibility/backwards sync
+const RIM_DEFAULT_MEDIA_KEY = 'pneu_center_rim_default_media_v1';
 const RIM_INMETRO_SEALS_KEY = 'pneu_center_rim_inmetro_seals_v1';
 
-export function getRimInmetroSeals(): RimInmetroSeal[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = localStorage.getItem(RIM_INMETRO_SEALS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (err) {
-    console.error('Error reading rim inmetro seals:', err);
-    return [];
+export function getRimDefaultMedia(): RimDefaultMedia[] {
+  return rimMediaSettingsMemory
+    .filter(m => m.default_image_url)
+    .map(m => ({
+      id: m.id,
+      rim: Number(m.rim),
+      image_url: m.default_image_url!
+    }));
+}
+
+export function saveRimDefaultMedia(items: RimDefaultMedia[]): void {
+  // Synchronize memory state to reflect these items
+  const copy = [...rimMediaSettingsMemory];
+  for (const item of items) {
+    const existing = copy.find(m => Number(m.rim) === item.rim);
+    if (existing) {
+      existing.default_image_url = item.image_url;
+    } else {
+      copy.push({
+        rim: item.rim.toString(),
+        default_image_url: item.image_url,
+        inmetro_label_url: null,
+        default_image_type: 'image'
+      });
+    }
   }
+  saveRimMediaSettingsLocal(copy);
+}
+
+export function getRimInmetroSeals(): RimInmetroSeal[] {
+  return rimMediaSettingsMemory
+    .filter(m => m.inmetro_label_url)
+    .map(m => ({
+      id: m.id,
+      rim: Number(m.rim),
+      seal_url: m.inmetro_label_url!
+    }));
 }
 
 export function saveRimInmetroSeals(items: RimInmetroSeal[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(RIM_INMETRO_SEALS_KEY, JSON.stringify(items));
-    window.dispatchEvent(new Event('pneu_center_rim_inmetro_seals_updated'));
-  } catch (err) {
-    console.error('Error saving rim inmetro seals:', err);
+  // Synchronize memory state to reflect these items
+  const copy = [...rimMediaSettingsMemory];
+  for (const item of items) {
+    const existing = copy.find(m => Number(m.rim) === item.rim);
+    if (existing) {
+      existing.inmetro_label_url = item.seal_url;
+    } else {
+      copy.push({
+        rim: item.rim.toString(),
+        default_image_url: null,
+        inmetro_label_url: item.seal_url,
+        default_image_type: 'image'
+      });
+    }
   }
+  saveRimMediaSettingsLocal(copy);
 }
 
-export async function fetchRimInmetroSealsDb(): Promise<RimInmetroSeal[]> {
+export async function fetchRimMediaSettingsDb(): Promise<RimMediaSetting[]> {
   const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
-  if (!isSupabaseConnected) return getRimInmetroSeals();
-  
+  if (!isSupabaseConnected) return rimMediaSettingsMemory;
+
   try {
-    const { data, error } = await supabase.from('rim_inmetro_seals').select('*');
-    if (!error && data && data.length > 0) {
-      const mapped = data.map((row: any) => ({
+    const { data, error } = await supabase
+      .from('rim_media_settings')
+      .select('*');
+
+    if (error) {
+      console.warn('Error fetching from rim_media_settings database table:', error.message);
+      return rimMediaSettingsMemory;
+    }
+
+    if (data) {
+      const mapped: RimMediaSetting[] = data.map((row: any) => ({
         id: row.id?.toString(),
-        rim: Number(row.rim),
-        seal_url: row.seal_url || ''
+        rim: row.rim?.toString() || '',
+        default_image_url: row.default_image_url || null,
+        inmetro_label_url: row.inmetro_label_url || null,
+        default_image_type: row.default_image_type || 'image'
       }));
-      saveRimInmetroSeals(mapped);
+      saveRimMediaSettingsLocal(mapped);
       return mapped;
     }
   } catch (err) {
-    console.warn('rim_inmetro_seals table query failed, trying other fallbacks:', err);
+    console.warn('Failed to query rim_media_settings table from Supabase:', err);
   }
+  return rimMediaSettingsMemory;
+}
 
-  // Fallback 1: check site_settings for fallback
-  try {
-    const { data: settingsData } = await supabase.from('site_settings').select('*');
-    if (settingsData && settingsData.length > 0) {
-      const isKeyValue = 'key' in settingsData[0] && 'value' in settingsData[0];
-      if (isKeyValue) {
-        const fallback = settingsData.find(r => r.key === 'rim_inmetro_seals_fallback');
-        if (fallback && fallback.value) {
-          const parsed = JSON.parse(fallback.value);
-          saveRimInmetroSeals(parsed);
-          return parsed;
-        }
-      } else {
-        const row = settingsData[0];
-        if (row.rim_inmetro_seals_fallback) {
-          const parsed = JSON.parse(row.rim_inmetro_seals_fallback);
-          saveRimInmetroSeals(parsed);
-          return parsed;
-        }
-      }
-    }
-  } catch (_) {}
+export async function fetchRimDefaultMediaDb(): Promise<RimDefaultMedia[]> {
+  await fetchRimMediaSettingsDb();
+  return getRimDefaultMedia();
+}
 
-  // Fallback 2: check rim_cards descriptions for fallback tags! (extremely robust across devices)
-  try {
-    const { data: rimCards, error } = await supabase.from('rim_cards').select('*');
-    if (!error && rimCards && rimCards.length > 0) {
-      const fallbackSeals: RimInmetroSeal[] = [];
-      for (const row of rimCards) {
-        const rimNum = Number(row.rim);
-        const url = extractTag(row.description, 'INMETRO_SEAL');
-        if (rimNum && url) {
-          fallbackSeals.push({ rim: rimNum, seal_url: url });
-        }
-      }
-      if (fallbackSeals.length > 0) {
-        saveRimInmetroSeals(fallbackSeals);
-        return fallbackSeals;
-      }
-    }
-  } catch (_) {}
-
+export async function fetchRimInmetroSealsDb(): Promise<RimInmetroSeal[]> {
+  await fetchRimMediaSettingsDb();
   return getRimInmetroSeals();
 }
 
-export async function saveRimInmetroSealDb(rim: number, sealUrl: string): Promise<void> {
-  const current = getRimInmetroSeals();
-  const index = current.findIndex(m => m.rim === rim);
-  if (index >= 0) {
-    current[index].seal_url = sealUrl;
-  } else {
-    current.push({ rim, seal_url: sealUrl });
-  }
-  saveRimInmetroSeals(current);
-
+export async function saveRimDefaultMediaDb(rim: number, imageUrl: string): Promise<void> {
   const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
-  if (isSupabaseConnected) {
+  if (!isSupabaseConnected) {
+    const existing = rimMediaSettingsMemory.find(m => Number(m.rim) === rim);
+    if (existing) {
+      existing.default_image_url = imageUrl;
+    } else {
+      rimMediaSettingsMemory.push({
+        rim: rim.toString(),
+        default_image_url: imageUrl,
+        inmetro_label_url: null,
+        default_image_type: 'image'
+      });
+    }
+    saveRimMediaSettingsLocal([...rimMediaSettingsMemory]);
+    return;
+  }
+
+  try {
+    // Check if a setting for this rim already exists in rim_media_settings
+    const { data, error } = await supabase
+      .from('rim_media_settings')
+      .select('*')
+      .eq('rim', rim.toString());
+
+    if (!error && data && data.length > 0) {
+      // Update
+      const { error: updateError } = await supabase
+        .from('rim_media_settings')
+        .update({
+          default_image_url: imageUrl,
+          default_image_type: 'image',
+          updated_at: new Date().toISOString()
+        })
+        .eq('rim', rim.toString());
+      if (updateError) throw updateError;
+    } else {
+      // Insert
+      const { error: insertError } = await supabase
+        .from('rim_media_settings')
+        .insert({
+          rim: rim.toString(),
+          default_image_url: imageUrl,
+          default_image_type: 'image'
+        });
+      if (insertError) throw insertError;
+    }
+
+    await fetchRimMediaSettingsDb();
+  } catch (err: any) {
+    console.error('Error saving default media image to Supabase:', err);
+    throw new Error(`Erro ao salvar imagem oficial no Supabase: ${err.message || err}`);
+  }
+}
+
+export async function saveRimInmetroSealDb(rim: number, sealUrl: string): Promise<void> {
+  const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
+  if (!isSupabaseConnected) {
+    const existing = rimMediaSettingsMemory.find(m => Number(m.rim) === rim);
+    if (existing) {
+      existing.inmetro_label_url = sealUrl;
+    } else {
+      rimMediaSettingsMemory.push({
+        rim: rim.toString(),
+        default_image_url: null,
+        inmetro_label_url: sealUrl,
+        default_image_type: 'image'
+      });
+    }
+    saveRimMediaSettingsLocal([...rimMediaSettingsMemory]);
+    return;
+  }
+
+  try {
+    // Check if a setting for this rim already exists in rim_media_settings
+    const { data, error } = await supabase
+      .from('rim_media_settings')
+      .select('*')
+      .eq('rim', rim.toString());
+
+    if (!error && data && data.length > 0) {
+      // Update
+      const { error: updateError } = await supabase
+        .from('rim_media_settings')
+        .update({
+          inmetro_label_url: sealUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('rim', rim.toString());
+      if (updateError) throw updateError;
+    } else {
+      // Insert
+      const { error: insertError } = await supabase
+        .from('rim_media_settings')
+        .insert({
+          rim: rim.toString(),
+          inmetro_label_url: sealUrl,
+          default_image_type: 'image'
+        });
+      if (insertError) throw insertError;
+    }
+
+    await fetchRimMediaSettingsDb();
+  } catch (err: any) {
+    console.error('Error saving Inmetro label to Supabase:', err);
+    throw new Error(`Erro ao salvar selo INMETRO no Supabase: ${err.message || err}`);
+  }
+}
+
+export async function migrateLocalMediaToSupabase(): Promise<{ migratedCount: number; errorsCount: number }> {
+  let migratedCount = 0;
+  let errorsCount = 0;
+
+  // Retrieve old localized fallback settings
+  let oldMedia: RimDefaultMedia[] = [];
+  let oldSeals: RimInmetroSeal[] = [];
+
+  try {
+    const mSt = localStorage.getItem(RIM_DEFAULT_MEDIA_KEY);
+    if (mSt) oldMedia = JSON.parse(mSt);
+  } catch (_) {}
+
+  try {
+    const sSt = localStorage.getItem(RIM_INMETRO_SEALS_KEY);
+    if (sSt) oldSeals = JSON.parse(sSt);
+  } catch (_) {}
+
+  // Gather items to migrate grouped by rim
+  const grouped = new Map<string, { default_img?: string; seal_img?: string }>();
+
+  for (const m of oldMedia) {
+    const rimStr = m.rim.toString();
+    if (rimStr && m.image_url) {
+      grouped.set(rimStr, { ...grouped.get(rimStr), default_img: m.image_url });
+    }
+  }
+
+  for (const s of oldSeals) {
+    const rimStr = s.rim.toString();
+    if (rimStr && s.seal_url) {
+      grouped.set(rimStr, { ...grouped.get(rimStr), seal_img: s.seal_url });
+    }
+  }
+
+  // Fallback to parse other older tables or inline descriptions mapped in localStorage card copies
+  try {
+    const storedCards = localStorage.getItem('pneu_center_rim_cards_v1');
+    if (storedCards) {
+      const parsed = JSON.parse(storedCards);
+      for (const card of parsed) {
+        const rimStr = card.rim?.toString();
+        if (rimStr && card.description) {
+          const sealUrl = extractTag(card.description, 'INMETRO_SEAL');
+          const mediaUrl = extractTag(card.description, 'DEFAULT_MEDIA');
+          if (sealUrl || mediaUrl) {
+            const currentObj = grouped.get(rimStr) || {};
+            if (sealUrl && !currentObj.seal_img) currentObj.seal_img = sealUrl;
+            if (mediaUrl && !currentObj.default_img) currentObj.default_img = mediaUrl;
+            grouped.set(rimStr, currentObj);
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
+  // Push to Supabase rim_media_settings table
+  for (const [rimStr, value] of grouped.entries()) {
     try {
       const { data, error } = await supabase
-        .from('rim_inmetro_seals')
+        .from('rim_media_settings')
         .select('*')
-        .eq('rim', rim);
-        
-      if (!error) {
-        if (data && data.length > 0) {
-          await supabase
-            .from('rim_inmetro_seals')
-            .update({ seal_url: sealUrl, updated_at: new Date().toISOString() })
-            .eq('rim', rim);
-        } else {
-          await supabase
-            .from('rim_inmetro_seals')
-            .insert({ rim, seal_url: sealUrl });
-        }
-      }
-    } catch (err) {
-      console.warn('Could not write to rim_inmetro_seals table in Supabase:', err);
-    }
+        .eq('rim', rimStr);
 
-    // Save fallback inside site_settings
-    await saveFallbackSetting('rim_inmetro_seals_fallback', JSON.stringify(current));
-
-    // Save fallback inside rim_cards description field as a tag
-    try {
-      const { data: rimCards, error: rimError } = await supabase
-        .from('rim_cards')
-        .select('*')
-        .eq('rim', rim.toString());
+      if (!error && data && data.length > 0) {
+        const payload: any = { updated_at: new Date().toISOString() };
+        if (value.default_img) payload.default_image_url = value.default_img;
+        if (value.seal_img) payload.inmetro_label_url = value.seal_img;
         
-      if (!rimError && rimCards && rimCards.length > 0) {
-        const oldDesc = rimCards[0].description || '';
-        let newDesc = oldDesc;
-        if (newDesc.includes('[INMETRO_SEAL:')) {
-          newDesc = newDesc.replace(/\[INMETRO_SEAL:.*?\]/g, `[INMETRO_SEAL:${sealUrl}]`);
-        } else {
-          newDesc = `${newDesc} [INMETRO_SEAL:${sealUrl}]`.trim();
-        }
-        await supabase
-          .from('rim_cards')
-          .update({ description: newDesc, updated_at: new Date().toISOString() })
-          .eq('rim', rim.toString());
+        const { error: errUp } = await supabase
+          .from('rim_media_settings')
+          .update(payload)
+          .eq('rim', rimStr);
+        if (errUp) throw errUp;
+      } else {
+        const { error: errIn } = await supabase
+          .from('rim_media_settings')
+          .insert({
+            rim: rimStr,
+            default_image_url: value.default_img || null,
+            inmetro_label_url: value.seal_img || null,
+            default_image_type: 'image'
+          });
+        if (errIn) throw errIn;
       }
+      migratedCount++;
     } catch (err) {
-      console.warn('Error saving seal fallback to rim_cards row:', err);
+      console.error(`Migration error for rim ${rimStr}:`, err);
+      errorsCount++;
     }
   }
+
+  // Delete legacy local storage blocks after migrating successfully
+  localStorage.removeItem(RIM_DEFAULT_MEDIA_KEY);
+  localStorage.removeItem(RIM_INMETRO_SEALS_KEY);
+
+  await fetchRimMediaSettingsDb();
+  return { migratedCount, errorsCount };
 }
 
 /**
@@ -1896,7 +1902,7 @@ export function resolveProductImage(product: { image?: string; rim?: number } | 
   }
   try {
     const defaults = getRimDefaultMedia();
-    const match = defaults.find(m => Number(m.rim) === Number(product.rim));
+    const match = defaults.find(m => m.rim === Number(product.rim));
     if (match && match.image_url && match.image_url.trim() !== '') {
       return match.image_url;
     }

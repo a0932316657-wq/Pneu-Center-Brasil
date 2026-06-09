@@ -43,7 +43,8 @@ import {
   slugify,
   syncFromSupabase,
   fetchRimDefaultMediaDb,
-  fetchRimInmetroSealsDb
+  fetchRimInmetroSealsDb,
+  isSyncedWithSupabase
 } from './lib/appStore';
 
 // Custom components
@@ -84,8 +85,55 @@ function isVideoUrl(url: string | undefined): boolean {
   );
 }
 
+// Parse path hash to support standard browser hist back/forward actions
+function parseHash(): RouteState {
+  const hash = window.location.hash;
+  
+  if (!hash || hash === '#/' || hash === '#/home' || hash === '#home') {
+    return { path: 'home' };
+  }
+  
+  if (hash.startsWith('#/produto/')) {
+    const id = hash.replace('#/produto/', '');
+    return { path: 'produto', productId: id };
+  }
+
+  if (hash.startsWith('#/product/')) {
+    const id = hash.replace('#/product/', '');
+    return { path: 'produto', productId: id };
+  }
+
+  if (hash.startsWith('#/catalogo')) {
+    return { path: 'catalogo' };
+  }
+
+  const pathPart = hash.replace('#/', '') as AppRoute;
+  const validPaths: AppRoute[] = [
+    'home',
+    'catalogo',
+    'produto',
+    'marcas',
+    'como-funciona',
+    'sobre',
+    'contato',
+    'politica-privacidade',
+    'termos-uso',
+    'politica-entrega',
+    'politica-trocas',
+    'paineladmin'
+  ];
+
+  if (validPaths.includes(pathPart)) {
+    return { path: pathPart };
+  }
+
+  return { path: 'home' };
+}
+
 export default function App() {
-  const [routeState, setRouteState] = useState<RouteState>({ path: 'home' });
+  const [routeState, setRouteState] = useState<RouteState>(parseHash);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(!isSyncedWithSupabase());
+  const [productsLoaded, setProductsLoaded] = useState(isSyncedWithSupabase());
   const [products, setProducts] = useState<Product[]>(getProducts());
   const [brands, setBrands] = useState<Brand[]>(getBrands());
   const [rimCards, setRimCards] = useState<RimCard[]>(getRimCards());
@@ -147,51 +195,6 @@ export default function App() {
   const [selectedMeasure, setSelectedMeasure] = useState('');
   const [showFilterNotice, setShowFilterNotice] = useState(false);
   const [sortBy, setSortBy] = useState('marca');
-
-  // Parse path hash to support standard browser hist back/forward actions
-  const parseHash = (): RouteState => {
-    const hash = window.location.hash;
-    
-    if (!hash || hash === '#/' || hash === '#/home' || hash === '#home') {
-      return { path: 'home' };
-    }
-    
-    if (hash.startsWith('#/produto/')) {
-      const id = hash.replace('#/produto/', '');
-      return { path: 'produto', productId: id };
-    }
-
-    if (hash.startsWith('#/product/')) {
-      const id = hash.replace('#/product/', '');
-      return { path: 'produto', productId: id };
-    }
-
-    if (hash.startsWith('#/catalogo')) {
-      return { path: 'catalogo' };
-    }
-
-    const pathPart = hash.replace('#/', '') as AppRoute;
-    const validPaths: AppRoute[] = [
-      'home',
-      'catalogo',
-      'produto',
-      'marcas',
-      'como-funciona',
-      'sobre',
-      'contato',
-      'politica-privacidade',
-      'termos-uso',
-      'politica-entrega',
-      'politica-trocas',
-      'paineladmin'
-    ];
-
-    if (validPaths.includes(pathPart)) {
-      return { path: pathPart };
-    }
-
-    return { path: 'home' };
-  };
 
   // Refs to always access the latest state inside popstate callback
   const selectedRimRef = React.useRef(selectedRim);
@@ -377,6 +380,25 @@ export default function App() {
       setTimeout(() => smoothScrollTo('sobre-section'), 250);
     }
 
+    // Handle loading states
+    if (isSyncedWithSupabase()) {
+      setIsLoadingProducts(false);
+      setProductsLoaded(true);
+    }
+
+    const handleSyncComplete = () => {
+      setIsLoadingProducts(false);
+      setProductsLoaded(true);
+      refreshStoreData();
+    };
+
+    // Defensive fallback timeout: If fetching is incredibly slow or offline, resolve to false after 4s
+    const fallbackTimer = setTimeout(() => {
+      setIsLoadingProducts(false);
+      setProductsLoaded(true);
+      refreshStoreData();
+    }, 4500);
+
     window.addEventListener('hashchange', handleHashChange);
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('pneu_center_products_updated', handleProductsChange);
@@ -385,6 +407,7 @@ export default function App() {
     window.addEventListener('pneu_center_settings_updated', handleSettingsChange);
     window.addEventListener('pneu_center_rim_default_media_updated', handleRimDefaultMediaChange);
     window.addEventListener('pneu_center_rim_inmetro_seals_updated', handleRimInmetroSealsChange);
+    window.addEventListener('pneu_center_sync_completed', handleSyncComplete);
     
     // Securely pull data on start from Supabase so any browser on any device is updated instantaneously
     syncFromSupabase().catch(err => console.warn('Supabase sync error on mount:', err));
@@ -392,6 +415,7 @@ export default function App() {
     fetchRimInmetroSealsDb().catch(err => console.warn('Rim inmetro seals sync error on mount:', err));
 
     return () => {
+      clearTimeout(fallbackTimer);
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('pneu_center_products_updated', handleProductsChange);
@@ -400,6 +424,7 @@ export default function App() {
       window.removeEventListener('pneu_center_settings_updated', handleSettingsChange);
       window.removeEventListener('pneu_center_rim_default_media_updated', handleRimDefaultMediaChange);
       window.removeEventListener('pneu_center_rim_inmetro_seals_updated', handleRimInmetroSealsChange);
+      window.removeEventListener('pneu_center_sync_completed', handleSyncComplete);
     };
   }, []);
 
@@ -1466,7 +1491,23 @@ export default function App() {
               </div>
 
               {/* Catalog Items Listing Grid */}
-              {sortedProducts.length > 0 ? (
+              {isLoadingProducts ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                    <div key={n} className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 animate-pulse">
+                      <div className="relative aspect-video w-full bg-slate-100/70 rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full border-4 border-dashed border-slate-200 animate-[spin_8s_linear_infinite]" />
+                      </div>
+                      <div className="space-y-2.5">
+                        <div className="h-3 bg-slate-100 rounded w-1/3" />
+                        <div className="h-4 bg-slate-100 rounded w-3/4" />
+                        <div className="h-3 bg-slate-100 rounded w-1/2" />
+                      </div>
+                      <div className="h-8 bg-slate-100 rounded-lg w-full mt-4" />
+                    </div>
+                  ))}
+                </div>
+              ) : sortedProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {sortedProducts.map((prod) => (
                     <ProductCard
@@ -1502,6 +1543,18 @@ export default function App() {
           {routeState.path === 'produto' && (
             <div key="produto-detalhes-container">
               {(() => {
+                if (isLoadingProducts) {
+                  return (
+                    <div className="mx-auto max-w-md text-center py-20 px-4 space-y-4">
+                      <div className="flex justify-center">
+                        <RefreshCw className="h-10 w-10 text-orange-600 animate-spin" />
+                      </div>
+                      <h2 className="font-display font-black text-xl text-slate-800 uppercase tracking-tight">Carregando produto...</h2>
+                      <p className="text-xs text-slate-500 font-sans">Buscando informações em tempo real no Supabase. Aguarde, por favor.</p>
+                    </div>
+                  );
+                }
+
                 const item = products.find((p) => p.slug === routeState.productId || p.id === routeState.productId);
                 if (item) {
                   return (

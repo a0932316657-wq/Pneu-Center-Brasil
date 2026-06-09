@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tag, HelpCircle, Eye, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Product } from '../types';
@@ -13,6 +13,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onViewDetails }: ProductCardProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Avoid triggering onViewDetails
     const msg = getProductMessage(product.name, product.measure, product.price, product.priceStatus);
@@ -32,11 +33,21 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
         className="relative aspect-video w-full overflow-hidden bg-checkerboard border-b border-slate-100 cursor-pointer"
         onClick={() => onViewDetails(productSlug)}
       >
+        {/* Animated tire wheel skeleton before load */}
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-slate-150 animate-pulse flex items-center justify-center z-10">
+            <div className="w-12 h-12 rounded-full border-4 border-dashed border-slate-300 animate-[spin_8s_linear_infinite]" />
+          </div>
+        )}
+
         <img
           src={resolveProductImage(product)}
           alt={`Pneu ${product.name}`}
           referrerPolicy="no-referrer"
-          className="h-full w-full object-contain p-4 object-center transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setImageLoaded(true)}
+          className={`h-full w-full object-contain p-4 object-center transition-all duration-500 group-hover:scale-105 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
         />
         {/* Brand Badge Overlay */}
         <BrandBadge brandName={product.brand} />

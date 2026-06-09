@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, MessageSquare, ShieldAlert, BadgeCheck, Compass, Settings, AlertTriangle, Check } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Product } from '../types';
@@ -12,6 +12,7 @@ interface ProductDetailsProps {
 }
 
 export default function ProductDetails({ product, onBackToCatalog }: ProductDetailsProps) {
+  const [mainImageLoaded, setMainImageLoaded] = useState(false);
   const handleWhatsAppClick = () => {
     const msg = getProductMessage(product.name, product.measure, product.price, product.priceStatus);
     openWhatsAppChat(msg);
@@ -62,12 +63,22 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
         {/* Left Side: Premium Image Panel */}
         <div className="lg:col-span-6 flex flex-col justify-start">
           <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-checkerboard shadow-xs">
+            {/* Main image loaded visual skeleton */}
+            {!mainImageLoaded && (
+              <div className="absolute inset-0 bg-slate-100 animate-pulse flex items-center justify-center z-10">
+                <div className="w-20 h-20 rounded-full border-4 border-dashed border-slate-300 animate-[spin_10s_linear_infinite]" />
+              </div>
+            )}
+
             {/* Dynamic support for multiple gallery images if they exist - otherwise show main single image */}
             <img
               src={resolveProductImage(product)}
               alt={`Foto detalhada do pneu ${product.name}`}
               referrerPolicy="no-referrer"
-              className="h-full w-full object-contain p-8 object-center"
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setMainImageLoaded(true)}
+              className={`h-full w-full object-contain p-8 object-center transition-all duration-300 ${mainImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
             />
             
             {/* Visual Indicators */}
