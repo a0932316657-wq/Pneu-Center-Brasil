@@ -28,7 +28,23 @@ import heroTiresImage from './assets/images/hero_tires_1780836675879.png';
 // Shared types and data
 import { AppRoute, RouteState, Product } from './types';
 import { BRANDS } from './data';
-import { getProducts, getBrands, getRimCards, getSettings, Brand, RimCard, getCatalogHash, parseCatalogHash, normalizeMeasure, buildCatalogUrl, parseCatalogUrl, slugify } from './lib/appStore';
+import { 
+  getProducts, 
+  getBrands, 
+  getRimCards, 
+  getSettings, 
+  Brand, 
+  RimCard, 
+  getCatalogHash, 
+  parseCatalogHash, 
+  normalizeMeasure, 
+  buildCatalogUrl, 
+  parseCatalogUrl, 
+  slugify,
+  syncFromSupabase,
+  fetchRimDefaultMediaDb,
+  fetchRimInmetroSealsDb
+} from './lib/appStore';
 
 // Custom components
 import Navbar from './components/Navbar';
@@ -343,6 +359,14 @@ export default function App() {
       setSiteSettings(getSettings());
     };
 
+    const handleRimDefaultMediaChange = () => {
+      refreshStoreData();
+    };
+
+    const handleRimInmetroSealsChange = () => {
+      refreshStoreData();
+    };
+
     // Parse initial hash scrolls
     const initialHash = window.location.hash;
     if (initialHash === '#marcas') {
@@ -359,7 +383,14 @@ export default function App() {
     window.addEventListener('pneu_center_brands_updated', handleBrandsChange);
     window.addEventListener('pneu_center_rimcards_updated', handleRimCardsChange);
     window.addEventListener('pneu_center_settings_updated', handleSettingsChange);
+    window.addEventListener('pneu_center_rim_default_media_updated', handleRimDefaultMediaChange);
+    window.addEventListener('pneu_center_rim_inmetro_seals_updated', handleRimInmetroSealsChange);
     
+    // Securely pull data on start from Supabase so any browser on any device is updated instantaneously
+    syncFromSupabase().catch(err => console.warn('Supabase sync error on mount:', err));
+    fetchRimDefaultMediaDb().catch(err => console.warn('Rim default media sync error on mount:', err));
+    fetchRimInmetroSealsDb().catch(err => console.warn('Rim inmetro seals sync error on mount:', err));
+
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('popstate', handlePopState);
@@ -367,6 +398,8 @@ export default function App() {
       window.removeEventListener('pneu_center_brands_updated', handleBrandsChange);
       window.removeEventListener('pneu_center_rimcards_updated', handleRimCardsChange);
       window.removeEventListener('pneu_center_settings_updated', handleSettingsChange);
+      window.removeEventListener('pneu_center_rim_default_media_updated', handleRimDefaultMediaChange);
+      window.removeEventListener('pneu_center_rim_inmetro_seals_updated', handleRimInmetroSealsChange);
     };
   }, []);
 
