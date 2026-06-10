@@ -146,6 +146,16 @@ export default function App() {
   const [brands, setBrands] = useState<Brand[]>(getBrands());
   const [rimCards, setRimCards] = useState<RimCard[]>(getRimCards());
   const [siteSettings, setSiteSettings] = useState(getSettings());
+  const [isTabTransitioning, setIsTabTransitioning] = useState(false);
+
+  // Trigger high quality spinning tire loading transition when route switches
+  useEffect(() => {
+    setIsTabTransitioning(true);
+    const timer = setTimeout(() => {
+      setIsTabTransitioning(false);
+    }, 450); // Elegant speed that is both responsive and allows content block calculation to resolve
+    return () => clearTimeout(timer);
+  }, [routeState]);
 
   const refreshStoreData = () => {
     setProducts(getProducts());
@@ -602,8 +612,41 @@ export default function App() {
       <main className="flex-grow">
         <AnimatePresence mode="wait">
           
+          {/* Section Transition Tire Spinner Loader */}
+          {isTabTransitioning && (
+            <motion.div
+              key="tab-loader"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="flex flex-col items-center justify-center py-24 sm:py-32 w-full min-h-[500px]"
+            >
+              <div className="relative w-20 h-20 text-orange-500">
+                <svg viewBox="0 0 100 100" className="w-full h-full animate-spin duration-1000 ease-linear">
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#1e293b" strokeWidth="12" />
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="12" strokeDasharray="6, 12" className="opacity-90" />
+                  <circle cx="50" cy="50" r="32" fill="none" stroke="#475569" strokeWidth="3" />
+                  <path d="M50 8  L50 92   M8 50  L92 50   M20.36 20.36 L79.64 79.64   M20.36 79.64 L79.64 20.36" stroke="#cbd5e1" strokeWidth="4" strokeLinecap="round" />
+                  <circle cx="50" cy="50" r="20" fill="none" stroke="#94a3b8" strokeWidth="2" />
+                  <circle cx="50" cy="50" r="10" fill="#0f172a" stroke="#cbd5e1" strokeWidth="3" />
+                  <circle cx="50" cy="50" r="3" fill="#f97316" />
+                </svg>
+              </div>
+              
+              <div className="mt-6 flex flex-col items-center gap-1 text-center">
+                <span className="text-sm sm:text-base font-display font-black uppercase tracking-widest text-slate-800">
+                  Carregando...
+                </span>
+                <span className="text-xs text-slate-400 font-sans tracking-wide">
+                  Buscando estoque de pneus mais recente
+                </span>
+              </div>
+            </motion.div>
+          )}
+
           {/* 1. HOME VIEW */}
-          {routeState.path === 'home' && (
+          {!isTabTransitioning && routeState.path === 'home' && (
             <motion.div
               key="home-page"
               initial={{ opacity: 0 }}
@@ -1447,7 +1490,7 @@ export default function App() {
           )}
 
           {/* 2. CATALOGUE VIEW */}
-          {routeState.path === 'catalogo' && (
+          {!isTabTransitioning && routeState.path === 'catalogo' && (
             <motion.div
               key="catalogo-page"
               initial={{ opacity: 0 }}
@@ -1638,7 +1681,7 @@ export default function App() {
           )}
 
           {/* 3. PRODUCT DETAILS VIEW */}
-          {routeState.path === 'produto' && (
+          {!isTabTransitioning && routeState.path === 'produto' && (
             <div key="produto-detalhes-container">
               {(() => {
                 if (isLoadingProducts) {
@@ -1686,7 +1729,7 @@ export default function App() {
           )}
 
           {/* 4. MARCAS VIEW */}
-          {routeState.path === 'marcas' && (
+          {!isTabTransitioning && routeState.path === 'marcas' && (
             <motion.div
               key="marcas-page"
               initial={{ opacity: 0 }}
@@ -1746,7 +1789,7 @@ export default function App() {
           )}
 
           {/* 5. COMO FUNCIONA VIEW */}
-          {routeState.path === 'como-funciona' && (
+          {!isTabTransitioning && routeState.path === 'como-funciona' && (
             <motion.div
               key="como-funciona-page"
               initial={{ opacity: 0 }}
@@ -1842,7 +1885,7 @@ export default function App() {
           )}
 
           {/* 6. SOBRE NÓS VIEW */}
-          {routeState.path === 'sobre' && (
+          {!isTabTransitioning && routeState.path === 'sobre' && (
             <motion.div
               key="sobre-page"
               initial={{ opacity: 0 }}
@@ -1880,8 +1923,9 @@ export default function App() {
                 {/* Column right: Institutional image */}
                 <div className="lg:col-span-5">
                   <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-100/50 shadow-sm relative group">
-                    <img 
+                    <MediaRenderer 
                       src={siteSettings.institutionalMediaUrl || "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&q=80&w=800"} 
+                      mediaType={siteSettings.institutionalMediaType || (isVideoUrl(siteSettings.institutionalMediaUrl) ? 'video' : 'image')}
                       alt={siteSettings.institutionalMediaAlt || "Pneu Center Brasil - Atendimento Sede"} 
                       className="w-full h-64 object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     />
@@ -1962,7 +2006,7 @@ export default function App() {
           )}
 
           {/* 7. CONTATO VIEW */}
-          {routeState.path === 'contato' && (
+          {!isTabTransitioning && routeState.path === 'contato' && (
             <motion.div
               key="contato-page"
               initial={{ opacity: 0 }}
@@ -1985,32 +2029,32 @@ export default function App() {
           )}
 
           {/* 8. POLICIES ROUTES VIEWS */}
-          {routeState.path === 'politica-privacidade' && (
+          {!isTabTransitioning && routeState.path === 'politica-privacidade' && (
             <PrivacyPolicy key="privacy" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
           )}
 
           {/* 9. TERMS VIEW */}
-          {routeState.path === 'termos-uso' && (
+          {!isTabTransitioning && routeState.path === 'termos-uso' && (
             <TermsOfUse key="terms" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
           )}
 
           {/* 10. SHIPPING RULES VIEW */}
-          {(routeState.path === 'politica-entrega' || routeState.path === 'politica-envio') && (
+          {!isTabTransitioning && (routeState.path === 'politica-entrega' || routeState.path === 'politica-envio') && (
             <ShippingPolicy key="delivery" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
           )}
 
           {/* 11. EXCHANGES / RETURNS VIEW */}
-          {routeState.path === 'politica-trocas' && (
+          {!isTabTransitioning && routeState.path === 'politica-trocas' && (
             <ReturnsPolicy key="exchanges" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
           )}
 
           {/* 11b. WARRANTY POLICY VIEW */}
-          {routeState.path === 'politica-garantia' && (
+          {!isTabTransitioning && routeState.path === 'politica-garantia' && (
             <WarrantyPolicy key="warranty" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
           )}
 
           {/* 11c. TRACKING VIEW */}
-          {routeState.path === 'rastreamento' && (
+          {!isTabTransitioning && routeState.path === 'rastreamento' && (
             <TrackingPage key="tracking" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
           )}
 

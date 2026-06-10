@@ -884,11 +884,28 @@ export function isSyncedWithSupabase(): boolean {
 
 export async function syncFromSupabase(): Promise<void> {
   try {
-    // 1. Fetch site_settings
-    const { data: settingsData, error: settingsError } = await supabase
-      .from('site_settings')
-      .select('*');
+    // Execute all table fetches in parallel to reduce load time from multiple sequential roundtrips to 1 concurrent batch
+    const [
+      settingsResult,
+      productsResult,
+      brandsResult,
+      rimsResult,
+      rimMediaResult
+    ] = await Promise.all([
+      supabase.from('site_settings').select('*'),
+      supabase.from('products').select('*'),
+      supabase.from('brands').select('*'),
+      supabase.from('rim_cards').select('*'),
+      supabase.from('rim_media_settings').select('*')
+    ]);
 
+    const { data: settingsData, error: settingsError } = settingsResult;
+    const { data: prodData, error: prodError } = productsResult;
+    const { data: brandData, error: brandError } = brandsResult;
+    const { data: rimData, error: rimError } = rimsResult;
+    const { data: rimMediaData, error: rimMediaError } = rimMediaResult;
+
+    // 1. Process site_settings
     if (!settingsError && settingsData && settingsData.length > 0) {
       if ('key' in settingsData[0] && 'value' in settingsData[0]) {
         settingsSchemaType = 'keyvalue';
@@ -907,33 +924,33 @@ export async function syncFromSupabase(): Promise<void> {
       window.dispatchEvent(new Event('pneu_center_logo_updated'));
     }
 
-    // 2. Fetch products
-    const { data: prodData, error: prodError } = await supabase
-      .from('products')
-      .select('*');
-
+    // 2. Process products
     if (!prodError && prodData) {
       const mappedProducts = prodData.map(mapProductFromRow);
       localStorage.setItem(PRODUCTS_KEY, JSON.stringify(mappedProducts));
       window.dispatchEvent(new Event('pneu_center_products_updated'));
     }
 
-    // 3. Fetch brands
-    const { data: brandData, error: brandError } = await supabase
-      .from('brands')
-      .select('*');
-
+    // 3. Process brands
     if (!brandError && brandData) {
       const mappedBrands = brandData.map(mapBrandFromRow);
       localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(mappedBrands));
       window.dispatchEvent(new Event('pneu_center_brands_updated'));
     }
 
-    // 4. Fetch rim cards
-    const { data: rimData, error: rimError } = await supabase
-      .from('rim_cards')
-      .select('*');
+    // 4. Process rim_media_settings
+    if (!rimMediaError && rimMediaData) {
+      const mappedRimMedia: RimMediaSetting[] = rimMediaData.map((row: any) => ({
+        id: row.id?.toString(),
+        rim: row.rim?.toString() || '',
+        default_image_url: row.default_image_url || null,
+        inmetro_label_url: row.inmetro_label_url || null,
+        default_image_type: row.default_image_type || 'image'
+      }));
+      saveRimMediaSettingsLocal(mappedRimMedia);
+    }
 
+    // 5. Process rim_cards
     if (!rimError && rimData) {
       const mappedRims = rimData.map(mapRimCardFromRow);
       localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(mappedRims));
@@ -965,6 +982,7 @@ export async function syncFromSupabase(): Promise<void> {
 
       window.dispatchEvent(new Event('pneu_center_rimcards_updated'));
     }
+
     isSupabaseSynced = true;
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('pneu_center_sync_completed'));
