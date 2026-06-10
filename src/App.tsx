@@ -1834,7 +1834,7 @@ export default function App() {
                   </div>
                   <div>
                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Canais Oficiais:</span>
-                    <p className="text-slate-700">WhatsApp: (11) 99594-6993 • E-mail: contato.pneucenterbrasil@gmail.com</p>
+                    <p className="text-slate-700">WhatsApp: (11) 99594-6993 • E-mail: contato@pneucenterbrasil.com.br</p>
                   </div>
                 </div>
               </div>

@@ -71,7 +71,7 @@ export default function ContactForm() {
                 </div>
                 <div>
                   <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">E-mail:</span>
-                  <p className="text-base font-extrabold text-slate-800 select-all">contato.pneucenterbrasil@gmail.com</p>
+                  <p className="text-base font-extrabold text-slate-800 select-all">contato@pneucenterbrasil.com.br</p>
                 </div>
               </div>
 

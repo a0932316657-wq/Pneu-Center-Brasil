@@ -51,7 +51,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   address: 'Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP, CEP 05513-200',
   whatsappText: '(11) 99594-6993',
   whatsappRaw: '5511995946993',
-  email: 'contato.pneucenterbrasil@gmail.com',
+  email: 'contato@pneucenterbrasil.com.br',
   hours: 'Segunda a sexta, das 8h às 18h. Sábado, das 8h às 13h.',
   slogan: 'Catálogo Oficial Multimarcas',
   institutionalText: 'A Pneu Center Brasil é especialista independente no comércio e distribuição de pneus de alta performance. Atuando com seriedade, transparência e agilidade logística, nossa equipe comercial auxilia cada cliente na escolha ideal para o modelo de seu veículo conversando diretamente pelo WhatsApp.',

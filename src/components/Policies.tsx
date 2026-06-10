@@ -16,7 +16,7 @@ const COMPANY_DETAILS = (
       Razão Social: <strong>CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA</strong><br />
       CNPJ: <strong className="font-mono">20.085.983/0001-13</strong><br />
       Endereço: Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP, CEP 05513-200<br />
-      WhatsApp: (11) 99594-6993 • E-mail: contato.pneucenterbrasil@gmail.com
+      WhatsApp: (11) 99594-6993 • E-mail: contato@pneucenterbrasil.com.br • Website: www.pneucenterbrasil.com.br
     </p>
   </div>
 );
@@ -93,7 +93,7 @@ export function PrivacyPolicy({ onBackToHome }: PolicyProps) {
           <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">8. Contato</h2>
           <p>
             WhatsApp: (11) 99594-6993<br />
-            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            E-mail: contato@pneucenterbrasil.com.br<br />
             CNPJ: 20.085.983/0001-13
           </p>
         </div>
@@ -167,7 +167,7 @@ export function TermsOfUse({ onBackToHome }: PolicyProps) {
           <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">7. Contato</h2>
           <p>
             WhatsApp: (11) 99594-6993<br />
-            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            E-mail: contato@pneucenterbrasil.com.br<br />
             CNPJ: 20.085.983/0001-13
           </p>
         </div>
@@ -245,7 +245,7 @@ export function ShippingPolicy({ onBackToHome }: PolicyProps) {
           <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">7. Contato</h2>
           <p>
             WhatsApp: (11) 99594-6993<br />
-            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            E-mail: contato@pneucenterbrasil.com.br<br />
             CNPJ: 20.085.983/0001-13
           </p>
         </div>
@@ -319,7 +319,7 @@ export function ReturnsPolicy({ onBackToHome }: PolicyProps) {
           <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">7. Contato</h2>
           <p>
             WhatsApp: (11) 99594-6993<br />
-            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            E-mail: contato@pneucenterbrasil.com.br<br />
             CNPJ: 20.085.983/0001-13
           </p>
         </div>
@@ -388,7 +388,7 @@ export function WarrantyPolicy({ onBackToHome }: PolicyProps) {
           <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">6. Contato</h2>
           <p>
             WhatsApp: (11) 99594-6993<br />
-            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            E-mail: contato@pneucenterbrasil.com.br<br />
             CNPJ: 20.085.983/0001-13
           </p>
         </div>

@@ -100,7 +100,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {} }: AdminPanelProps) {
   // Session authentication states
-  const [email, setEmail] = useState('contato.pneucenterbrasil@gmail.com');
+  const [email, setEmail] = useState('contato@pneucenterbrasil.com.br');
   const [password, setPassword] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -3664,7 +3664,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     required
                     value={siteSettings.email}
                     onChange={(e) => setSiteSettings({ ...siteSettings, email: e.target.value })}
-                    placeholder="Ex: contato.pneucenterbrasil@gmail.com"
+                    placeholder="Ex: contato@pneucenterbrasil.com.br"
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-mono"
                   />
                 </div>

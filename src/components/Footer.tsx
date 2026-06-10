@@ -111,10 +111,10 @@ export default function Footer({ onNavigate }: FooterProps) {
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-blue-400 shrink-0" />
                 <a 
-                  href="mailto:contato.pneucenterbrasil@gmail.com"
+                  href="mailto:contato@pneucenterbrasil.com.br"
                   className="hover:text-white transition-colors"
                 >
-                  contato.pneucenterbrasil@gmail.com
+                  contato@pneucenterbrasil.com.br
                 </a>
               </div>
 
@@ -169,10 +169,10 @@ export default function Footer({ onNavigate }: FooterProps) {
         {/* copyright and credit */}
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center text-[10px] text-slate-600 border-t border-slate-900/40 pt-4">
           <p className="font-mono">
-            &copy; {currentYear} CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA. Todos os direitos reservados.
+            &copy; {currentYear} CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA • pneucenterbrasil.com.br. Todos os direitos reservados.
           </p>
           <p className="font-sans uppercase tracking-wider font-semibold">
-            CNPJ Legítimo: 20.085.983/0001-13
+            CNPJ: 20.085.983/0001-13 • www.pneucenterbrasil.com.br
           </p>
         </div>
 
