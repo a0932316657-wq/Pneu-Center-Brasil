@@ -234,31 +234,31 @@ export const FAQS: FAQItem[] = [
   {
     question: 'O site vende pneus diretamente?',
     answer:
-      'Não. Nosso site atua estritamente como um catálogo digital informativo e de suporte técnico para consulta de marcas e medidas. Toda a negociação e combinação de entrega ocorre através do nosso atendimento humano via WhatsApp.',
+      'Não. Nosso site atua estritamente como um catálogo informativo de pneus multimarcas para consulta de modelos e especificações técnicas. Todas as consultas de disponibilidade, preços e entrega ocorrem exclusivamente através do nosso atendimento humano via WhatsApp.',
   },
   {
-    question: 'Posso pagar pelo site?',
+    question: 'Como funciona o pagamento?',
     answer:
-      'Não. Não possuímos carrinho de compras, checkout virtual ou qualquer sistema de faturamento online. O cliente não paga nada adiantado. O pagamento é realizado única e exclusivamente no ato da entrega diretamente para a transportadora parceira, após a conferência dos produtos.',
+      'Este site não realiza nenhuma cobrança, pagamento online,Pix, boleto, cartão, checkout ou intermediação financeira direta. O portal não coleta dados bancários ou senhas. As formas de pagamento disponíveis são informadas e combinadas exclusivamente pelo atendimento humano, de forma transparente após a confirmação do produto e disponibilidade.',
   },
   {
-    question: 'O WhatsApp finaliza a compra automaticamente?',
+    question: 'O WhatsApp representa compra automática?',
     answer:
-      'Não. O contato via WhatsApp serve para nosso consultor humanizado tirar dúvidas técnicas do condutor, confirmar a disponibilidade física dos pneus em nosso estoque e agendar o envio seguro por transportadora.',
+      'Não. O contato pelo WhatsApp não representa compra automática ou reserva imediata. Preços, disponibilidade de estoque, entrega e formas de pagamento devem ser expressamente confirmados diretamente com a nossa equipe.',
   },
   {
     question: 'Como funciona a disponibilidade dos produtos?',
     answer:
-      'Garantimos que todos os pneus publicados em nosso catálogo online estão disponíveis para atendimento e encomenda imediata. Caso algum item esgote temporariamente, ele será sinalizado como indisponível ou retirado de exibição. Fale com nossa equipe pelo WhatsApp para reservar o seu modelo.',
+      'Devido à alta rotatividade, a entrega e a disponibilidade física de estoque dos pneus publicados no site estão sujeitas à confirmação no momento do atendimento. Recomendamos consultar nossa equipe pelo WhatsApp para confirmar a presença do pneu desejado.',
   },
   {
-    question: 'Vocês são parceiros oficiais das marcas citadas?',
+    question: 'A Pneu Center Brasil possui marcas oficiais?',
     answer:
-      'A Pneu Center Brasil é uma revendedora multimarcas independente. Todas as marcas famosas amplamente reconhecidas como Pirelli, Michelin, Goodyear, Bridgestone, Continental, Dunlop, Firestone e Hankook são de propriedade exclusiva dos seus respectivos fabricantes e são citadas neste site puramente para a perfeita identificação técnica dos pneus automotivos comercializados.',
+      'A Pneu Center Brasil é uma revendedora multimarcas independente. Os nomes e marcas comerciais citados (como Pirelli, Michelin, Goodyear, Bridgestone, Continental, Dunlop, Firestone e Hankook) pertencem aos seus respectivos fabricantes e são utilizados exclusivamente para identificação dos modelos e especificações técnicas dos produtos. Não possuímos vínculo societário, parceria oficial ou representação institucional com os fabricantes listados.',
   },
   {
-    question: 'Os pneus contam com garantia?',
+    question: 'Como funciona a garantia dos pneus?',
     answer:
-      'Sim. Todos os pneus de nosso portfólio possuem garantia conforme a legislação nacional aplicável (Código de Defesa do Consumidor brasileiro). Detalhes, regras específicas de cada fabricante e assistência técnica são sempre alinhados diretamente em nosso atendimento humano de forma transparente.',
+      'Os produtos seguem as garantias legais aplicáveis e, quando houver, as condições de garantia informadas pelo respectivo fabricante ou distribuidor. As regras específicas de garantia podem variar conforme marca, modelo e análise técnica, sendo explicadas pelo atendimento de forma transparente.',
   },
 ];

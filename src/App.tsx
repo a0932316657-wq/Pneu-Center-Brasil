@@ -18,7 +18,10 @@ import {
   Sparkles,
   RefreshCw,
   FolderLock,
-  AlertTriangle
+  AlertTriangle,
+  FileText,
+  MessageSquare,
+  MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -60,8 +63,10 @@ import {
   PrivacyPolicy, 
   TermsOfUse, 
   ShippingPolicy, 
-  ReturnsPolicy 
+  ReturnsPolicy,
+  WarrantyPolicy
 } from './components/Policies';
+import { TrackingPage } from './components/TrackingPage';
 
 // WhatsApp direct messenger
 import { openWhatsAppChat, DEFAULT_WHATSAPP_MESSAGE, getProductMessage } from './lib/whatsapp';
@@ -116,10 +121,13 @@ function parseHash(): RouteState {
     'como-funciona',
     'sobre',
     'contato',
+    'rastreamento',
     'politica-privacidade',
     'termos-uso',
+    'politica-envio',
     'politica-entrega',
     'politica-trocas',
+    'politica-garantia',
     'paineladmin'
   ];
 
@@ -617,17 +625,17 @@ export default function App() {
                       {/* Small tag */}
                       <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3.5 py-1 text-xs font-mono font-medium text-orange-400 border border-orange-500/15 mx-auto lg:mx-0">
                         <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-                        <span>Catálogo Autorizado de Reposição</span>
+                        <span>Catálogo de Pneus Multimarcas</span>
                       </div>
 
                       {/* Main Display Headlines */}
                       <div className="space-y-4">
                         <h1 className="font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl uppercase leading-none">
                           Pneus multimarcas <br className="hidden sm:block" />
-                          <span className="text-orange-500">para o seu carro</span>
+                          <span className="text-orange-500">para carro, SUV e utilitários leves</span>
                         </h1>
                         <p className="text-sm text-gray-300 md:text-base leading-relaxed max-w-2xl">
-                          Consulte modelos, medidas e disponibilidade com atendimento especializado. A Pneu Center Brasil funciona como catálogo digital de pneus automotivos, com atendimento via WhatsApp para dúvidas, orientações e condições de entrega.
+                          Consulte pneus por medida, aro e marca. A Pneu Center Brasil funciona como catálogo informativo, com atendimento humano via WhatsApp para confirmar disponibilidade, condições comerciais, entrega e formas de pagamento.
                         </p>
                       </div>
 
@@ -638,10 +646,10 @@ export default function App() {
                         </div>
                         <div>
                           <p className="text-xs sm:text-sm font-sans font-bold text-white uppercase tracking-wide">
-                            Pneus Multimarcas Disponíveis
+                            Modelos Disponíveis para Cotação
                           </p>
                           <p className="text-[11px] sm:text-xs text-slate-300 font-sans mt-0.5 leading-tight">
-                            Temos mais de <span className="font-extrabold text-orange-500">{products.filter(p => p.active !== false).length}</span> pneus ativos cadastrados em nosso estoque multimarcas. Confira o catálogo completo abaixo!
+                            Consulte cotações gratuitas de mais de <span className="font-extrabold text-orange-500">{products.filter(p => p.active !== false).length}</span> modelos de pneus cadastrados em nosso catálogo de reposição.
                           </p>
                         </div>
                       </div>
@@ -651,18 +659,23 @@ export default function App() {
                         <button
                           id="hero-btn-catalog"
                           onClick={() => navigateTo('catalogo')}
-                          className="w-full sm:w-auto rounded-xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-bold px-8 py-4 transition-all hover:shadow-lg hover:shadow-orange-500/15 cursor-pointer font-display uppercase tracking-wide text-xs"
+                          className="w-full sm:w-auto rounded-xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-bold px-8 py-4 transition-all hover:shadow-lg hover:shadow-orange-500/15 cursor-pointer font-display uppercase tracking-wide text-xs whitespace-nowrap"
                         >
-                          Consultar Catálogo
+                          Consultar pneus
                         </button>
                         <button
                           id="hero-btn-whatsapp"
                           onClick={() => openWhatsAppChat(DEFAULT_WHATSAPP_MESSAGE)}
-                          className="w-full sm:w-auto flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-555 text-white font-semibold px-8 py-4 transition-all hover:shadow-lg hover:shadow-emerald-500/20 cursor-pointer font-display uppercase tracking-wide text-xs"
+                          className="w-full sm:w-auto flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-555 text-white font-semibold px-8 py-4 transition-all hover:shadow-lg hover:shadow-emerald-500/20 cursor-pointer font-display uppercase tracking-wide text-xs whitespace-nowrap"
                         >
-                          <span>Tirar Dúvidas WhatsApp</span>
+                          <span>Falar com atendimento</span>
                         </button>
                       </div>
+
+                      {/* Small notice near buttons */}
+                      <p className="text-[10px] text-gray-400 font-sans leading-relaxed text-center lg:text-left max-w-md border-t border-slate-900/60 pt-2 shrink-0">
+                        Este site não realiza pagamento online, checkout, carrinho de compras ou venda automática. As informações comerciais são confirmadas diretamente no atendimento.
+                      </p>
                     </div>
 
                     {/* RIGHT COLUMN: GORGEOUS ANIMATED TIRE WITH CIRCULATING BRANDS */}
@@ -804,89 +817,88 @@ export default function App() {
                         })()}
                       </div>
                     </div>
-
                   </div>
 
-                  {/* HIGHLY OPTIMIZED TRUST BANNER (PAGUE NA ENTREGA, GARANTIAS & NOTA FISCAL) */}
+                                {/* HIGHLY OPTIMIZED TRUST BANNER (COMPLIANT AND INFORMATION-CENTRIC) */}
                   <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-slate-900/60">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
                       
-                      {/* CARD 1: PAGUE NA ENTREGA APENAS */}
-                      <div className="bg-emerald-950/45 border-2 border-emerald-500 rounded-2xl p-4 flex flex-col justify-between hover:bg-emerald-950/60 transition-all shadow-lg shadow-emerald-500/15">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="p-2 rounded-lg bg-emerald-500/15 text-emerald-400 shrink-0">
-                            <CreditCard className="h-5 w-5 text-emerald-400" />
+                      {/* CARD 1: CATÁLOGO INFORMATIVO */}
+                      <div className="bg-orange-950/40 border-2 border-orange-500/80 rounded-2xl p-5 flex flex-col justify-between hover:bg-orange-950/60 transition-all shadow-lg shadow-orange-500/15">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="p-2 rounded-lg bg-orange-500/20 text-orange-400 shrink-0 border border-orange-500/30">
+                            <Sparkles className="h-5 w-5 text-orange-400" />
                           </span>
-                          <span className="text-[10px] sm:text-[11px] font-sans font-extrabold text-emerald-400 uppercase tracking-widest">
-                            PAGAMENTO SEGURO
+                          <span className="text-[11px] sm:text-xs font-sans font-black text-orange-400 uppercase tracking-widest">
+                            Catálogo Técnico
                           </span>
                         </div>
                         <div>
-                          <h4 className="font-sans font-black text-white text-sm sm:text-base uppercase leading-tight text-emerald-400">
-                            Pague na Entrega Apenas
+                          <h4 className="font-sans font-black text-white text-base uppercase leading-tight tracking-tight">
+                            Catálogo informativo
                           </h4>
-                          <p className="text-xs text-gray-200 font-sans mt-1.5 leading-normal">
-                            Zero cobranças antecipadas. Pague com total segurança apenas no ato do recebimento após conferir fisicamente todos os pneus.
+                          <p className="text-sm font-medium text-slate-200 font-sans mt-2.5 leading-relaxed">
+                            Consulte modelos, medidas e marcas disponíveis antes de falar com nosso atendimento técnico especializado.
                           </p>
                         </div>
                       </div>
  
-                      {/* CARD 2: 1 ANO DE GARANTIA DA LOJA */}
-                      <div className="bg-orange-950/45 border-2 border-orange-500 rounded-2xl p-4 flex flex-col justify-between hover:bg-orange-950/60 transition-all shadow-lg shadow-orange-500/15">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="p-2 rounded-lg bg-orange-500/15 text-orange-400 shrink-0">
-                            <ShieldCheck className="h-5 w-5 text-orange-400" />
+                      {/* CARD 2: ATENDIMENTO HUMANO */}
+                      <div className="bg-emerald-950/40 border-2 border-emerald-500/80 rounded-2xl p-5 flex flex-col justify-between hover:bg-emerald-950/60 transition-all shadow-lg shadow-emerald-500/15">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 shrink-0 border border-emerald-500/30">
+                            <HelpCircle className="h-5 w-5 text-emerald-400" />
                           </span>
-                          <span className="text-[10px] sm:text-[11px] font-sans font-extrabold text-orange-400 uppercase tracking-widest">
-                            GARANTIA DA LOJA
+                          <span className="text-[11px] sm:text-xs font-sans font-black text-emerald-400 uppercase tracking-widest">
+                            Falar no WhatsApp
                           </span>
                         </div>
                         <div>
-                          <h4 className="font-sans font-black text-white text-sm sm:text-base uppercase leading-tight text-orange-400">
-                            1 Ano de Garantia Loja
+                          <h4 className="font-sans font-black text-white text-base uppercase leading-tight tracking-tight">
+                            Atendimento humano
                           </h4>
-                          <p className="text-xs text-gray-200 font-sans mt-1.5 leading-normal">
-                            Suporte e garantia de 1 ano diretamente com a nossa loja física para máxima tranquilidade no seu dia a dia.
+                          <p className="text-sm font-medium text-slate-200 font-sans mt-2.5 leading-relaxed">
+                            Dúvidas sobre medidas, disponibilidade, entrega e pagamento são tratadas de forma humana diretamente pelo WhatsApp.
                           </p>
                         </div>
                       </div>
  
-                      {/* CARD 3: 5 ANOS DE GARANTIA FABRICANTE */}
-                      <div className="bg-amber-950/45 border-2 border-amber-500 rounded-2xl p-4 flex flex-col justify-between hover:bg-amber-950/60 transition-all shadow-lg shadow-amber-500/15">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="p-2 rounded-lg bg-amber-500/15 text-amber-400 shrink-0">
-                            <Award className="h-5 w-5 text-amber-400" />
+                      {/* CARD 3: EMPRESA IDENTIFICADA */}
+                      <div className="bg-amber-950/40 border-2 border-amber-500/80 rounded-2xl p-5 flex flex-col justify-between hover:bg-amber-950/60 transition-all shadow-lg shadow-amber-500/15">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="p-2 rounded-lg bg-amber-500/20 text-amber-500 shrink-0 border border-amber-500/30">
+                            <Building2 className="h-5 w-5 text-amber-400" />
                           </span>
-                          <span className="text-[10px] sm:text-[11px] font-sans font-extrabold text-amber-400 uppercase tracking-widest">
-                            GARANTIA OFICIAL
+                          <span className="text-[11px] sm:text-xs font-sans font-black text-amber-400 uppercase tracking-widest">
+                            Transparência Total
                           </span>
                         </div>
                         <div>
-                          <h4 className="font-sans font-black text-white text-sm sm:text-base uppercase leading-tight text-amber-400">
-                            5 Anos do Fabricante
+                          <h4 className="font-sans font-black text-white text-base uppercase leading-tight tracking-tight">
+                            Empresa identificada
                           </h4>
-                          <p className="text-xs text-gray-200 font-sans mt-1.5 leading-normal">
-                            Todos os pneus novos acompanham canais oficiais de garantia estendida de 5 anos de proteção oficial de fabricante.
+                          <p className="text-sm font-medium text-slate-200 font-sans mt-2.5 leading-relaxed">
+                            Informações completas de razão social, CNPJ ativo, endereço real, telefone e e-mail disponíveis publicamente no site.
                           </p>
                         </div>
                       </div>
  
-                      {/* CARD 4: PNEU COM NOTA FISCAL TUDO CERTINHO (UPGRADED FOR VIVID SKY COLOR AND HIGH CONTRAST) */}
-                      <div className="bg-sky-950/45 border-2 border-sky-400 rounded-2xl p-4 flex flex-col justify-between hover:bg-sky-950/60 transition-all shadow-lg shadow-sky-450/15">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="p-2 rounded-lg bg-sky-500/15 text-sky-400 shrink-0">
-                            <ShieldCheck className="h-5 w-5 text-sky-400" />
+                      {/* CARD 4: SEM CHECKOUT ONLINE */}
+                      <div className="bg-sky-950/40 border-2 border-sky-400 rounded-2xl p-5 flex flex-col justify-between hover:bg-sky-950/60 transition-all shadow-lg shadow-sky-400/15">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="p-2 rounded-lg bg-sky-500/20 text-sky-400 shrink-0 border border-sky-500/30">
+                            <CreditCard className="h-5 w-5 text-sky-400" />
                           </span>
-                          <span className="text-[10px] sm:text-[11px] font-sans font-extrabold text-sky-400 uppercase tracking-widest">
-                            PRODUTO LEGAL
+                          <span className="text-[11px] sm:text-xs font-sans font-black text-sky-400 uppercase tracking-widest">
+                            Sem Pagamento Web
                           </span>
                         </div>
                         <div>
-                          <h4 className="font-sans font-black text-white text-sm sm:text-base uppercase leading-tight text-sky-400">
-                            Com Nota Fiscal
+                          <h4 className="font-sans font-black text-white text-base uppercase leading-tight tracking-tight">
+                            Sem checkout online
                           </h4>
-                          <p className="text-xs text-gray-200 font-sans mt-1.5 leading-normal">
-                            Aqui a entrega é em conformidade com a lei. Pneus 100% originais e novos, acompanhando sua respectiva Nota Fiscal.
+                          <p className="text-sm font-medium text-slate-200 font-sans mt-2.5 leading-relaxed">
+                            O site não solicita cartão, senhas, dados bancários ou pagamentos dentro da plataforma. Segurança digital preservada.
                           </p>
                         </div>
                       </div>
@@ -895,8 +907,8 @@ export default function App() {
                   </div>
  
                   {/* Sane disclosure message */}
-                   <p className="text-[11px] sm:text-xs text-gray-400 max-w-lg mx-auto font-sans leading-normal text-center">
-                     *Site informativo de catálogo. Não realizamos pagamento online, transações virtuais de faturamento ou cobranças antecipadas neste domínio eletrônico.*
+                   <p className="text-[11px] sm:text-xs text-gray-400 max-w-xl mx-auto font-sans leading-normal text-center">
+                     *A Pneu Center Brasil atua como catálogo informativo de pneus multimarcas. Todas as informações comerciais são validadas de forma manual e individual no atendimento humano via WhatsApp.*
                    </p>
 
                    {/* TRUST STRIP */}
@@ -906,7 +918,7 @@ export default function App() {
                         { label: 'Empresa com CNPJ ativo', value: '20.085.983/0001-13', icon: ShieldCheck, iconColor: 'text-orange-500' },
                         { label: 'Atendimento especializado', value: 'Consultores Humanos', icon: Award, iconColor: 'text-blue-400' },
                         { label: 'Pneus automotivos multimarcas', value: 'Passeio & SUV', icon: Wrench, iconColor: 'text-amber-500' },
-                        { label: 'Sem checkout online', value: 'Segurança Garantida', icon: CreditCard, iconColor: 'text-emerald-400' },
+                        { label: 'Sem checkout online', value: 'Consulta Segura', icon: CreditCard, iconColor: 'text-emerald-400' },
                         { label: 'Entrega acordada individual', value: 'Sob Consulta', icon: Truck, iconColor: 'text-indigo-400' },
                       ].map((strip, idx) => (
                         <div key={idx} className="p-3 bg-slate-900/30 rounded-xl border border-slate-800/40">
@@ -918,6 +930,20 @@ export default function App() {
                     </div>
                   </div>
 
+                </div>
+              </section>
+
+              {/* AVISO DE TRANSPARÊNCIA ABAIXO DO HERO */}
+              <section className="bg-amber-50 border-b border-amber-200/80 py-5 font-sans">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left">
+                    <div className="rounded-full bg-amber-100 p-2 text-amber-800 shrink-0 border border-amber-200/60 shadow-xs">
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-800 font-extrabold max-w-4xl tracking-tight leading-relaxed">
+                      <span className="text-amber-700 bg-amber-100/60 px-1.5 py-0.5 rounded font-black mr-1 uppercase">AVISO:</span> Trabalhamos com pneus novos multimarcas. Todos os produtos possuem procedência, nota fiscal e garantia conforme política da empresa. Confirme disponibilidade, medida, entrega e condições comerciais no atendimento.
+                    </p>
+                  </div>
                 </div>
               </section>
 
@@ -935,10 +961,10 @@ export default function App() {
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     {[
-                      { step: '1', title: 'Escolha o pneu', desc: 'Navegue pelo catálogo e veja medidas, marcas e especificações.' },
-                      { step: '2', title: 'Tire dúvidas', desc: 'Nossa equipe informa disponibilidade, características e condições comerciais.' },
-                      { step: '3', title: 'Combine a entrega', desc: 'As condições de entrega são informadas durante o atendimento, conforme região e modelo.' },
-                      { step: '4', title: 'Receba, Confira e Pague', desc: 'A transportadora parceira realiza a entrega no local combinado. Você confere os pneus fisicamente em mãos e realiza o pagamento diretamente para o entregador (via Pix ou Cartão na maquininha). Não realizamos nenhuma cobrança antecipada.' },
+                      { step: '1', title: 'Consulte o catálogo', desc: 'Veja os pneus disponíveis no site por medida, aro e marca.' },
+                      { step: '2', title: 'Inicie o contato', desc: 'Clique para falar com nossa equipe pelo WhatsApp no modelo de sua escolha.' },
+                      { step: '3', title: 'Confirme as condições', desc: 'Confirmamos o estoque físico, preço do dia, custos e prazos de transporte.' },
+                      { step: '4', title: 'Conclua sua cotação', desc: 'Sem transações digitais no site. Todas as cotações e combinações são concluídas diretamente no atendimento.' },
                     ].map((step, idx) => (
                       <div key={idx} className="relative p-6 rounded-xl border border-slate-200 bg-white shadow-xs">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-600 font-sans font-extrabold text-slate-950 mb-3.5">
@@ -951,9 +977,81 @@ export default function App() {
                   </div>
 
                   <div className="mt-8 text-center bg-white border border-slate-200 rounded-xl p-5 max-w-3xl mx-auto shadow-xs">
-                    <p className="text-xs text-slate-650 leading-relaxed font-medium">
-                      O contato pelo WhatsApp não representa compra automática. A confirmação da encomenda, disponibilidade corporal, entrega física e pagamentos válidos são feitos somente conversando com o atendente.
+                    <p className="text-xs text-slate-650 leading-relaxed font-bold">
+                      Este site é estritamente um catálogo de pneus multimarcas independente. Não comercializamos produtos diretamente por checkout, carrinho ou cobranças automáticas neste domínio. Todas as encomendas necessitam de atendimento humano.
                     </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* SEÇÃO "GARANTIA E PROCEDÊNCIA" */}
+              <section className="py-16 bg-white font-sans border-b border-slate-200">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  <div className="text-center max-w-xl mx-auto mb-12">
+                    <h2 className="font-sans text-2xl font-black text-slate-800 uppercase tracking-tight">
+                      Garantia, Procedência & Segurança
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-2">
+                      Nosso catálogo e processos de atendimento são estruturados para garantir sua total segurança jurídica e clareza comercial.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[
+                      {
+                        title: 'Garantia conforme o fabricante',
+                        desc: 'Todos os pneus comercializados (como Pirelli, Goodyear, Continental, Michelin, Dunlop e Hankook) possuem garantia legal de fabricação regulamentada pelas respectivas marcas conforme as especificações fiscais de compra.',
+                        icon: Award,
+                        color: 'text-orange-600 bg-orange-50 border-orange-100'
+                      },
+                      {
+                        title: 'Nota fiscal eletrônica (NF-e)',
+                        desc: 'Emitimos Nota Fiscal Eletrônica em 100% de nossas operações de fornecimento de pneus, garantindo procedência fiscal completa e segurança legal para pessoa física ou jurídica.',
+                        icon: FileText,
+                        color: 'text-blue-600 bg-blue-50 border-blue-100'
+                      },
+                      {
+                        title: 'Procedência Confiável',
+                        desc: 'Revendemos exclusivamente pneus novos multimarcas originais de distribuidores autorizados. Não comercializamos pneus remold, reformados, recapeados ou de origem usada.',
+                        icon: ShieldCheck,
+                        color: 'text-emerald-600 bg-emerald-50 border-emerald-100'
+                      },
+                      {
+                        title: 'Atendimento Especializado',
+                        desc: 'Nossa equipe técnica comercial auxilia você de forma humanizada a esclarecer dúvidas de especificações, marcas ideais e compatibilidade dos índices de carga/velocidade para seu veículo.',
+                        icon: MessageSquare,
+                        color: 'text-purple-600 bg-purple-50 border-purple-100'
+                      },
+                      {
+                        title: 'Acompanhamento do Envio',
+                        desc: 'As remessas contam com suporte logístico qualificado e acompanhamento por canais oficiais de contato para que você saiba exatamente o status físico de sua entrega.',
+                        icon: Truck,
+                        color: 'text-indigo-600 bg-indigo-50 border-indigo-100'
+                      },
+                      {
+                        title: 'Empresa Identificada & Sede',
+                        desc: 'Pneu Center Brasil é um nome comercial legítimo operado pela razão social CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA, CNPJ 20.085.983/0001-13 com endereço real de operação física em São Paulo - SP.',
+                        icon: Building2,
+                        color: 'text-rose-600 bg-rose-50 border-rose-100'
+                      }
+                    ].map((card, idx) => {
+                      const Icon = card.icon;
+                      return (
+                        <div key={idx} className="flex flex-col justify-between p-6 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/50 transition-all duration-300">
+                          <div>
+                            <div className={`inline-flex rounded-xl p-3 border ${card.color} mb-4`}>
+                              <Icon className="h-6 w-6" />
+                            </div>
+                            <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider mb-2">
+                              {card.title}
+                            </h4>
+                            <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                              {card.desc}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </section>
@@ -1654,58 +1752,91 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8"
+              className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8 font-sans"
             >
               <div className="text-center max-w-2xl mx-auto mb-12">
                 <h1 className="font-sans text-3xl font-black text-slate-800 sm:text-4xl uppercase">
-                  Como funciona o atendimento
+                  Como Funciona o Processo de Compra
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-2">
-                  Facilitamos seu processo técnico de escolha e entrega, garantindo a ausência de burocracias virtuais.
+                  Passo a passo com total transparência e segurança comercial, sem cobranças automáticas ou checkout eletrônico.
                 </p>
               </div>
 
-              {/* Dynamic steps detailed list */}
+              {/* Detailed 7 Steps purchased logic */}
               <div className="space-y-8 relative before:absolute before:left-6 before:top-4 before:bottom-4 before:w-0.5 before:bg-slate-200">
                 {[
                   {
                     step: '1',
-                    title: 'Escolha o pneu ideal',
-                    desc: 'Navegue pelo nosso catálogo digital. Filtrando de forma rápida por aro, fabricante ou medida específica de rodado automotivo de passeio.'
+                    title: 'Navegação no Catálogo',
+                    desc: 'Navegue pelo nosso catálogo digital informativo e escolha pneus multimarcas adequados para o modelo e necessidades do seu tipo de veículo.'
                   },
                   {
                     step: '2',
-                    title: 'Tire dúvidas e faça cotação',
-                    desc: 'Logo após selecionar o modelo desejado, basta clicar em "Consultar Distribuidor". Você será instantaneamente direcionado para o WhatsApp com um consultor comercial que confirmará o estoque de forma física e tirará suas dúvidas de índices de carga.'
+                    title: 'Consulta de Disponibilidade',
+                    desc: 'Inicie um contato via WhatsApp com um de nossos atendentes diretos para confirmar o estoque físico imediato dos pneus selecionados.'
                   },
                   {
                     step: '3',
-                    title: 'Combine a entrega de forma direta',
-                    desc: 'O preço final do frete local, as transportadoras homologadas para o Butantã e São Paulo, bem como a liberação para retirada física oficial são totalmente coordenadas em atendimento direto.'
+                    title: 'Cotação de Valores',
+                    desc: 'Um consultor especializado apresentará os valores atualizados do dia, opções de parcelamento, prazos de entrega específicos ou formas de retirada física.'
                   },
                   {
                     step: '4',
-                    title: 'Receba, Confira e Pague',
-                    desc: 'A transportadora parceira realiza a entrega no local combinado. Você confere os pneus fisicamente em mãos e realiza o pagamento diretamente para o entregador (via Pix ou Cartão na maquininha). Não realizamos nenhuma cobrança antecipada.'
+                    title: 'Confirmação do Atendimento',
+                    desc: 'Realizamos a validação final técnica das medidas indicadas e índices corretos de carga e velocidade para assegurar que o pneu é 100% adequado e seguro para seu automóvel.'
+                  },
+                  {
+                    step: '5',
+                    title: 'Liberação do Pedido',
+                    desc: 'O pedido de cotação é finalizado de forma manual e os produtos originais com Nota Fiscal são devidamente preparados, faturados e liberados para o envio ou retirada.'
+                  },
+                  {
+                    step: '6',
+                    title: 'Acompanhamento de Entrega',
+                    desc: 'Fornecemos suporte qualificado contínuo sobre o status de entrega logística física e enviamos o código de rastreamento do despacho, quando aplicável e disponível.'
+                  },
+                  {
+                    step: '7',
+                    title: 'Recebimento e Conferência',
+                    desc: 'Você recebe o pneu novo original, realiza a conferência das marcações industriais e efetua o pagamento de forma segura na entrega física (quando aplicável) ou conforme acordado.'
                   }
                 ].map((st, idx) => (
                   <div key={idx} className="relative flex gap-6 items-start">
-                    <div className="absolute left-0 top-0 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-600 font-sans font-black text-slate-950 text-lg shadow-md shadow-orange-500/5">
+                    <div className="absolute left-0 top-0 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 font-sans font-black text-white text-lg border border-slate-750 shadow-xs z-10">
                       {st.step}
                     </div>
                     <div className="pl-16 space-y-1">
-                      <h3 className="font-sans text-lg font-bold text-slate-800 tracking-tight uppercase">{st.title}</h3>
-                      <p className="text-sm text-slate-650 leading-relaxed font-sans">{st.desc}</p>
+                      <h3 className="font-sans text-base font-extrabold text-slate-800 tracking-tight uppercase leading-relaxed">{st.title}</h3>
+                      <p className="text-sm text-slate-500 leading-relaxed font-sans">{st.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Direct Warning block */}
-              <div className="mt-12 rounded-xl border border-slate-200 bg-white p-6 text-center shadow-xs">
-                <p className="text-xs leading-relaxed text-slate-600 font-sans max-w-2xl mx-auto font-medium">
-                  <strong className="text-amber-850">IMPORTANTE:</strong> O contato pelo WhatsApp não representa compra automática ou faturamento fiscal imediato. A confirmação da encomenda de pneus, os preços finais oficiais, prazos e métodos de pagamentos válidos são ajustados de maneira individualizada conversando de forma direta.
-                </p>
+              {/* Institutional Registration corporate info */}
+              <div className="mt-12 rounded-2xl border border-slate-200 bg-slate-50 p-6 space-y-4">
+                <h4 className="font-sans text-xs font-black uppercase text-slate-700 tracking-widest border-b pb-2 border-slate-200">
+                  Dados da Empresa
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans text-slate-600">
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Razão Social:</span>
+                    <p className="font-bold text-slate-800 uppercase">CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA</p>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">CNPJ Cadastral:</span>
+                    <p className="font-mono font-bold text-slate-800">20.085.983/0001-13</p>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Endereço Comercial Sede:</span>
+                    <p className="text-slate-700">Av. Professor Francisco Morato, 2001, Butantã, São Paulo - SP, CEP 05513-200</p>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Canais Oficiais:</span>
+                    <p className="text-slate-700">WhatsApp: (11) 99594-6993 • E-mail: contato.pneucenterbrasil@gmail.com</p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -1717,49 +1848,116 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8 space-y-8 font-sans"
+              className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 space-y-12 font-sans"
             >
-              <div className="text-center max-w-2xl mx-auto mb-4">
+              <div className="text-center max-w-2xl mx-auto">
                 <h1 className="font-sans text-3xl font-black text-slate-800 sm:text-4xl uppercase">
-                  Sobre Nós
+                  Sobre a Empresa
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-2">
-                  A história e as diretrizes corporativas da Pneu Center Brasil
+                  Conheça nossa trajetória, compromissos técnicos e canais legítimos de distribuição de pneus automotivos.
                 </p>
               </div>
 
-              <div className="max-w-none text-sm md:text-base text-slate-650 space-y-5 leading-relaxed font-sans">
-                <p>
-                  A <strong>{siteSettings.commercialName || 'Pneu Center Brasil'}</strong> é o nome comercial da empresa registrada comercialmente sob a razão social <strong>{siteSettings.corporateName || 'CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA'}</strong>, constituída sob o CNPJ <strong>{siteSettings.cnpj || '20.085.983/0001-13'}</strong>, com sede física estabelecida no seguinte endereço cadastral: {siteSettings.address || 'Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP, CEP 05513-200'}.
-                </p>
+              {/* Layout Content Split */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                <p>
-                  {siteSettings.institutionalText || 'Atuamos com catálogo online moderno e atendimento técnico humanizado especializado para reposição de pneus automotivos multimarcas, auxiliando motoristas, frotistas e proprietários de veículos na escolha de modelos de pneus perfeitamente compatíveis com as medidas indicadas pelas respectivas montadoras de automóveis.'}
-                </p>
+                {/* Column left: Text detailed info */}
+                <div className="lg:col-span-7 space-y-6 text-sm text-slate-650 leading-relaxed">
+                  <p>
+                    A <strong>Pneu Center Brasil</strong> é uma operação comercial voltada à listagem e intermediação informativa de pneus automotivos multimarcas, vinculada juridicamente e operada de forma legítima pela empresa <strong>CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA</strong>, inscrita no CNPJ sob o número <strong>20.085.983/0001-13</strong>, com sede física em São Paulo - SP.
+                  </p>
 
-                <p>
-                  Diferente de sistemas de e-commerce tradicionais suscetíveis a inconsistências de estoque físicos e custos adicionais imprevistos de entrega interestaduais, nós optamos e defendemos um canal comercial direto e humanizado por WhatsApp.
-                </p>
+                  <p>
+                    Nossa atuação no setor automotivo brasileiro pauta-se pelo compromisso rigoroso de fornecer informações técnicas qualificadas, descomplicando o processo de reposição de pneus para carros nacionais, importados, SUVs e utilitários leves. Atuamos como revendedora multimarcas independente, trazendo as principais marcas globais ao alcance do motorista, sem burocracia virtual.
+                  </p>
 
-                <p className="border-l-4 border-orange-500 bg-white border border-slate-200 p-5 rounded-r-xl text-slate-650 shadow-xs">
-                  Nosso site tem finalidade estritamente informativa de catálogo digital e facilita o contato inicial rápido com a equipe comercial. Não realizamos checkout eletrônico neste domínio, não solicitamos dados financeiros dos usuários através de nosso site e não efetuamos cobranças antecipadas em ambiente virtual.
-                </p>
-              </div>
+                  <p className="border-l-4 border-orange-500 bg-slate-50 p-4 rounded-r-xl text-xs font-semibold leading-relaxed shadow-xs text-slate-600">
+                    Defendemos que um pneu seguro exige validação especializada. Por isso, recusamos processos de checkout automatizados em ambiente eletrônico web. Toda compra e faturamento só são confirmados após diálogo humano direto e personalizado visando validar os índices adequados para sua segurança de rodagem.
+                  </p>
+                </div>
 
-              {/* Dynamic highlights */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-                {[
-                  { title: 'Revenda Independente', desc: 'Ampla gama de pneus Pirelli, Michelin, Goodyear, Bridgestone, Continental, Dunlop...', icon: Building2 },
-                  { title: 'Butantã / São Paulo', desc: 'Atendimento estendido para facilitade logística imediata de retirada na capital paulista.', icon: Wrench },
-                  { title: 'Privacidade Total', desc: 'Livre de cookies invasivos ou requisição abusiva de faturas de crédito no ambiente web.', icon: FolderLock },
-                ].map((item, id) => (
-                  <div key={id} className="p-6 rounded-xl border border-slate-200 bg-white space-y-2 shadow-xs">
-                    <item.icon className="h-6 w-6 text-orange-600" />
-                    <h4 className="font-sans font-extrabold text-slate-800 text-sm uppercase">{item.title}</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed font-sans">{item.desc}</p>
+                {/* Column right: Institutional image */}
+                <div className="lg:col-span-5">
+                  <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-100/50 shadow-sm relative group">
+                    <img 
+                      src={siteSettings.institutionalMediaUrl || "https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&q=80&w=800"} 
+                      alt={siteSettings.institutionalMediaAlt || "Pneu Center Brasil - Atendimento Sede"} 
+                      className="w-full h-64 object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent pointer-events-none" />
+                    <div className="absolute bottom-3 left-3 bg-slate-900/85 text-[10px] uppercase font-bold text-white px-2.5 py-1 rounded">
+                      Instalações e Logística
+                    </div>
                   </div>
-                ))}
+                </div>
+
               </div>
+
+              {/* Specific Trust blocks requested */}
+              <div className="space-y-4">
+                <h3 className="font-sans text-xs font-black uppercase text-slate-700 tracking-wider">
+                  Nossos Pilares de Confiança
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[
+                    {
+                      title: 'Garantia conforme o fabricante',
+                      desc: 'Todos os pneus possuem garantia legal contra avarias estruturais industriais, conforme regras específicas e manuais oficiais dos respectivos fabricantes (Pirelli, Goodyear, Continental, etc).',
+                      icon: Award
+                    },
+                    {
+                      title: 'Nota fiscal',
+                      desc: 'Emitimos Nota Fiscal Eletrônica (NF-e) em conformidade tributária integral nas operações de venda de pneus, proporcionando transparência e segurança jurídica ao comprador.',
+                      icon: FileText
+                    },
+                    {
+                      title: 'Atendimento especializado',
+                      desc: 'Equipe de consultores técnicos para conferir exatidão de medidas, compatibilidade de aros, velocidade, carga e aplicação viária correta para seu carro.',
+                      icon: Wrench
+                    },
+                    {
+                      title: 'Empresa identificada',
+                      desc: 'CNPJ ativo e cadastrado regularizado sob Razão Social CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA • 20.085.983/0001-13.',
+                      icon: ShieldCheck
+                    },
+                    {
+                      title: 'Endereço Comercial',
+                      desc: 'Sede própria com endereço de faturamento real em Av. Professor Francisco Morato, 2001, Butantã, São Paulo - SP, CEP 05513-200.',
+                      icon: MapPin
+                    }
+                  ].map((block, i) => (
+                    <div key={i} className="flex gap-4 p-5 rounded-2xl border border-slate-200 bg-white shadow-xs items-start hover:border-slate-300 transition-colors">
+                      <div className="rounded-xl bg-orange-50 p-2 text-orange-600 shrink-0 border border-orange-100">
+                        <block.icon className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-sans font-extrabold text-slate-800 text-sm uppercase tracking-wide">{block.title}</h4>
+                        <p className="text-xs text-slate-500 leading-relaxed font-sans">{block.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Map embed segment */}
+              <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-xs">
+                <div className="bg-slate-50 px-6 py-4 uppercase font-black text-slate-700 tracking-wider text-xs border-b border-slate-100 flex items-center justify-between">
+                  <span>Localização de Faturamento & Armazenagem</span>
+                  <span className="text-[10px] text-slate-400 font-mono normal-case">Butantã, São Paulo/SP</span>
+                </div>
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3656.7720980425717!2d-46.72658822538965!3d-23.57662!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce570be485d4cb%3A0x8be5b72dfa4f5fbe!2sAv.%20Prof.%20Francisco%20Morato%2C%25202001%2520-%2520Butant%25C3%25A3%252C%2520S%25C3%25Aao%2520Paulo%2520-%2520SP%252C%252005513-300!5e0!3m2!1spt-BR!2sbr!4v1700000000000!5m2!1spt-BR!2sbr"
+                  width="100%"
+                  height="300"
+                  style={{ border: 0 }}
+                  allowFullScreen={true}
+                  loading="lazy"
+                  title="Sede Pneu Center Brasil"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
             </motion.div>
           )}
 
@@ -1797,13 +1995,23 @@ export default function App() {
           )}
 
           {/* 10. SHIPPING RULES VIEW */}
-          {routeState.path === 'politica-entrega' && (
+          {(routeState.path === 'politica-entrega' || routeState.path === 'politica-envio') && (
             <ShippingPolicy key="delivery" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
           )}
 
           {/* 11. EXCHANGES / RETURNS VIEW */}
           {routeState.path === 'politica-trocas' && (
             <ReturnsPolicy key="exchanges" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
+          )}
+
+          {/* 11b. WARRANTY POLICY VIEW */}
+          {routeState.path === 'politica-garantia' && (
+            <WarrantyPolicy key="warranty" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
+          )}
+
+          {/* 11c. TRACKING VIEW */}
+          {routeState.path === 'rastreamento' && (
+            <TrackingPage key="tracking" onBackToHome={() => navigateTo('home')} onNavigate={navigateTo} />
           )}
 
           {/* 12. ADMIN PANEL VIEW */}

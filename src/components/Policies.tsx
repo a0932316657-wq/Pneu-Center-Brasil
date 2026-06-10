@@ -1,12 +1,12 @@
 import React from 'react';
-import { ShieldCheck, Scale, Truck, RefreshCw, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Scale, Truck, RefreshCw, Award, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AppRoute } from '../types';
 
 interface PolicyProps {
+  key?: string;
   onBackToHome: () => void;
   onNavigate: (route: AppRoute, productId?: string) => void;
-  key?: React.Key;
 }
 
 const COMPANY_DETAILS = (
@@ -52,41 +52,49 @@ export function PrivacyPolicy({ onBackToHome }: PolicyProps) {
 
         <div className="space-y-6 text-sm md:text-base text-slate-600 leading-relaxed font-sans">
           <p>
-            Na <strong>Pneu Center Brasil</strong>, a privacidade e a segurança dos dados pessoais de nossos clientes são prioritárias. Esta Política de Privacidade explica de forma transparente como lidamos com as informações coletadas por meio de nosso site de catálogo digital.
+            Última atualização: Junho de 2026 • PNEU CENTER BRASIL, nome fantasia de CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA, inscrita no CNPJ 20.085.983/0001-13, com sede em Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP, CEP 05513-200.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Quais dados são coletados?</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Informações que Coletamos</h2>
           <p>
-            Como nosso site funciona exclusivamente em modalidade de catálogo digital eletrônico, nós não coletamos dados de faturamento diretamente pelo sistema. Coletamos apenas os dados básicos preenchidos ativamente por você em nosso formulário de contato ou através do link de redirecionamento para o WhatsApp, que incluem:
-          </p>
-          <ul className="list-disc pl-5 mt-2 space-y-1.5 text-slate-650">
-            <li>Nome completo;</li>
-            <li>Telefone de contato (WhatsApp);</li>
-            <li>Endereço de e-mail;</li>
-            <li>Cidade ou região de interesse de entrega;</li>
-            <li>Medida de pneu ou veículo de preferência informado no campo de texto livre.</li>
-          </ul>
-
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Como os dados são utilizados?</h2>
-          <p>
-            Os dados indicados são de porte exclusivo de atendimento manual e se destinam especificamente ao seguinte rol de finalidades:
-          </p>
-          <ul className="list-disc pl-5 mt-2 space-y-1.5 text-slate-650">
-            <li>Responder às suas dúvidas e detalhar as especificações técnicas de pneus;</li>
-            <li>Efetuar cotações de preços personalizadas;</li>
-            <li>Consultar a disponibilidade imediata no estoque físico correspondente à sua região;</li>
-            <li>Organizar a logística de entrega física junto a transportadoras terceiras ou parceiras comerciais autorizadas;</li>
-            <li>Garantir o perfeito cumprimento de obrigações civis de assistência ao consumidor.</li>
-          </ul>
-
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">3. Sem Coleta de Dados Financeiros no Site</h2>
-          <p>
-            Reiteramos de forma veemente que <strong>este portal não possui formulários de checkout e não solicita sob nenhuma circunstância dados de cartões de débito, crédito, contas correntes ou senhas pessoais</strong>. Em caso de envio ou requisição desses dados, considere de imediato a ocorrência de phishing e reporte imediatamente à nossa equipe.
+            Podemos coletar nome, telefone, e-mail, cidade, veículo, medida de pneu desejada e mensagem enviada pelo formulário ou WhatsApp.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">4. Direitos do Titular (LGPD)</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Finalidade do Tratamento de Dados</h2>
           <p>
-            Em conformidade integral com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 - LGPD), o usuário detém a plenitude dos direitos de solicitar a confirmação do tratamento, acessar seus dados sob controle da Pneu Center Brasil, revogar o consentimento outorgado para conversação comercial e requerer a exclusão completa de seus dados corporativos no canal designado de correspondência: <strong>contato.pneucenterbrasil@gmail.com</strong>.
+            Os dados são utilizados para responder solicitações, enviar orçamentos, confirmar disponibilidade, melhorar atendimento e cumprir obrigações legais.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">3. Base Legal para Tratamento</h2>
+          <p>
+            O tratamento ocorre conforme a LGPD, incluindo execução de procedimentos pré-contratuais, cumprimento de obrigações legais, legítimo interesse e consentimento quando aplicável.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">4. Compartilhamento de Dados</h2>
+          <p>
+            Não vendemos dados pessoais. Informações podem ser compartilhadas apenas quando necessário para atendimento, entrega, emissão fiscal ou obrigações legais.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">5. Cookies e Tecnologias de Rastreamento</h2>
+          <p>
+            O site pode utilizar cookies e tecnologias como Google Tag Manager, Google Ads e ferramentas de análise para melhorar experiência e mensuração de campanhas.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">6. Segurança dos Dados</h2>
+          <p>
+            Adotamos medidas técnicas e organizacionais para proteger os dados contra acesso não autorizado, alteração, perda ou divulgação indevida.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">7. Direitos do Titular</h2>
+          <p>
+            O titular pode solicitar acesso, correção, exclusão, portabilidade ou informações sobre tratamento dos dados conforme LGPD.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">8. Contato</h2>
+          <p>
+            WhatsApp: (11) 99594-6993<br />
+            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            CNPJ: 20.085.983/0001-13
           </p>
         </div>
       </div>
@@ -126,28 +134,41 @@ export function TermsOfUse({ onBackToHome }: PolicyProps) {
         </p>
 
         <div className="space-y-6 text-sm md:text-base text-slate-600 leading-relaxed font-sans">
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Aceitação dos Termos</h2>
           <p>
-            Seja bem-vindo ao portal da <strong>Pneu Center Brasil</strong>. Ao acessar e utilizar este site, você concorda de maneira livre e informada com todos os regulamentos expressos neste Termos de Uso.
+            Ao acessar o site da Pneu Center Brasil, o usuário declara estar ciente e concordar com estes Termos de Uso.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Natureza do Site: Catálogo Digital</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Descrição do Serviço</h2>
           <p>
-            O presente endereço eletrônico destina-se puramente à listagem informativa, educacional e comercial preliminar do rol de pneus automotivos negociados. <strong>O site não é um canal de e-commerce e não opera venda virtual automática, carrinho ou faturamento eletrônico próprio.</strong> O ato de clicar ou interagir com nosso site não constitui negócio jurídico perfeito ou compromisso definitivo de venda pela nossa empresa.
+            O site funciona como catálogo digital para apresentação de pneus automotivos multimarcas. As consultas, orçamentos, confirmações de disponibilidade, entrega e condições comerciais são realizadas pelo atendimento oficial.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Flutuação de Estoque e Informações Técnicas</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">3. Preços e Pagamento</h2>
           <p>
-            Todas as imagens de produtos contidas no site servem como referência de modelo ou padrão visual de pneus de passeio e SUV e possuem caráter ilustrativo. Os preços de pneus, sua disponibilidade física e as marcas que detêm fabricação flutuam ao longo de períodos sazonais do mercado e de logística das importadoras. As atualizações técnicas definitivas, bem como a homologação oficial para cada modelo específico de veículo, são conferidas de maneira obrigatória no atendimento telefônico ou por WhatsApp.
+            Os preços exibidos são referências comerciais e podem variar conforme estoque, região de entrega, forma de pagamento e atualização de produto. A confirmação final ocorre no atendimento.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">3. Independência das Marcas Comerciais</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">4. Envio e Entrega</h2>
           <p>
-            A Pneu Center Brasil opera no mercado nacional na condição de <strong>revendedora multimarcas e independente</strong> de pneus automotivos de reposição. Marcas registradas mencionadas de terceiros (incluindo Pirelli, Michelin, Goodyear, Bridgestone, Continental, Dunlop, Firestone e Hankook) são usadas legalmente para designar especificações originais industriais do pneu. Não possuímos vínculo societário oficial ou participação acionária junto a nenhuma das referidas fábricas multinacionais.
+            As condições de envio e entrega são informadas antes da confirmação da compra, conforme região, produto e disponibilidade logística.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">4. Foro Aplicável</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">5. Propriedade Intelectual</h2>
           <p>
-            Para dirimir controvérsias judiciais que decorram da leitura dos termos do site, as partes elegem preferencialmente o foro da comarca da Capital de São Paulo/SP, com renúncia a qualquer outro, por mais privilegiado que este venha a se apresentar.
+            Textos, imagens, marcas, layout e elements gráficos do site são protegidos conforme legislação aplicável. Marcas de fabricantes são usadas apenas para identificação dos produtos.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">6. Limitação de Responsabilidade</h2>
+          <p>
+            As imagens podem ser meramente ilustrativas. O cliente deve confirmar medida, marca, modelo, índice de carga, índice de velocidade e demais especificações antes da finalização.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">7. Contato</h2>
+          <p>
+            WhatsApp: (11) 99594-6993<br />
+            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            CNPJ: 20.085.983/0001-13
           </p>
         </div>
       </div>
@@ -179,7 +200,7 @@ export function ShippingPolicy({ onBackToHome }: PolicyProps) {
             <Truck className="h-7 w-7" />
           </div>
           <h1 className="font-sans text-2xl font-black text-slate-800 md:text-3.5xl m-0 tracking-tight uppercase">
-            Política de Entrega e Pagamento
+            Política de Envio e Entrega
           </h1>
         </div>
         <p className="font-mono text-xs text-slate-400 uppercase tracking-widest mb-8 border-b border-slate-200 pb-4 font-bold">
@@ -188,31 +209,44 @@ export function ShippingPolicy({ onBackToHome }: PolicyProps) {
 
         <div className="space-y-6 text-sm md:text-base text-slate-600 leading-relaxed font-sans">
           <p>
-            Esta política rege o processo comercial e logístico estritamente humano que ocorre logo após o encerramento da busca informativa em nosso catálogo eletrônico.
+            PNEU CENTER BRASIL, nome fantasia de CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA, inscrita no CNPJ 20.085.983/0001-13, com sede em Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP, CEP 05513-200.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Dinâmica da Entrega Física</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Área de Cobertura</h2>
           <p>
-            Prazos de entrega, custos de fretes locais ou interestaduais e termos de coleta dependem exclusivamente de variáveis que envolvem peso de carga, CEP de recebimento e restrições locais de circulação de veículos de grande porte. Portanto:
+            A Pneu Center Brasil atende clientes em diferentes regiões, mediante confirmação de disponibilidade logística, prazo e condições de entrega.
           </p>
-          <ul className="list-disc pl-5 mt-2 space-y-1.5 text-slate-650">
-            <li>As condições exatas de tempo e valores de fretes são orçadas e individualizadas durante a conversa via WhatsApp;</li>
-            <li>Utilizamos transportadoras profissionais terceirizadas credenciadas para envios rápidos, ou opcionalmente, disponibilizamos coordenadas de retirada física de acordo com a disponibilidade;</li>
-            <li>A encomenda só é liberada para transporte após confirmação expressa do pedido e aprovação documental no atendimento comercial direto.</li>
-          </ul>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Condições de Pagamento de Pneus</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Prazo de Envio</h2>
           <p>
-            Para fins de segurança jurídica mútua e prevenção a fraudes cibernéticas comuns no comércio automotivo:
+            O prazo de envio pode variar conforme o produto escolhido, disponibilidade, região de destino e transportadora/parceiro logístico utilizado. As informações são confirmadas durante o atendimento.
           </p>
-          <ul className="list-disc pl-5 mt-2 space-y-1.5 text-slate-650">
-            <li><strong>A Pneu Center Brasil não processa Pix, boletos ou cartões de modo antecipado através deste site;</strong></li>
-            <li>As verdadeiras formas de pagamento aceitas e autorizadas serão detalhadas e explicadas formalmente pelo nosso atendente no WhatsApp;</li>
-            <li>As formas comerciais incluem pagamento presencial na hora da entrega física do produto, boletos validados faturados corporativos, ou cartões de débito e crédito faturados nos terminais devidamente autorizados.</li>
-          </ul>
 
-          <p className="text-amber-800 font-semibold mt-4 bg-amber-50 rounded-lg border border-amber-250 p-4 shadow-xs text-xs sm:text-sm">
-            Aviso de Prevenção: Nunca faça nenhum tipo de depósito, PIX ou pagamento online direcionado para chaves de contas que constem fora do domínio de nossa razão social legítima (CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA). Exija sempre faturamento formal.
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">3. Valor do Frete</h2>
+          <p>
+            O valor do frete é calculado conforme região, peso, volume, disponibilidade logística e modalidade de entrega. O valor é informado antes da confirmação da compra.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">4. Rastreamento</h2>
+          <p>
+            Quando houver entrega com rastreamento, o código será enviado ao cliente após postagem ou despacho.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">5. Embalagem</h2>
+          <p>
+            Os produtos são preparados para transporte conforme tipo de pneu e modalidade de envio, buscando preservar a integridade durante o deslocamento.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">6. Problemas na Entrega</h2>
+          <p>
+            Em caso de atraso, avaria ou divergência, o cliente deve entrar em contato pelos canais oficiais para análise e orientação.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">7. Contato</h2>
+          <p>
+            WhatsApp: (11) 99594-6993<br />
+            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            CNPJ: 20.085.983/0001-13
           </p>
         </div>
       </div>
@@ -244,7 +278,7 @@ export function ReturnsPolicy({ onBackToHome }: PolicyProps) {
             <RefreshCw className="h-7 w-7" />
           </div>
           <h1 className="font-sans text-2xl font-black text-slate-800 md:text-3.5xl m-0 tracking-tight uppercase">
-            Política de Trocas, Devoluções e Garantia
+            Política de Troca e Devolução
           </h1>
         </div>
         <p className="font-mono text-xs text-slate-400 uppercase tracking-widest mb-8 border-b border-slate-200 pb-4 font-bold">
@@ -252,37 +286,110 @@ export function ReturnsPolicy({ onBackToHome }: PolicyProps) {
         </p>
 
         <div className="space-y-6 text-sm md:text-base text-slate-600 leading-relaxed font-sans">
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Direito de Arrependimento</h2>
           <p>
-            Na <strong>Pneu Center Brasil</strong>, a satisfação total e a conformidade técnica dos pneus comercializados fundamentam nosso compromisso de atendimento.
+            Quando aplicável, o cliente poderá solicitar cancelamento ou devolução conforme legislação brasileira vigente e condições da contratação.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Conferência na Entrega do Produto</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Condições para Troca ou Devolução</h2>
           <p>
-            Recomendamos expressamente que o cliente ou preposto designado realize a conferência imediata dos pneus no exato momento da entrega, verificando:
-          </p>
-          <ul className="list-disc pl-5 mt-2 space-y-1.5 text-slate-650">
-            <li>Se a marca, modelo e medida (com largura, perfil e aro) batem rigorosamente com o pedido acordado comercialmente;</li>
-            <li>Se há alguma avaria física decorrente do transporte que possa comprometer a integridade física do produto.</li>
-          </ul>
-          <p>
-            Verificada qualquer divergência técnica ou avaria física aparente, recuse o recebimento imediato e comunique à Pneu Center Brasil pelo WhatsApp ou e-mail corporativo.
+            O produto deve estar sem sinais de uso indevido, sem instalação quando aplicável, com nota fiscal e em condições adequadas para análise.
           </p>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Direito de Arrependimento legal (7 Dias)</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">3. Produto com Defeito</h2>
           <p>
-            Conforme artigo 49 do Código de Defesa do Consumidor brasileiro (CDC), em transações comerciais realizadas fora do estabelecimento físico, o consumidor detém o período legal de reflexão de 7 dias (contados a partir do efetivo recebimento do pneu) para solicitar a revogação da aquisição e estorno financeiro correspondente, contanto que:
+            Em caso de possível defeito de fabricação, a solicitação será analisada conforme política de garantia, legislação aplicável e regras do fabricante.
           </p>
-          <ul className="list-disc pl-5 mt-2 space-y-1.5 text-slate-650">
-            <li>Os pneus permaneçam em estado de novos, não tenham sido submetidos a qualquer montagem física em rodas ou rodagem em vias;</li>
-            <li>Mantenham-se intactas as etiquetas industriais de vulcanização das fábricas originais.</li>
-          </ul>
 
-          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">3. Garantia Técnica Contra Defeitos de Fabricação</h2>
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">4. Procedimento para Solicitação</h2>
           <p>
-            Todos os pneus que revendemos contam com garantia legal de fabricação, conforme leis aplicáveis do país e normas declaradas pelos respectivos fabricantes. A reposição contra falhas ou defeitos de vulcanização estruturais passa por análise profissional do engenheiro ou distribuidor oficial do pneu em questão.
+            O cliente deve entrar em contato pelo WhatsApp ou e-mail oficial informando dados do pedido, produto e motivo da solicitação.
           </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">5. Reembolso</h2>
           <p>
-            Damos ciência de que <strong>avarias decorrentes de buracos nas vias, montagem incorreta do pneu, furos acidentais por pregos, bolhas provocadas por impactos severos ou problemas de suspensão desalinhada (desgaste irregular de banda de rodagem) não constituem defeito industrial do pneu</strong> e estão excluídos formalmente das condições básicas de garantia de revenda.
+            Quando aplicável, o reembolso será realizado após análise do produto e confirmação das condições de devolução.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">6. Custos de Envio</h2>
+          <p>
+            Custos de envio podem variar conforme motivo da solicitação, análise técnica, região e legislação aplicável.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">7. Contato</h2>
+          <p>
+            WhatsApp: (11) 99594-6993<br />
+            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            CNPJ: 20.085.983/0001-13
+          </p>
+        </div>
+      </div>
+
+      {COMPANY_DETAILS}
+    </motion.div>
+  );
+}
+
+export function WarrantyPolicy({ onBackToHome }: PolicyProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8"
+    >
+      <button
+        onClick={onBackToHome}
+        className="mb-6 flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        <span>Voltar ao Início</span>
+      </button>
+
+      <div className="max-w-none">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="rounded bg-sky-50 p-2.5 text-sky-600 shadow-xs">
+            <Award className="h-7 w-7" />
+          </div>
+          <h1 className="font-sans text-2xl font-black text-slate-800 md:text-3.5xl m-0 tracking-tight uppercase">
+            Política de Garantia
+          </h1>
+        </div>
+        <p className="font-mono text-xs text-slate-400 uppercase tracking-widest mb-8 border-b border-slate-200 pb-4 font-bold">
+          Última atualização: Junho de 2026
+        </p>
+
+        <div className="space-y-6 text-sm md:text-base text-slate-600 leading-relaxed font-sans">
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">1. Cobertura da Garantia</h2>
+          <p>
+            Os pneus comercializados possuem garantia legal e/ou garantia do fabricante, conforme regras aplicáveis, nota fiscal e condições de uso.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">2. Prazo de Garantia</h2>
+          <p>
+            O prazo de garantia pode variar conforme fabricante, modelo do pneu e legislação aplicável. As informações devem ser confirmadas no atendimento e documentação fiscal.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">3. Condições para Acionar a Garantia</h2>
+          <p>
+            Para acionar a garantia, o cliente deve apresentar nota fiscal, informações do produto e relatar o problema identificado.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">4. Exclusões da Garantia</h2>
+          <p>
+            A garantia pode não cobrir danos causados por uso inadequado, instalação incorreta, calibragem inadequada, impactos, cortes, desgaste natural, desalinhamento, sobrecarga, alterações no produto ou uso fora das especificações.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">5. Procedimento</h2>
+          <p>
+            O cliente deve entrar em contato pelos canais oficiais informando dados do pedido, nota fiscal, fotos do produto e descrição do problema.
+          </p>
+
+          <h2 className="font-sans text-base font-bold text-slate-800 uppercase mt-8 mb-3">6. Contato</h2>
+          <p>
+            WhatsApp: (11) 99594-6993<br />
+            E-mail: contato.pneucenterbrasil@gmail.com<br />
+            CNPJ: 20.085.983/0001-13
           </p>
         </div>
       </div>

@@ -49,10 +49,13 @@ export type AppRoute =
   | 'como-funciona'
   | 'sobre'
   | 'contato'
+  | 'rastreamento'
   | 'politica-privacidade'
   | 'termos-uso'
+  | 'politica-envio'
   | 'politica-entrega'
   | 'politica-trocas'
+  | 'politica-garantia'
   | 'paineladmin';
 
 export interface RouteState {
