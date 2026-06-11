@@ -322,3 +322,86 @@ export async function uploadMedia(file: File, folder: string): Promise<{ publicU
     mediaType: isVideo ? 'video' : 'image'
   };
 }
+
+/**
+ * Uploads media for the presell campaign center to the pneu-center bucket in specified subfolders
+ */
+export async function uploadPresellMedia(file: File, folder: string): Promise<{ publicUrl: string; mediaType: 'image' | 'video' }> {
+  if (isSupabaseUrlAbsent || isSupabaseKeyAbsent) {
+    throw new Error('Supabase não configurado. Adicione as credenciais nas configurações.');
+  }
+
+  const fileType = file.type.toLowerCase();
+  const isVideo = fileType.startsWith('video/') || fileType === 'video/mp4' || fileType === 'video/webm';
+
+  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+  const allowedVideoTypes = ['video/mp4', 'video/webm'];
+
+  if (!allowedImageTypes.includes(fileType) && !allowedVideoTypes.includes(fileType)) {
+    throw new Error('Formato não permitido. Escolha imagens (JPG, JPEG, PNG, WEBP, GIF) ou vídeos (MP4, WEBM).');
+  }
+
+  const maxImageSize = 10 * 1024 * 1024; // 10MB
+  const maxVideoSize = 100 * 1024 * 1024; // 100MB
+
+  if (isVideo) {
+    if (file.size > maxVideoSize) {
+      throw new Error('Vídeo muito grande. Envie um arquivo com até 100 MB.');
+    }
+  } else {
+    if (file.size > maxImageSize) {
+      throw new Error('Imagem muito grande. O limite de upload para imagens da presell é 10 MB.');
+    }
+  }
+
+  let fileToUpload: File | Blob = file;
+  if (!isVideo) {
+    try {
+      fileToUpload = await compressImageIfNeeded(file);
+    } catch (err) {
+      console.warn('Erro ao comprimir imagem da presell, usando original:', err);
+    }
+  }
+
+  const nameToUse = (fileToUpload instanceof File) ? fileToUpload.name : file.name;
+  const extMatch = file.name.match(/\.([a-zA-Z0-9]+)$/);
+  const originalExt = extMatch ? extMatch[1].toLowerCase() : (isVideo ? 'mp4' : 'jpg');
+  const fileExt = fileToUpload.type === 'image/jpeg' ? 'jpg' : originalExt;
+
+  const baseName = nameToUse.replace(/\.[^/.]+$/, "");
+  const cleanName = baseName
+    .replace(/[^a-zA-Z0-9]/g, '_')
+    .substring(0, 30);
+
+  const fileName = `${Date.now()}_${cleanName}.${fileExt}`;
+  const cleanFolder = folder.replace(/^\/+|\/+$/g, '');
+  const filePath = cleanFolder ? `${cleanFolder}/${fileName}` : fileName;
+
+  const { data, error } = await supabase.storage
+    .from('pneu-center')
+    .upload(filePath, fileToUpload, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) {
+    console.error(`Erro no upload presell [Bucket: pneu-center, Path: ${filePath}]:`, error);
+    throw new Error(
+      `Erro ao enviar para a pasta ${folder}/: ${error.message}`
+    );
+  }
+
+  const { data: urlData } = supabase.storage
+    .from('pneu-center')
+    .getPublicUrl(filePath);
+
+  if (!urlData || !urlData.publicUrl) {
+    throw new Error('Erro ao obter a URL pública para o arquivo da presell enviado.');
+  }
+
+  return {
+    publicUrl: urlData.publicUrl,
+    mediaType: isVideo ? 'video' : 'image'
+  };
+}
+

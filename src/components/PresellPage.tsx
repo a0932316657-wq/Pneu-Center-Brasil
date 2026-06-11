@@ -48,8 +48,10 @@ export default function PresellPage() {
     return getPresellRimCards().filter((card) => card.active);
   });
 
-  // Fetch brand listings from general Brands Panel
+  // Fetch brand listings from Presell Campaign or general Brands Panel as fallback
   const fetchActiveBrands = (): any[] => {
+    const list = getPresellBrandCards().filter(b => b.active);
+    if (list.length > 0) return list;
     return getBrands().filter(b => b.active);
   };
 
@@ -222,8 +224,18 @@ export default function PresellPage() {
     }
   ];
 
+  const backgroundStyle = settings.background_image_url && settings.background_image_url.trim() !== ''
+    ? { 
+        backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.92)), url(${settings.background_image_url})`, 
+        backgroundSize: 'cover', 
+        backgroundAttachment: 'fixed', 
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }
+    : undefined;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-orange-500 selection:text-slate-950">
+    <div style={backgroundStyle} className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-orange-500 selection:text-slate-950">
       
       {/* Dynamic Keyframe Animation Styles for Smooth Infinite Marquee */}
       <style>{`
