@@ -784,6 +784,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         fullDesc: prodFullDesc.trim(),
         price: parsedPrice,
         priceStatus: prodPriceStatus,
+        original_price: parsedPrice,
         gallery: prodGallery,
         featured: prodIsFeatured,
         active: prodIsActive,
@@ -2042,6 +2043,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         
         if (matchesRim && matchesBrand) {
           if (p.price && p.price > 0) {
+            const origPrice = p.original_price || p.price;
             let newPrice = p.price;
             if (bulkPriceAction === 'add') {
               newPrice = p.price * (1 + percent / 100);
@@ -2057,7 +2059,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                newPrice = 1.00;
             }
             
-            const updated = { ...p, price: newPrice };
+            const updated = { ...p, price: newPrice, original_price: origPrice };
             await saveProductDb(updated);
             updatedCount++;
           }
@@ -2070,6 +2072,43 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     } catch (err: any) {
       console.error(err);
       triggerFeedback(`Erro no reajuste de preço: ${err.message || err}`, 'error');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleResetPrices = async () => {
+    if (!(await checkAuth())) return;
+
+    const matchesAllRim = bulkPriceRimFilter === 'Todos';
+    const matchesAllBrand = bulkPriceBrandFilter === 'Todas';
+    const filterDesc = `${matchesAllRim ? 'Todos os Aros' : `Aro ${bulkPriceRimFilter}`} e ${matchesAllBrand ? 'Todas as Marcas' : `Marca ${bulkPriceBrandFilter}`}`;
+
+    const confirmMsg = `Tem certeza que deseja RESETAR os preços dos pneus (${filterDesc}) de volta para os preços originais cadastrados pela primeira vez?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setBulkProcessing(true);
+    let updatedCount = 0;
+    try {
+      for (const p of productsList) {
+        const matchesRim = bulkPriceRimFilter === 'Todos' || String(p.rim) === bulkPriceRimFilter;
+        const matchesBrand = bulkPriceBrandFilter === 'Todas' || p.brand.trim().toLowerCase() === bulkPriceBrandFilter.trim().toLowerCase();
+
+        if (matchesRim && matchesBrand) {
+          const targetPrice = p.original_price || p.price;
+          if (targetPrice && targetPrice > 0 && p.price !== targetPrice) {
+            const updated = { ...p, price: targetPrice, original_price: targetPrice };
+            await saveProductDb(updated);
+            updatedCount++;
+          }
+        }
+      }
+      triggerFeedback(`Sucesso! Os preços de ${updatedCount} pneus foram resetados para o valor original.`);
+      setProductsList(getProducts());
+      onRefreshPublicData();
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao resetar preços: ${err.message || err}`, 'error');
     } finally {
       setBulkProcessing(false);
     }
@@ -5569,7 +5608,7 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                       </select>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-700/60 !mt-6 space-y-3.5">
+                    <div className="pt-4 border-t border-slate-700/60 !mt-6 space-y-3">
                       <button
                         type="button"
                         disabled={bulkProcessing || !bulkPricePercent}
@@ -5586,12 +5625,23 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                         )}
                       </button>
 
+                      <button
+                        type="button"
+                        disabled={bulkProcessing}
+                        onClick={handleResetPrices}
+                        className="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-orange-500/50 text-slate-200 hover:text-orange-400 disabled:bg-slate-750 disabled:text-slate-500 font-extrabold text-xs uppercase tracking-widest rounded-lg py-3.5 transition-all cursor-pointer text-center flex items-center justify-center gap-2"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Resetar Preços Originais
+                      </button>
+
                       <div className="p-3 bg-[#132742] border border-slate-700 rounded-lg space-y-1.5 select-none animate-fade-in">
                         <span className="block text-[8px] font-black uppercase tracking-widest text-orange-400">Regras de Validação</span>
                         <ul className="text-[9.5px] text-slate-350 leading-relaxed font-mono list-disc list-inside space-y-1">
                           <li>Preço nunca será menor que R$ 1,00.</li>
                           <li>Preços sofrem arredondamento de 2 casas decimais.</li>
                           <li>Aparece de forma nativa no site (reajuste interno, sem tags de desconto ou promoção).</li>
+                          <li><strong>Resetar Preços:</strong> Restaura o preço de todos os pneus filtrados para o valor original do primeiro cadastro ou edição individual.</li>
                         </ul>
                       </div>
                     </div>

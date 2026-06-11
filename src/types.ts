@@ -39,6 +39,7 @@ export interface Product {
   groove_depth?: string;
   inmetro_label_url?: string;
   slug?: string;
+  original_price?: number;
 }
 
 export type AppRoute =

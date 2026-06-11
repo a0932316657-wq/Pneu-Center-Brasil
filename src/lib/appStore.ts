@@ -404,7 +404,8 @@ function mapProductFromRow(row: any): Product {
     letter_color: row.letter_color || '',
     groove_depth: row.groove_depth || '',
     inmetro_label_url: row.inmetro_label_url || '',
-    slug: row.slug || ''
+    slug: row.slug || '',
+    original_price: (row.original_price != null && row.original_price !== '') ? Number(row.original_price) : undefined
   };
 }
 
@@ -448,7 +449,8 @@ function buildProductPayload(p: Product): any {
     letter_color: p.letter_color || '',
     groove_depth: p.groove_depth || '',
     inmetro_label_url: p.inmetro_label_url || '',
-    slug: p.slug || ''
+    slug: p.slug || '',
+    original_price: p.original_price
   };
 }
 
@@ -1066,7 +1068,7 @@ export async function saveProductDb(product: Product): Promise<Product> {
           'speed_index', 'max_speed', 'compatible_rims', 'width_mm',
           'diameter_mm', 'treadwear', 'traction', 'temperature',
           'runflat', 'extra_load', 'rim_protector', 'ply_quantity',
-          'mounting', 'letter_color', 'groove_depth', 'inmetro_label_url', 'slug'
+          'mounting', 'letter_color', 'groove_depth', 'inmetro_label_url', 'slug', 'original_price'
         ];
         technicalKeys.forEach(k => {
           delete stripped[k];
