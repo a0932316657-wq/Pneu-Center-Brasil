@@ -30,7 +30,8 @@ import {
   ChevronRight,
   Award,
   Film,
-  RefreshCw
+  RefreshCw,
+  CheckSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MediaRenderer } from './MediaRenderer';
@@ -253,6 +254,10 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
   // Delete Confirmation ID Modal
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Selection and Bulk Deletion states
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Filter products for the admin dashboard list
   const filteredAdminProducts = productsList.filter((prod) => {
@@ -883,12 +888,44 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       onRefreshPublicData();
       triggerFeedback('Pneu excluído definitivamente com sucesso!');
       setConfirmDeleteId(null);
+      // Remove from selected list if present
+      setSelectedProductIds(prev => prev.filter(selId => selId !== id));
       syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
     } catch (err: any) {
       console.error(err);
       triggerFeedback(`Erro ao deletar produto definitivamente: ${err.message || err}`, 'error');
     } finally {
       setIsDeletingProduct(false);
+    }
+  };
+
+  const handleBulkDeleteProducts = async () => {
+    if (selectedProductIds.length === 0) {
+      triggerFeedback('Nenhum pneu selecionado para exclusão.', 'error');
+      return;
+    }
+    if (!(await checkAuth())) return;
+
+    const confirmMsg = `Tem certeza que deseja excluir DEFINITIVAMENTE ${selectedProductIds.length} pneu(s) selecionado(s)? Esta ação é irreversível e excluirá as informações de forma permanente tanto no banco quanto localmente!`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsBulkDeleting(true);
+    let deletedCount = 0;
+    try {
+      for (const id of selectedProductIds) {
+        await deleteProductDb(id);
+        deletedCount++;
+      }
+      triggerFeedback(`Sucesso! ${deletedCount} pneu(s) foi/foram excluído(s) definitivamente.`);
+      setSelectedProductIds([]);
+      setProductsList(getProducts());
+      onRefreshPublicData();
+      syncFromSupabase().catch(err => console.warn('Background sync failed:', err));
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao deletar pneu(s) em massa: ${err.message || err}`, 'error');
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -2769,6 +2806,28 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                 <table className="min-w-full divide-y divide-slate-100 text-left text-sm font-sans hidden md:table">
                   <thead className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider border-b border-slate-100">
                     <tr>
+                      <th className="px-6 py-4.5 w-12 text-center select-none">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-orange-600 focus:ring-orange-550 h-4.5 w-4.5 cursor-pointer accent-orange-500"
+                          checked={
+                            filteredAdminProducts.length > 0 &&
+                            filteredAdminProducts.every(p => selectedProductIds.includes(p.id))
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const visibleIds = filteredAdminProducts.map(p => p.id);
+                              setSelectedProductIds(prev => {
+                                const combined = new Set([...prev, ...visibleIds]);
+                                return Array.from(combined);
+                              });
+                            } else {
+                              const visibleIds = filteredAdminProducts.map(p => p.id);
+                              setSelectedProductIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                            }
+                          }}
+                        />
+                      </th>
                       <th className="px-6 py-4.5">Foto</th>
                       <th className="px-6 py-4.5">Pneu / Marca</th>
                       <th className="px-6 py-4.5">Medida / Aro</th>
@@ -2780,13 +2839,32 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   <tbody className="divide-y divide-slate-100 text-slate-650">
                     {filteredAdminProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="text-center py-12 text-slate-400 font-sans">
+                        <td colSpan={7} className="text-center py-12 text-slate-400 font-sans">
                           Nenhum pneu encontrado com os filtros selecionados.
                         </td>
                       </tr>
                     ) : (
                       filteredAdminProducts.map((prod) => (
-                        <tr key={prod.id} className="hover:bg-slate-50/50 transition-colors">
+                        <tr 
+                          key={prod.id} 
+                          className={`hover:bg-slate-50/50 transition-colors ${
+                            selectedProductIds.includes(prod.id) ? 'bg-orange-50/30 font-semibold' : ''
+                          }`}
+                        >
+                          <td className="px-6 py-4 text-center select-none">
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300 text-orange-600 focus:ring-orange-550 h-4.5 w-4.5 cursor-pointer accent-orange-500"
+                              checked={selectedProductIds.includes(prod.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedProductIds(prev => [...prev, prod.id]);
+                                } else {
+                                  setSelectedProductIds(prev => prev.filter(id => id !== prod.id));
+                                }
+                              }}
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <div className="h-12 w-16 rounded border bg-checkerboard overflow-hidden flex items-center justify-center">
                               <img src={prod.image || null} alt={prod.name} className="h-full w-full object-contain p-1" />
@@ -2864,89 +2942,200 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   </tbody>
                 </table>
 
-                {/* Mobile list representation for cards */}
-                <div className="block md:hidden divide-y divide-slate-100">
-                  {filteredAdminProducts.length === 0 ? (
-                    <div className="text-center py-10 text-slate-400 font-sans text-xs">
-                      Nenhum pneu encontrado com os filtros selecionados.
+                 {/* Mobile list representation for cards */}
+                <div className="block md:hidden">
+                  {filteredAdminProducts.length > 0 && (
+                    <div className="bg-slate-50 border-b border-slate-150 px-4 py-3 flex items-center justify-between text-xs font-sans">
+                      <label className="flex items-center gap-2.5 text-slate-650 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-orange-600 focus:ring-orange-550 h-4.5 w-4.5 cursor-pointer accent-orange-500"
+                          checked={
+                            filteredAdminProducts.length > 0 &&
+                            filteredAdminProducts.every(p => selectedProductIds.includes(p.id))
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const visibleIds = filteredAdminProducts.map(p => p.id);
+                              setSelectedProductIds(prev => {
+                                const combined = new Set([...prev, ...visibleIds]);
+                                return Array.from(combined);
+                              });
+                            } else {
+                              const visibleIds = filteredAdminProducts.map(p => p.id);
+                              setSelectedProductIds(prev => prev.filter(id => !visibleIds.includes(id)));
+                            }
+                          }}
+                        />
+                        <span className="font-bold text-slate-700">Selecionar tudo ({filteredAdminProducts.length})</span>
+                      </label>
+                      {selectedProductIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProductIds([])}
+                          className="text-[10px] font-extrabold uppercase text-orange-600 hover:text-orange-700 tracking-wider"
+                        >
+                          Limpar ({selectedProductIds.length})
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    filteredAdminProducts.map((prod) => (
-                      <div key={prod.id} className="p-4 space-y-4 font-sans">
-                        <div className="flex gap-3">
-                          <div className="h-16 w-20 rounded border bg-checkerboard overflow-hidden flex items-center justify-center shrink-0">
-                            <img src={prod.image || null} alt={prod.name} className="h-full w-full object-contain p-1" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between mb-0.5">
-                              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{prod.brand}</span>
-                              <span className="font-mono text-[10px] font-bold text-slate-500">Aro {prod.rim}</span>
-                            </div>
-                            <h4 className="font-bold text-slate-800 text-sm truncate">{prod.name}</h4>
-                            <span className="block font-mono text-xs font-bold text-slate-600 mt-1">{prod.measure}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-50">
-                          <div>
-                            <span className="block text-[9px] text-slate-400 font-bold uppercase">Preço</span>
-                            {prod.priceStatus === 'exibir' && prod.price ? (
-                              <strong className="text-slate-800 font-bold font-mono">
-                                R$ {prod.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </strong>
-                            ) : (
-                              <span className="text-[9px] font-extrabold text-slate-450 uppercase font-mono">Sob Consulta</span>
-                            )}
-                          </div>
-                          <div>
-                            <span className="block text-[9px] text-slate-400 font-bold uppercase text-right">Status</span>
-                            <span className="text-[11px] font-medium text-slate-600 block text-right">{prod.status}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="block text-[9px] text-slate-400 font-bold uppercase text-right">Filtros</span>
-                            <div className="flex items-center gap-1.5 justify-end">
-                              {prod.active !== false ? (
-                                <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[8px] font-extrabold text-emerald-700 uppercase border border-emerald-150">Ativo</span>
-                              ) : (
-                                <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-extrabold text-slate-500 uppercase border border-slate-250">Inativo</span>
-                              )}
-                              {prod.featured && (
-                                <span className="inline-block rounded-full bg-orange-50 px-2 py-0.5 text-[8px] font-extrabold text-orange-700 uppercase border border-orange-150">Destaque</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                          <button
-                            onClick={() => toggleProductActive(prod)}
-                            className={`flex-1 py-2 font-bold text-[10px] uppercase border rounded select-none block text-center cursor-pointer transition-all ${
-                              prod.active !== false
-                                ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800'
-                                : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-250 text-emerald-800'
-                            }`}
-                          >
-                            {prod.active !== false ? 'Desativar' : 'Ativar'}
-                          </button>
-                          <button
-                            onClick={() => initProductForm(prod)}
-                            className="flex-1 py-2 font-bold text-[10px] uppercase bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded select-none block text-center cursor-pointer transition-all"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteId(prod.id)}
-                            className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded cursor-pointer"
-                          >
-                            <Trash2 className="h-4.5 w-4.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
                   )}
+
+                  <div className="divide-y divide-slate-100">
+                    {filteredAdminProducts.length === 0 ? (
+                      <div className="text-center py-10 text-slate-400 font-sans text-xs">
+                        Nenhum pneu encontrado com os filtros selecionados.
+                      </div>
+                    ) : (
+                      filteredAdminProducts.map((prod) => (
+                        <div 
+                          key={prod.id} 
+                          className={`p-4 space-y-4 font-sans transition-colors ${
+                            selectedProductIds.includes(prod.id) ? 'bg-orange-50/10' : ''
+                          }`}
+                        >
+                          <div className="flex gap-3 items-start">
+                            <div className="flex items-center h-16 mr-1 select-none">
+                              <input
+                                type="checkbox"
+                                className="rounded border-slate-300 text-orange-600 focus:ring-orange-550 h-4.5 w-4.5 cursor-pointer accent-orange-500"
+                                checked={selectedProductIds.includes(prod.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedProductIds(prev => [...prev, prod.id]);
+                                  } else {
+                                    setSelectedProductIds(prev => prev.filter(id => id !== prod.id));
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="h-16 w-20 rounded border bg-checkerboard overflow-hidden flex items-center justify-center shrink-0">
+                              <img src={prod.image || null} alt={prod.name} className="h-full w-full object-contain p-1" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{prod.brand}</span>
+                                <span className="font-mono text-[10px] font-bold text-slate-500">Aro {prod.rim}</span>
+                              </div>
+                              <h4 className="font-bold text-slate-800 text-sm truncate">{prod.name}</h4>
+                              <span className="block font-mono text-xs font-bold text-slate-600 mt-1">{prod.measure}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-50">
+                            <div>
+                              <span className="block text-[9px] text-slate-400 font-bold uppercase">Preço</span>
+                              {prod.priceStatus === 'exibir' && prod.price ? (
+                                <strong className="text-slate-800 font-bold font-mono">
+                                  R$ {prod.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </strong>
+                              ) : (
+                                <span className="text-[9px] font-extrabold text-slate-450 uppercase font-mono">Sob Consulta</span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="block text-[9px] text-slate-400 font-bold uppercase text-right">Status</span>
+                              <span className="text-[11px] font-medium text-slate-600 block text-right">{prod.status}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="block text-[9px] text-slate-400 font-bold uppercase text-right">Filtros</span>
+                              <div className="flex items-center gap-1.5 justify-end">
+                                {prod.active !== false ? (
+                                  <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[8px] font-extrabold text-emerald-700 uppercase border border-emerald-150">Ativo</span>
+                                ) : (
+                                  <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-extrabold text-slate-500 uppercase border border-slate-250">Inativo</span>
+                                )}
+                                {prod.featured && (
+                                  <span className="inline-block rounded-full bg-orange-50 px-2 py-0.5 text-[8px] font-extrabold text-orange-700 uppercase border border-orange-150">Destaque</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                            <button
+                              onClick={() => toggleProductActive(prod)}
+                              className={`flex-1 py-2 font-bold text-[10px] uppercase border rounded select-none block text-center cursor-pointer transition-all ${
+                                prod.active !== false
+                                  ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800'
+                                  : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-250 text-emerald-800'
+                              }`}
+                            >
+                              {prod.active !== false ? 'Desativar' : 'Ativar'}
+                            </button>
+                            <button
+                              onClick={() => initProductForm(prod)}
+                              className="flex-1 py-2 font-bold text-[10px] uppercase bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded select-none block text-center cursor-pointer transition-all"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(prod.id)}
+                              className="p-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded cursor-pointer"
+                            >
+                              <Trash2 className="h-4.5 w-4.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Sticky / Floating Bulk Actions Banner */}
+            <AnimatePresence>
+              {selectedProductIds.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  className="sticky bottom-4 z-40 bg-slate-900 border border-slate-750 text-white rounded-xl shadow-xl px-4 py-3.5 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 my-5 backdrop-blur-md"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-orange-500/10 text-orange-400 p-2 rounded-lg border border-orange-500/20">
+                      <CheckSquare className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-bold text-white font-sans">
+                        {selectedProductIds.length} {selectedProductIds.length === 1 ? 'pneu selecionado' : 'pneus selecionados'}
+                      </h5>
+                      <p className="text-[11px] text-slate-400 font-sans">
+                        Selecione as ações em lote disponíveis para aplicar nos itens marcados.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => setSelectedProductIds([])}
+                      type="button"
+                      className="flex-1 sm:flex-initial text-slate-300 hover:text-white px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-lg border border-slate-700 hover:bg-slate-800 transition-all cursor-pointer"
+                    >
+                      Desmarcar Todos
+                    </button>
+                    <button
+                      onClick={handleBulkDeleteProducts}
+                      disabled={isBulkDeleting}
+                      type="button"
+                      className="flex-1 sm:flex-initial bg-red-650 hover:bg-red-600 text-white px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-lg hover:shadow-lg disabled:bg-slate-800 disabled:text-slate-500 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isBulkDeleting ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
+                          Excluindo...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-3.5 w-3.5 text-white" />
+                          Excluir Selecionados
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Delete Confirmation Dialog */}
             <AnimatePresence>
