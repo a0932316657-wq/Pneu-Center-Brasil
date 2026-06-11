@@ -57,7 +57,8 @@ export type AppRoute =
   | 'politica-entrega'
   | 'politica-trocas'
   | 'politica-garantia'
-  | 'paineladmin';
+  | 'paineladmin'
+  | 'presell';
 
 export interface RouteState {
   path: AppRoute;
@@ -75,4 +76,39 @@ export interface ContactFormInput {
 export interface FAQItem {
   question: string;
   answer: string;
+}
+
+export interface PresellSettings {
+  id?: string;
+  hero_title: string;
+  hero_subtitle: string;
+  hero_button_text: string;
+  hero_whatsapp_message: string;
+  hero_media_url?: string;
+  hero_media_type?: string; 
+  background_image_url?: string;
+  notice_text: string;
+  mobile_fixed_button: boolean;
+  active: boolean;
+}
+
+export interface PresellRimCard {
+  id: string;
+  title: string;
+  rim?: string;
+  subtitle?: string;
+  image_url?: string;
+  button_text?: string;
+  whatsapp_message?: string;
+  active: boolean;
+  sort_order: number;
+}
+
+export interface PresellBrandCard {
+  id: string;
+  brand_name: string;
+  logo_url?: string;
+  whatsapp_message?: string;
+  active: boolean;
+  sort_order: number;
 }

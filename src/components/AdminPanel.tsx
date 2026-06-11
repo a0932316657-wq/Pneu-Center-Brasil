@@ -31,11 +31,12 @@ import {
   Award,
   Film,
   RefreshCw,
-  CheckSquare
+  CheckSquare,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MediaRenderer } from './MediaRenderer';
-import { Product } from '../types';
+import { Product, PresellSettings, PresellRimCard, PresellBrandCard } from '../types';
 import { 
   getProducts, 
   saveProducts, 
@@ -69,7 +70,18 @@ import {
   saveRimInmetroSealDb,
   migrateLocalMediaToSupabase,
   getRimMediaSettings,
-  fetchRimMediaSettingsDb
+  fetchRimMediaSettingsDb,
+  getPresellSettings,
+  savePresellSettingsLocal,
+  savePresellSettingsDb,
+  getPresellRimCards,
+  savePresellRimCardsLocal,
+  savePresellRimCardDb,
+  deletePresellRimCardDb,
+  getPresellBrandCards,
+  savePresellBrandCardsLocal,
+  savePresellBrandCardDb,
+  deletePresellBrandCardDb
 } from '../lib/appStore';
 import { supabase, uploadFile, uploadMedia, isSupabaseUrlAbsent, isSupabaseKeyAbsent } from '../lib/supabaseClient';
 import { BRANDS } from '../data';
@@ -108,7 +120,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Dashboard navigation tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'aboutCompany' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image' | 'bulkMedia'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'add-product' | 'logo-identity' | 'site-settings' | 'aboutCompany' | 'marcas' | 'cards-do-aro' | 'import-export' | 'hero-image' | 'bulkMedia' | 'presell-campanha'>('overview');
   
   // App states loaded from store
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -216,6 +228,27 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
   // Form states for custom logo
   const [tempLogo, setTempLogo] = useState<string | null>(null);
+
+  // --- PRESELL / CAMPAIGN STATE HOOKS ---
+  const [presellHeroTitle, setPresellHeroTitle] = useState('');
+  const [presellHeroSubtitle, setPresellHeroSubtitle] = useState('');
+  const [presellHeroButtonText, setPresellHeroButtonText] = useState('');
+  const [presellHeroWhatsappMessage, setPresellHeroWhatsappMessage] = useState('');
+  const [presellHeroMediaUrl, setPresellHeroMediaUrl] = useState('');
+  const [presellHeroMediaType, setPresellHeroMediaType] = useState<'image' | 'video'>('image');
+  const [presellBackgroundUrl, setPresellBackgroundUrl] = useState('');
+  const [presellNoticeText, setPresellNoticeText] = useState('');
+  const [presellMobileFixedBtn, setPresellMobileFixedBtn] = useState(true);
+
+  const [presellRimCardsList, setPresellRimCardsList] = useState<PresellRimCard[]>([]);
+  const [presellBrandCardsList, setPresellBrandCardsList] = useState<PresellBrandCard[]>([]);
+
+  // Active form state managers
+  const [editingPresellRimCard, setEditingPresellRimCard] = useState<Partial<PresellRimCard> | null>(null);
+  const [editingPresellBrandCard, setEditingPresellBrandCard] = useState<Partial<PresellBrandCard> | null>(null);
+  const [isSavingPresellSettings, setIsSavingPresellSettings] = useState(false);
+  const [isSavingPresellRimCard, setIsSavingPresellRimCard] = useState(false);
+  const [isSavingPresellBrand, setIsSavingPresellBrand] = useState(false);
 
   // Status notification messaging
   const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -349,6 +382,23 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setCurrentLogo(getLogo());
     setBrandsList(getBrands());
     setRimCardsList(getRimCards());
+
+    // Load initial campaign configurations
+    const initPresellSettings = () => {
+      const pSet = getPresellSettings();
+      setPresellHeroTitle(pSet.hero_title);
+      setPresellHeroSubtitle(pSet.hero_subtitle);
+      setPresellHeroButtonText(pSet.hero_button_text);
+      setPresellHeroWhatsappMessage(pSet.hero_whatsapp_message);
+      setPresellHeroMediaUrl(pSet.hero_media_url || '');
+      setPresellHeroMediaType(pSet.hero_media_type || 'image');
+      setPresellBackgroundUrl(pSet.background_image_url || '');
+      setPresellNoticeText(pSet.notice_text);
+      setPresellMobileFixedBtn(pSet.mobile_fixed_button !== false);
+    };
+    initPresellSettings();
+    setPresellRimCardsList(getPresellRimCards());
+    setPresellBrandCardsList(getPresellBrandCards());
     
     // Fetch rim media settings directly from Supabase on load
     fetchRimMediaSettingsDb().then(() => {
@@ -362,15 +412,30 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       setRimDefaultMediaState(getRimDefaultMedia());
       setRimInmetroSealsState(getRimInmetroSeals());
     };
+    const handlePresellSettingsUpdate = () => {
+      initPresellSettings();
+    };
+    const handlePresellRimsUpdate = () => {
+      setPresellRimCardsList(getPresellRimCards());
+    };
+    const handlePresellBrandsUpdate = () => {
+      setPresellBrandCardsList(getPresellBrandCards());
+    };
 
     window.addEventListener('pneu_center_rim_default_media_updated', handleMediaUpdate);
     window.addEventListener('pneu_center_rim_inmetro_seals_updated', handleSealsUpdate);
     window.addEventListener('pneu_center_rim_media_settings_updated', handleMediaSettingsUpdate);
+    window.addEventListener('pneu_center_presell_settings_updated', handlePresellSettingsUpdate);
+    window.addEventListener('pneu_center_presell_rim_cards_updated', handlePresellRimsUpdate);
+    window.addEventListener('pneu_center_presell_brand_cards_updated', handlePresellBrandsUpdate);
 
     return () => {
       window.removeEventListener('pneu_center_rim_default_media_updated', handleMediaUpdate);
       window.removeEventListener('pneu_center_rim_inmetro_seals_updated', handleSealsUpdate);
       window.removeEventListener('pneu_center_rim_media_settings_updated', handleMediaSettingsUpdate);
+      window.removeEventListener('pneu_center_presell_settings_updated', handlePresellSettingsUpdate);
+      window.removeEventListener('pneu_center_presell_rim_cards_updated', handlePresellRimsUpdate);
+      window.removeEventListener('pneu_center_presell_brand_cards_updated', handlePresellBrandsUpdate);
     };
   }, []);
 
@@ -2352,6 +2417,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               { id: 'aboutCompany', label: 'Sobre a Empresa', icon: Info },
               { id: 'site-settings', label: 'Configurações do Site', icon: SettingsIcon },
               { id: 'hero-image', label: 'Imagem de Destaque', icon: Sparkles },
+              { id: 'presell-campanha', label: 'Presell / Página de Campanha', icon: MessageSquare },
             ].map((btn) => {
               const Icon = btn.icon;
               const isSel = activeTab === btn.id;
@@ -5840,6 +5906,757 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
 
             </motion.div>
           )}
+
+        {/* 13. PRESELL CAMPAIGN PANEL SECTION */}
+        {activeTab === 'presell-campanha' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6 animate-fade-in text-slate-800"
+          >
+            <div>
+              <h1 id="tab-presell-campanha-title" className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                <MessageSquare className="h-7 w-7 text-orange-500" />
+                Página Presell para Campanhas
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Configure e personalize a página de vendas consultivas e conversão focada 100% em WhatsApp (<code className="bg-slate-100 text-orange-650 px-1 py-0.5 rounded font-bold">#/presell</code>).
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
+              
+              {/* Left Form: Gerenciador de Configurações Gerais */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* 1. CONFIGURAÇÕES GERAIS FORM */}
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setIsSavingPresellSettings(true);
+                    try {
+                      const payload: PresellSettings = {
+                        hero_title: presellHeroTitle,
+                        hero_subtitle: presellHeroSubtitle,
+                        hero_button_text: presellHeroButtonText,
+                        hero_whatsapp_message: presellHeroWhatsappMessage,
+                        hero_media_url: presellHeroMediaUrl,
+                        hero_media_type: presellHeroMediaType,
+                        background_image_url: presellBackgroundUrl,
+                        notice_text: presellNoticeText,
+                        mobile_fixed_button: presellMobileFixedBtn,
+                        active: true
+                      };
+                      await savePresellSettingsDb(payload);
+                      triggerFeedback('Configurações gerais da Presell salvas com sucesso!', 'success');
+                    } catch (err) {
+                      console.error(err);
+                      triggerFeedback('Erro ao salvar as configurações gerais. Verifique o console.', 'error');
+                    } finally {
+                      setIsSavingPresellSettings(false);
+                    }
+                  }} 
+                  className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5"
+                >
+                  <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 border-b border-slate-100 pb-2 uppercase tracking-wide">
+                    <SettingsIcon className="h-4.5 w-4.5 text-orange-500" />
+                    1. Conteúdo do Banner e Hero Principal
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Título do Destaque (Hero Title)</label>
+                      <input 
+                        type="text" 
+                        value={presellHeroTitle} 
+                        onChange={(e) => setPresellHeroTitle(e.target.value)} 
+                        required
+                        placeholder="Ex: QUER ECONOMIZAR ATÉ 40% EM PNEUS NOVOS PARA SEU CARRO?"
+                        className="w-full bg-slate-50 border border-slate-250 rounded-lg py-2 px-3 text-xs font-semibold text-slate-850"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Subtítulo de Apoio (Hero Subtitle)</label>
+                      <textarea 
+                        value={presellHeroSubtitle} 
+                        onChange={(e) => setPresellHeroSubtitle(e.target.value)} 
+                        rows={3}
+                        required
+                        placeholder="Ex: Encontre todos os aros de pneus esportivos e convencionais no canal oficial consultivo."
+                        className="w-full bg-slate-50 border border-slate-250 rounded-lg py-2 px-3 text-xs font-semibold text-slate-850"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Texto do Botão Principal (CTA)</label>
+                      <input 
+                        type="text" 
+                        value={presellHeroButtonText} 
+                        onChange={(e) => setPresellHeroButtonText(e.target.value)} 
+                        required
+                        placeholder="Ex: Consultar Pneus no WhatsApp"
+                        className="w-full bg-slate-50 border border-slate-250 rounded-lg py-2 px-3 text-xs font-semibold text-slate-850"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Mensagem WhatsApp Principal</label>
+                      <input 
+                        type="text" 
+                        value={presellHeroWhatsappMessage} 
+                        onChange={(e) => setPresellHeroWhatsappMessage(e.target.value)} 
+                        required
+                        placeholder="Ex: Olá, gostaria de consultar pneus para meu carro."
+                        className="w-full bg-slate-50 border border-slate-250 rounded-lg py-2 px-3 text-xs font-semibold text-slate-850"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Tipo da Mídia de Destaque</label>
+                      <select 
+                        value={presellHeroMediaType} 
+                        onChange={(e) => setPresellHeroMediaType(e.target.value as any)} 
+                        className="w-full bg-slate-50 border border-slate-250 rounded-lg py-2 px-3 text-xs font-semibold text-slate-850"
+                      >
+                        <option value="image">Imagem Estática</option>
+                        <option value="video">Vídeo Loop</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">URL da Mídia de Destaque (Opcional)</label>
+                      <input 
+                        type="url" 
+                        value={presellHeroMediaUrl} 
+                        onChange={(e) => setPresellHeroMediaUrl(e.target.value)} 
+                        placeholder="Em branco para usar pneu 3D padrão"
+                        className="w-full bg-slate-50 border border-slate-250 rounded-lg py-2 px-3 text-xs font-semibold text-slate-850"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Texto Pequeno de Aviso (Compliance Notice)</label>
+                      <textarea 
+                        value={presellNoticeText} 
+                        onChange={(e) => setPresellNoticeText(e.target.value)} 
+                        rows={2}
+                        required
+                        placeholder="Ex: Conforme regras do Código de Defesa do Consumidor, informamos que este e-commerce funciona como catálogo informativo..."
+                        className="w-full bg-slate-50 border border-slate-250 rounded-lg py-2 px-3 text-xs font-semibold text-slate-850"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <input 
+                          type="checkbox" 
+                          id="fixed-mobile-c"
+                          checked={presellMobileFixedBtn} 
+                          onChange={(e) => setPresellMobileFixedBtn(e.target.checked)} 
+                          className="h-4 w-4 text-orange-500 accent-orange-500 border-slate-300 rounded"
+                        />
+                        <label htmlFor="fixed-mobile-c" className="text-xs text-slate-700 font-bold uppercase select-none cursor-pointer">
+                          Exibir Botão WhatsApp Fixo no Mobile (Rodapé Sticky)
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isSavingPresellSettings}
+                      className="bg-orange-500 hover:bg-orange-450 disabled:bg-slate-300 text-slate-950 font-extrabold text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition-colors cursor-pointer"
+                    >
+                      {isSavingPresellSettings ? 'Salvando...' : 'Salvar Configurações Gerais'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* 2. CARDS DE ARO MANAGER */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3 flex-wrap">
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase tracking-wide">
+                        <Database className="h-4.5 w-4.5 text-orange-500" />
+                        2. Cards de Aro da Presell (Proporção 1:1)
+                      </h3>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Cada card representa uma opção de aro (13 ao 18) com link rápido e direto para consultoria.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingPresellRimCard({
+                        title: 'Pneus Aro 15 em Oferta',
+                        rim: '15',
+                        subtitle: 'Excelente estabilidade e aderência comprovada nas pistas.',
+                        image_url: '',
+                        button_text: 'Orçar Aro 15 no WhatsApp',
+                        whatsapp_message: 'Olá, gostaria de receber cotação dos pneus aro 15 disponíveis.',
+                        active: true,
+                        sort_order: presellRimCardsList.length
+                      })}
+                      className="bg-slate-900 text-white hover:bg-slate-800 text-[10px] font-black uppercase tracking-wider py-2 px-3 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Plus className="h-4 w-4" /> Add Aro Card
+                    </button>
+                  </div>
+
+                  {/* Rim card dynamic overlay modifier form */}
+                  {editingPresellRimCard && (
+                    <form 
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!editingPresellRimCard.title) return;
+                        setIsSavingPresellRimCard(true);
+                        try {
+                          const payload: PresellRimCard = {
+                            id: editingPresellRimCard.id,
+                            title: editingPresellRimCard.title,
+                            rim: editingPresellRimCard.rim || '',
+                            subtitle: editingPresellRimCard.subtitle || '',
+                            image_url: editingPresellRimCard.image_url || '',
+                            button_text: editingPresellRimCard.button_text || '',
+                            whatsapp_message: editingPresellRimCard.whatsapp_message || '',
+                            active: editingPresellRimCard.active !== false,
+                            sort_order: Number(editingPresellRimCard.sort_order) || 0
+                          };
+                          await savePresellRimCardDb(payload);
+                          setPresellRimCardsList(getPresellRimCards());
+                          setEditingPresellRimCard(null);
+                          triggerFeedback('Card de Aro atualizado com sucesso!', 'success');
+                        } catch (err) {
+                          console.error(err);
+                          triggerFeedback('Erro ao salvar o card de aro. Verifique as tabelas do Supabase.', 'error');
+                        } finally {
+                          setIsSavingPresellRimCard(false);
+                        }
+                      }}
+                      className="bg-slate-50 border border-slate-205 rounded-xl p-5 space-y-4 animate-fade-in"
+                    >
+                      <div className="flex justify-between items-center bg-slate-200/50 p-2.5 rounded-lg">
+                        <span className="text-xs text-slate-800 font-extrabold uppercase">
+                          {editingPresellRimCard.id ? 'Editar Card de Aro' : 'Novo Card de Aro'}
+                        </span>
+                        <button 
+                          type="button" 
+                          onClick={() => setEditingPresellRimCard(null)} 
+                          className="p-1 hover:bg-slate-300 rounded text-slate-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Título do Card</label>
+                          <input 
+                            type="text" 
+                            value={editingPresellRimCard.title || ''} 
+                            onChange={(e) => setEditingPresellRimCard({...editingPresellRimCard, title: e.target.value})}
+                            required
+                            placeholder="Ex: Pneus Aro 14 em Oferta"
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Aro Correspondente (Ex: 14, 15, 17)</label>
+                          <input 
+                            type="text" 
+                            value={editingPresellRimCard.rim || ''} 
+                            onChange={(e) => setEditingPresellRimCard({...editingPresellRimCard, rim: e.target.value})}
+                            required
+                            placeholder="Ex: 14"
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Subtítulo Descritivo</label>
+                          <input 
+                            type="text" 
+                            value={editingPresellRimCard.subtitle || ''} 
+                            onChange={(e) => setEditingPresellRimCard({...editingPresellRimCard, subtitle: e.target.value})}
+                            placeholder="Ex: Alta performance e custo benefício excelente."
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">URL da Imagem Proporção 1:1</label>
+                          <input 
+                            type="url" 
+                            value={editingPresellRimCard.image_url || ''} 
+                            onChange={(e) => setEditingPresellRimCard({...editingPresellRimCard, image_url: e.target.value})}
+                            placeholder="Em branco para símbolo de aro padrão"
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Texto do Botão</label>
+                          <input 
+                            type="text" 
+                            value={editingPresellRimCard.button_text || ''} 
+                            onChange={(e) => setEditingPresellRimCard({...editingPresellRimCard, button_text: e.target.value})}
+                            placeholder="Ex: Consultar Aro 14"
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Mensagem WhatsApp Customizada</label>
+                          <input 
+                            type="text" 
+                            value={editingPresellRimCard.whatsapp_message || ''} 
+                            onChange={(e) => setEditingPresellRimCard({...editingPresellRimCard, whatsapp_message: e.target.value})}
+                            required
+                            placeholder="Ex: Olá, quero falar com um especialista sobre pneus aro 14."
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Ordem de Exibição (Sort Order)</label>
+                          <input 
+                            type="number" 
+                            value={editingPresellRimCard.sort_order || 0} 
+                            onChange={(e) => setEditingPresellRimCard({...editingPresellRimCard, sort_order: parseInt(e.target.value) || 0})}
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5 pt-6 flex items-center gap-2">
+                          <input 
+                            type="checkbox" 
+                            id="rim-card-active-c"
+                            checked={editingPresellRimCard.active !== false} 
+                            onChange={(e) => setEditingPresellRimCard({...editingPresellRimCard, active: e.target.checked})}
+                            className="h-4 w-4 text-orange-500 accent-orange-500 border-slate-300 rounded"
+                          />
+                          <label htmlFor="rim-card-active-c" className="text-xs text-slate-700 font-bold uppercase select-none cursor-pointer">Card Ativo / Exposto</label>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 flex gap-2 justify-end">
+                        <button 
+                          type="button" 
+                          onClick={() => setEditingPresellRimCard(null)}
+                          className="bg-slate-200 hover:bg-slate-250 text-slate-800 text-[10px] font-black uppercase tracking-wider py-2.5 px-4 rounded-lg cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                        <button 
+                          type="submit" 
+                          disabled={isSavingPresellRimCard}
+                          className="bg-orange-500 hover:bg-orange-450 disabled:bg-slate-300 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2.5 px-5 rounded-lg cursor-pointer"
+                        >
+                          {isSavingPresellRimCard ? 'Salvando...' : 'Salvar Card'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Rim card listings inside table loop */}
+                  <div className="overflow-x-auto border border-slate-150 rounded-xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-150 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                          <th className="p-3">Rim / Aro</th>
+                          <th className="p-3">Título</th>
+                          <th className="p-3">WhatsApp / Ação</th>
+                          <th className="p-3 text-center">Ordem</th>
+                          <th className="p-3 text-center">Status</th>
+                          <th className="p-3 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                        {presellRimCardsList.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-6 text-center text-slate-450 font-mono italic">
+                              Nenhum card de aro cadastrado para a Presell. Clique em "Add Aro Card" acima para criar os padrões (Aro 13 a 18).
+                            </td>
+                          </tr>
+                        ) : (
+                          [...presellRimCardsList].sort((a,b) => a.sort_order - b.sort_order).map((card) => (
+                            <tr key={card.id} className="hover:bg-slate-50/50">
+                              <td className="p-3 font-bold font-mono">Aro {card.rim}</td>
+                              <td className="p-3 truncate max-w-[140px]">{card.title}</td>
+                              <td className="p-3 truncate max-w-[200px]" title={card.whatsapp_message}>
+                                <span className="bg-slate-150 font-mono text-[10px] text-slate-650 px-1.5 py-0.5 rounded truncate block">
+                                  {card.whatsapp_message}
+                                </span>
+                              </td>
+                              <td className="p-3 text-center font-mono font-bold text-slate-500">{card.sort_order}</td>
+                              <td className="p-3 text-center">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                  card.active 
+                                    ? 'bg-emerald-100 text-emerald-800' 
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {card.active ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right space-x-1.5">
+                                <button 
+                                  type="button" 
+                                  onClick={() => setEditingPresellRimCard(card)}
+                                  className="text-blue-600 hover:text-blue-800 font-black uppercase text-[10px]"
+                                >
+                                  Editar
+                                </button>
+                                <span className="text-slate-300">|</span>
+                                <button 
+                                  type="button" 
+                                  onClick={async () => {
+                                    if (!card.id) return;
+                                    if (!window.confirm('Tem certeza que deseja excluir este card de aro?')) return;
+                                    try {
+                                      await deletePresellRimCardDb(card.id);
+                                      setPresellRimCardsList(getPresellRimCards());
+                                      triggerFeedback('Card de Aro excluído com sucesso!', 'success');
+                                    } catch (err) {
+                                      console.error(err);
+                                      triggerFeedback('Erro ao remover o card.', 'error');
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-800 font-black uppercase text-[10px]"
+                                >
+                                  Excluir
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 3. MINI CARDS DE MARCA MANAGER */}
+                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3 flex-wrap">
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase tracking-wide">
+                        <Award className="h-4.5 w-4.5 text-orange-500" />
+                        3. Carrossel de Marcas da Presell
+                      </h3>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Configure as bandeiras multimarcas do portfólio que deslizam em loop infinito na landing page de campanhas.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingPresellBrandCard({
+                        brand_name: 'Pirelli',
+                        logo_url: '',
+                        whatsapp_message: 'Olá, gostaria de consultar pneus da marca Pirelli.',
+                        active: true,
+                        sort_order: presellBrandCardsList.length
+                      })}
+                      className="bg-slate-900 text-white hover:bg-slate-800 text-[10px] font-black uppercase tracking-wider py-2 px-3 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Plus className="h-4 w-4" /> Add Marca
+                    </button>
+                  </div>
+
+                  {/* Dynamic brand card overlay form */}
+                  {editingPresellBrandCard && (
+                    <form 
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!editingPresellBrandCard.brand_name) return;
+                        setIsSavingPresellBrand(true);
+                        try {
+                          const payload: PresellBrandCard = {
+                            id: editingPresellBrandCard.id,
+                            brand_name: editingPresellBrandCard.brand_name,
+                            logo_url: editingPresellBrandCard.logo_url || '',
+                            whatsapp_message: editingPresellBrandCard.whatsapp_message || '',
+                            active: editingPresellBrandCard.active !== false,
+                            sort_order: Number(editingPresellBrandCard.sort_order) || 0
+                          };
+                          await savePresellBrandCardDb(payload);
+                          setPresellBrandCardsList(getPresellBrandCards());
+                          setEditingPresellBrandCard(null);
+                          triggerFeedback('Marca salva com sucesso!', 'success');
+                        } catch (err) {
+                          console.error(err);
+                          triggerFeedback('Erro ao salvar marca da Presell no Supabase.', 'error');
+                        } finally {
+                          setIsSavingPresellBrand(false);
+                        }
+                      }}
+                      className="bg-slate-50 border border-slate-205 rounded-xl p-5 space-y-4 animate-fade-in"
+                    >
+                      <div className="flex justify-between items-center bg-slate-200/50 p-2.5 rounded-lg">
+                        <span className="text-xs text-slate-800 font-extrabold uppercase">
+                          {editingPresellBrandCard.id ? 'Editar Marca da Presell' : 'Nova Marca da Presell'}
+                        </span>
+                        <button 
+                          type="button" 
+                          onClick={() => setEditingPresellBrandCard(null)} 
+                          className="p-1 hover:bg-slate-300 rounded text-slate-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Nome da Marca</label>
+                          <input 
+                            type="text" 
+                            value={editingPresellBrandCard.brand_name || ''} 
+                            onChange={(e) => setEditingPresellBrandCard({...editingPresellBrandCard, brand_name: e.target.value})}
+                            required
+                            placeholder="Ex: Pirelli"
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">URL da Logo (Opcional)</label>
+                          <input 
+                            type="url" 
+                            value={editingPresellBrandCard.logo_url || ''} 
+                            onChange={(e) => setEditingPresellBrandCard({...editingPresellBrandCard, logo_url: e.target.value})}
+                            placeholder="Em branco para exibir círculo de letra inicial"
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Mensagem WhatsApp Customizada</label>
+                          <input 
+                            type="text" 
+                            value={editingPresellBrandCard.whatsapp_message || ''} 
+                            onChange={(e) => setEditingPresellBrandCard({...editingPresellBrandCard, whatsapp_message: e.target.value})}
+                            required
+                            placeholder="Ex: Olá, gostaria de consultar pneus da marca Pirelli."
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Ordem (Sort Order)</label>
+                          <input 
+                            type="number" 
+                            value={editingPresellBrandCard.sort_order || 0} 
+                            onChange={(e) => setEditingPresellBrandCard({...editingPresellBrandCard, sort_order: parseInt(e.target.value) || 0})}
+                            className="w-full bg-white border border-slate-250 py-1.5 px-2.5 text-xs rounded-lg font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5 pt-6 flex items-center gap-2">
+                          <input 
+                            type="checkbox" 
+                            id="brand-active-c"
+                            checked={editingPresellBrandCard.active !== false} 
+                            onChange={(e) => setEditingPresellBrandCard({...editingPresellBrandCard, active: e.target.checked})}
+                            className="h-4 w-4 text-orange-500 accent-orange-500 border-slate-300 rounded"
+                          />
+                          <label htmlFor="brand-active-c" className="text-xs text-slate-700 font-bold uppercase select-none cursor-pointer">Bandeira Ativa</label>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 flex gap-2 justify-end">
+                        <button 
+                          type="button" 
+                          onClick={() => setEditingPresellBrandCard(null)}
+                          className="bg-slate-200 hover:bg-slate-250 text-slate-800 text-[10px] font-black uppercase tracking-wider py-2.5 px-4 rounded-lg cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                        <button 
+                          type="submit" 
+                          disabled={isSavingPresellBrand}
+                          className="bg-orange-500 hover:bg-orange-450 disabled:bg-slate-300 text-slate-950 text-[10px] font-black uppercase tracking-wider py-2.5 px-5 rounded-lg cursor-pointer"
+                        >
+                          {isSavingPresellBrand ? 'Salvando...' : 'Salvar Marca'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Brand items table */}
+                  <div className="overflow-x-auto border border-slate-150 rounded-xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-150 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                          <th className="p-3">Marca</th>
+                          <th className="p-3">WhatsApp / Mensagem</th>
+                          <th className="p-3 text-center">Ordem</th>
+                          <th className="p-3 text-center">Status</th>
+                          <th className="p-3 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                        {presellBrandCardsList.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="p-6 text-center text-slate-450 font-mono italic">
+                              Nenhuma marca cadastrada. Clique em "Add Marca" acima para cadastrar (Goodyear, Michelin, Pirelli, etc.).
+                            </td>
+                          </tr>
+                        ) : (
+                          [...presellBrandCardsList].sort((a,b) => a.sort_order - b.sort_order).map((brand) => (
+                            <tr key={brand.id} className="hover:bg-slate-50/50">
+                              <td className="p-3 font-bold uppercase tracking-tight">{brand.brand_name}</td>
+                              <td className="p-3 max-w-[200px] truncate">
+                                <span className="bg-slate-150 text-[10px] text-slate-650 px-2 py-0.5 rounded block truncate">
+                                  {brand.whatsapp_message}
+                                </span>
+                              </td>
+                              <td className="p-3 text-center font-mono font-bold text-slate-500">{brand.sort_order}</td>
+                              <td className="p-3 text-center">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                  brand.active 
+                                    ? 'bg-emerald-100 text-emerald-800' 
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {brand.active ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </td>
+                              <td className="p-3 text-right space-x-1.5 font-bold uppercase text-[10px]">
+                                <button 
+                                  type="button" 
+                                  onClick={() => setEditingPresellBrandCard(brand)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                >
+                                  Editar
+                                </button>
+                                <span className="text-slate-300">|</span>
+                                <button 
+                                  type="button" 
+                                  onClick={async () => {
+                                    if (!brand.id) return;
+                                    if (!window.confirm('Excluir esta bandeira da Presell?')) return;
+                                    try {
+                                      await deletePresellBrandCardDb(brand.id);
+                                      setPresellBrandCardsList(getPresellBrandCards());
+                                      triggerFeedback('Marca excluída da presell!', 'success');
+                                    } catch (err) {
+                                      console.error(err);
+                                      triggerFeedback('Erro ao excluir marca.', 'error');
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  Excluir
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+              
+              {/* Right panel: Informações estendidas / SQL de Apoio */}
+              <div className="space-y-6">
+                
+                {/* Visualizer card */}
+                <div className="bg-[#0b1b32] text-white border border-slate-800 rounded-xl p-5 shadow-md space-y-4 font-sans select-none">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-orange-400" />
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-100">Instruções de Acesso</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                    A página de campanha foca 100% no WhatsApp. Ela removeu de forma soberana o menu de navegação, cabeçalhos, botões para o catálogo principal do site e quaisquer links externos que possam diluir o engajamento.
+                  </p>
+                  <div className="bg-[#061021] border border-slate-800 rounded-lg p-3 text-left">
+                    <span className="block text-[8px] font-black uppercase tracking-widest text-slate-500">Link Direto da Presell</span>
+                    <a 
+                      href="/#/presell" 
+                      target="_blank" 
+                      className="text-xs font-mono text-orange-400 hover:underline hover:text-orange-355 block mt-0.5 truncate"
+                    >
+                      {window.location.origin}/#/presell
+                    </a>
+                  </div>
+                </div>
+
+                {/* SQL TABLE CREATOR BOX */}
+                <div className="bg-slate-900 text-slate-100 border border-slate-800 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center gap-2 text-orange-400">
+                    <Database className="h-5 w-5" />
+                    <span className="text-xs font-black uppercase tracking-wider">Tabelas no Supabase (DDL SQL)</span>
+                  </div>
+                  
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Caso visualize erros de conexão nas tabelas da Presell, execute o DDL abaixo no painel de controle do seu banco de dados ou SQL Editor do Supabase para criá-las instantaneamente:
+                  </p>
+                  
+                  <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 font-mono text-[9px] text-slate-350 leading-relaxed max-h-[180px] overflow-y-auto select-all">
+                    {`-- Executar no SQL Editor do Supabase
+CREATE TABLE IF NOT EXISTS public.presell_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    hero_title TEXT NOT NULL,
+    hero_subtitle TEXT NOT NULL,
+    hero_button_text TEXT NOT NULL,
+    hero_whatsapp_message TEXT NOT NULL,
+    hero_media_url TEXT,
+    hero_media_type TEXT DEFAULT 'image',
+    background_image_url TEXT,
+    notice_text TEXT,
+    mobile_fixed_button BOOLEAN DEFAULT TRUE,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.presell_rim_cards (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    rim TEXT NOT NULL,
+    subtitle TEXT NOT NULL,
+    image_url TEXT,
+    button_text TEXT,
+    whatsapp_message TEXT NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.presell_brand_cards (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    brand_name TEXT NOT NULL,
+    logo_url TEXT,
+    whatsapp_message TEXT NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Habilitar leitura pública / bypass RLS
+ALTER TABLE public.presell_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.presell_rim_cards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.presell_brand_cards ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Leitura Publica Settings" ON public.presell_settings FOR SELECT USING (true);
+CREATE POLICY "Leitura Publica Rims" ON public.presell_rim_cards FOR SELECT USING (true);
+CREATE POLICY "Leitura Publica Brands" ON public.presell_brand_cards FOR SELECT USING (true);
+
+CREATE POLICY "Acesso Total Autenticado Settings" ON public.presell_settings USING (true) WITH CHECK (true);
+CREATE POLICY "Acesso Total Autenticado Rims" ON public.presell_rim_cards USING (true) WITH CHECK (true);
+CREATE POLICY "Acesso Total Autenticado Brands" ON public.presell_brand_cards USING (true) WITH CHECK (true);`}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </motion.div>
+        )}
 
       </main>
     </div>

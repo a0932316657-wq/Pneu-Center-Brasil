@@ -67,6 +67,7 @@ import {
   WarrantyPolicy
 } from './components/Policies';
 import { TrackingPage } from './components/TrackingPage';
+import PresellPage from './components/PresellPage';
 
 // WhatsApp direct messenger
 import { openWhatsAppChat, DEFAULT_WHATSAPP_MESSAGE, getProductMessage } from './lib/whatsapp';
@@ -128,7 +129,8 @@ function parseHash(): RouteState {
     'politica-entrega',
     'politica-trocas',
     'politica-garantia',
-    'paineladmin'
+    'paineladmin',
+    'presell'
   ];
 
   if (validPaths.includes(pathPart)) {
@@ -606,7 +608,7 @@ export default function App() {
     <div id="app-viewport" className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-800 selection:bg-slate-900 selection:text-white">
       
       {/* Header Bar */}
-      {routeState.path !== 'paineladmin' && <Navbar currentRoute={routeState.path} onNavigate={navigateTo} />}
+      {routeState.path !== 'paineladmin' && routeState.path !== 'presell' && <Navbar currentRoute={routeState.path} onNavigate={navigateTo} />}
 
       {/* Main Pages Content with dynamic AnimatePresence */}
       <main className="flex-grow">
@@ -2143,11 +2145,16 @@ export default function App() {
             <AdminPanel key="admin-panel" onBackToHome={() => navigateTo('home')} onRefreshPublicData={refreshStoreData} />
           )}
 
+          {/* 13. PRESELL CAMPAIGN VIEW */}
+          {!isTabTransitioning && routeState.path === 'presell' && (
+            <PresellPage key="presell-campaign" />
+          )}
+
         </AnimatePresence>
       </main>
 
       {/* Footer block */}
-      {routeState.path !== 'paineladmin' && <Footer onNavigate={navigateTo} />}
+      {routeState.path !== 'paineladmin' && routeState.path !== 'presell' && <Footer onNavigate={navigateTo} />}
 
     </div>
   );
