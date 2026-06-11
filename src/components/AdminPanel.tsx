@@ -930,7 +930,9 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
         fullDesc: prodFullDesc.trim(),
         price: parsedPrice,
         priceStatus: prodPriceStatus,
-        original_price: parsedPrice,
+        original_price: editingProduct 
+          ? (parsedPrice === editingProduct.price ? (editingProduct.original_price ?? parsedPrice) : parsedPrice)
+          : parsedPrice,
         gallery: prodGallery,
         featured: prodIsFeatured,
         active: prodIsActive,
@@ -1844,6 +1846,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
           fullDesc,
           price,
           priceStatus,
+          original_price: price !== undefined ? price : (existingProd ? existingProd.original_price : undefined),
           featured: featuredStr === 'true',
           active: activeStr !== 'false',
 

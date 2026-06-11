@@ -405,7 +405,7 @@ function mapProductFromRow(row: any): Product {
     groove_depth: row.groove_depth || '',
     inmetro_label_url: row.inmetro_label_url || '',
     slug: row.slug || '',
-    original_price: (row.original_price != null && row.original_price !== '') ? Number(row.original_price) : undefined
+    original_price: (row.original_price != null && row.original_price !== '') ? Number(row.original_price) : (priceNum > 0 ? priceNum : undefined)
   };
 }
 
