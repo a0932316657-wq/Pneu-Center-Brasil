@@ -1174,18 +1174,23 @@ export const DEFAULT_PRESELL_BRAND_CARDS: PresellBrandCard[] = [
   { id: 'bc-8', brand_name: 'Hankook', logo_url: '', whatsapp_message: 'Olá, gostaria de consultar pneus da marca Hankook.', active: true, sort_order: 8 }
 ];
 
+let presellSettingsCache: PresellSettings = DEFAULT_PRESELL_SETTINGS;
+let presellRimCardsCache: PresellRimCard[] = DEFAULT_PRESELL_RIM_CARDS;
+let presellBrandCardsCache: PresellBrandCard[] = DEFAULT_PRESELL_BRAND_CARDS;
+
 export function getPresellSettings(): PresellSettings {
   if (typeof window === 'undefined') return DEFAULT_PRESELL_SETTINGS;
   try {
     const stored = localStorage.getItem(PRESELL_SETTINGS_KEY);
-    return stored ? JSON.parse(stored) : DEFAULT_PRESELL_SETTINGS;
+    return stored ? JSON.parse(stored) : (presellSettingsCache || DEFAULT_PRESELL_SETTINGS);
   } catch (err) {
     console.error('Error getting presell settings', err);
-    return DEFAULT_PRESELL_SETTINGS;
+    return presellSettingsCache || DEFAULT_PRESELL_SETTINGS;
   }
 }
 
 export function savePresellSettingsLocal(settings: PresellSettings): void {
+  presellSettingsCache = settings;
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(PRESELL_SETTINGS_KEY, JSON.stringify(settings));
@@ -1197,65 +1202,62 @@ export function savePresellSettingsLocal(settings: PresellSettings): void {
 
 export async function savePresellSettingsDb(settings: PresellSettings): Promise<PresellSettings | null> {
   savePresellSettingsLocal(settings);
-  
-  // Map these fields back to the local SiteSettings cache and trigger update!
-  const currentSettings = getSettings();
-  const updatedSettings: SiteSettings = {
-    ...currentSettings,
-    presell_hero_title: settings.hero_title,
-    presell_hero_subtitle: settings.hero_subtitle,
-    presell_button_text: settings.hero_button_text,
-    presell_whatsapp_message: settings.hero_whatsapp_message,
-    presell_hero_media_url: settings.hero_media_url || '',
-    presell_hero_media_type: settings.hero_media_type || 'image',
-    presell_background_image_url: settings.background_image_url || '',
-    presell_notice_text: settings.notice_text,
-    mobile_fixed_button: settings.mobile_fixed_button,
-    active: settings.active
-  };
-  
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(updatedSettings));
-  window.dispatchEvent(new Event('pneu_center_settings_updated'));
 
   const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
   if (!isSupabaseConnected) return settings;
 
   try {
-    const { data: rows, error: selectErr } = await supabase.from('site_settings').select('*');
+    const { data: rows, error: selectErr } = await supabase.from('presell_settings').select('*');
     if (selectErr) throw selectErr;
 
-    // Check existing columns to avoid query failures on unmigrated structures
-    const cols = rows && rows.length > 0 ? Object.keys(rows[0]) : [];
-
-    const payload: any = {};
-    const setField = (dbField: string, val: any) => {
-      if (cols.length === 0 || cols.includes(dbField)) {
-        payload[dbField] = val;
-      }
+    const payload = {
+      hero_title: settings.hero_title,
+      hero_subtitle: settings.hero_subtitle,
+      hero_button_text: settings.hero_button_text,
+      hero_whatsapp_message: settings.hero_whatsapp_message,
+      hero_media_url: settings.hero_media_url || null,
+      hero_media_type: settings.hero_media_type || 'image',
+      background_image_url: settings.background_image_url || null,
+      notice_text: settings.notice_text || null,
+      mobile_fixed_button: settings.mobile_fixed_button !== false,
+      active: settings.active !== false
     };
-
-    setField('presell_hero_title', settings.hero_title);
-    setField('presell_hero_subtitle', settings.hero_subtitle);
-    setField('presell_button_text', settings.hero_button_text);
-    setField('presell_whatsapp_message', settings.hero_whatsapp_message);
-    setField('presell_hero_media_url', settings.hero_media_url);
-    setField('presell_hero_media_type', settings.hero_media_type);
-    setField('presell_background_image_url', settings.background_image_url);
-    setField('presell_notice_text', settings.notice_text);
 
     if (rows && rows.length > 0) {
       const rowId = rows[0].id;
-      const { error: updateErr } = await supabase.from('site_settings').update(payload).eq('id', rowId);
+      const { error: updateErr } = await supabase.from('presell_settings').update(payload).eq('id', rowId);
       if (updateErr) throw updateErr;
     } else {
-      const { error: insertErr } = await supabase.from('site_settings').insert({ id: 1, ...payload });
-      if (insertErr) throw insertErr;
+      try {
+        const { error: insertErr } = await supabase.from('presell_settings').insert({ id: 1, ...payload });
+        if (insertErr) {
+          const { error: insertErr2 } = await supabase.from('presell_settings').insert(payload);
+          if (insertErr2) throw insertErr2;
+        }
+      } catch {
+        const { error: insertErr2 } = await supabase.from('presell_settings').insert(payload);
+        if (insertErr2) throw insertErr2;
+      }
     }
 
-    // Confirmation step
-    const { data: freshRows } = await supabase.from('site_settings').select('*');
+    // Refresh settings data to secure in memory cache
+    const { data: freshRows } = await supabase.from('presell_settings').select('*');
     if (freshRows && freshRows.length > 0) {
-      console.log('site_settings re-loaded and confirmed:', freshRows[0]);
+      const row = freshRows[0];
+      const mapped = {
+        id: row.id?.toString(),
+        hero_title: row.hero_title || '',
+        hero_subtitle: row.hero_subtitle || '',
+        hero_button_text: row.hero_button_text || row.button_text || '',
+        hero_whatsapp_message: row.hero_whatsapp_message || row.whatsapp_message || '',
+        hero_media_url: row.hero_media_url || '',
+        hero_media_type: row.hero_media_type || 'image',
+        background_image_url: row.background_image_url || '',
+        notice_text: row.notice_text || '',
+        mobile_fixed_button: row.mobile_fixed_button !== false,
+        active: row.active !== false
+      };
+      savePresellSettingsLocal(mapped);
     }
   } catch (err: any) {
     console.error('Supabase savePresellSettings failed:', err);
@@ -1265,72 +1267,50 @@ export async function savePresellSettingsDb(settings: PresellSettings): Promise<
 }
 
 export function getPresellRimCards(): PresellRimCard[] {
-  const rimCards = getRimCards(); // Dynamic lookup from shared rim cards cache
-  return rimCards.map(rc => ({
-    id: rc.id,
-    title: rc.name,
-    rim: rc.rim.toString(),
-    subtitle: rc.subtitle || rc.description || '',
-    image_url: rc.image || '',
-    button_text: rc.button_text || 'FALAR COM ESPECIALISTA',
-    whatsapp_message: rc.whatsapp_message || `Olá, gostaria de consultar pneus Aro ${rc.rim}.`,
-    active: rc.active,
-    sort_order: rc.sort_order ?? rc.rim
-  })).sort((a, b) => a.sort_order - b.sort_order);
+  if (typeof window === 'undefined') return DEFAULT_PRESELL_RIM_CARDS;
+  try {
+    const stored = localStorage.getItem(PRESELL_RIM_CARDS_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {}
+  return presellRimCardsCache.length > 0 ? presellRimCardsCache : DEFAULT_PRESELL_RIM_CARDS;
 }
 
 export function savePresellRimCardsLocal(cards: PresellRimCard[]): void {
-  // Map back to standard rim cards format and save
-  const originalRims = getRimCards();
-  const updatedRims = cards.map(c => {
-    const rimNum = Number(c.rim.replace(/\D/g, '')) || 15;
-    const match = originalRims.find(or => or.id === c.id || or.rim === rimNum);
-    return {
-      id: match ? match.id : c.id,
-      name: c.title,
-      rim: rimNum,
-      image: c.image_url,
-      description: c.subtitle,
-      active: c.active,
-      subtitle: c.subtitle,
-      button_text: c.button_text,
-      whatsapp_message: c.whatsapp_message,
-      sort_order: c.sort_order
-    };
-  });
-  saveRimCards(updatedRims);
+  presellRimCardsCache = cards;
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PRESELL_RIM_CARDS_KEY, JSON.stringify(cards));
+    window.dispatchEvent(new Event('pneu_center_presell_rim_cards_updated'));
+  } catch (err) {
+    console.error('Error saving presell rim cards', err);
+  }
 }
 
 export async function savePresellRimCardDb(card: PresellRimCard): Promise<PresellRimCard> {
-  const rimNum = Number(card.rim.replace(/\D/g, '')) || 15;
-  const originalRims = getRimCards();
-  const existing = originalRims.find(rc => rc.id === card.id || rc.rim === rimNum);
-  const idToSave = existing ? existing.id : card.id;
-
-  const payload: any = {
-    title: card.title,
-    rim: rimNum,
-    image_url: card.image_url,
-    description: card.subtitle,
-    subtitle: card.subtitle,
-    button_text: card.button_text,
-    whatsapp_message: card.whatsapp_message,
-    active: card.active,
-    sort_order: card.sort_order,
-    updated_at: new Date().toISOString()
-  };
-
   const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
   let resultRow: any = null;
 
+  const payload: any = {
+    title: card.title,
+    rim: card.rim || '15',
+    image_url: card.image_url || null,
+    subtitle: card.subtitle || '',
+    button_text: card.button_text || 'FALAR COM ESPECIALISTA',
+    whatsapp_message: card.whatsapp_message || '',
+    active: card.active !== false,
+    sort_order: Number(card.sort_order) || 0
+  };
+
   if (isSupabaseConnected) {
-    const isIdReal = idToSave && (idToSave.length === 36 || !idToSave.startsWith('rc-') || !isNaN(Number(idToSave)));
-    const numericId = isIdReal && !isNaN(Number(idToSave)) ? Number(idToSave) : null;
-    const dbId = numericId !== null ? numericId : idToSave;
+    const isIdReal = card.id && (card.id.length === 36 || !card.id.startsWith('rc-') || !isNaN(Number(card.id)));
+    const numericId = isIdReal && !isNaN(Number(card.id)) ? Number(card.id) : null;
+    const dbId = numericId !== null ? numericId : card.id;
 
     if (isIdReal) {
       const { data, error } = await supabase
-        .from('rim_cards')
+        .from('presell_rim_cards')
         .update(payload)
         .eq('id', dbId)
         .select();
@@ -1344,7 +1324,7 @@ export async function savePresellRimCardDb(card: PresellRimCard): Promise<Presel
 
     if (!resultRow) {
       const { data, error } = await supabase
-        .from('rim_cards')
+        .from('presell_rim_cards')
         .insert([payload])
         .select();
       if (error) {
@@ -1355,157 +1335,133 @@ export async function savePresellRimCardDb(card: PresellRimCard): Promise<Presel
     }
   }
 
-  const mappedResult = mapRimCardFromRow(resultRow || {
-    id: idToSave,
-    title: card.title,
-    rim: rimNum,
-    image_url: card.image_url,
-    description: card.subtitle,
-    active: card.active,
-    subtitle: card.subtitle,
-    button_text: card.button_text,
-    whatsapp_message: card.whatsapp_message,
-    sort_order: card.sort_order
-  });
-
-  const otherRims = getRimCards().filter(rc => rc.id !== mappedResult.id && rc.rim !== mappedResult.rim);
-  saveRimCards([mappedResult, ...otherRims]);
-
-  return {
-    id: mappedResult.id,
-    title: mappedResult.name,
-    rim: mappedResult.rim.toString(),
-    subtitle: mappedResult.subtitle || mappedResult.description || '',
-    image_url: mappedResult.image || '',
-    button_text: mappedResult.button_text || 'FALAR COM ESPECIALISTA',
-    whatsapp_message: mappedResult.whatsapp_message || '',
-    active: mappedResult.active,
-    sort_order: mappedResult.sort_order ?? mappedResult.rim
+  const mappedResult: PresellRimCard = {
+    id: resultRow?.id?.toString() || card.id,
+    title: resultRow?.title || card.title,
+    rim: resultRow?.rim?.toString() || card.rim,
+    subtitle: resultRow?.subtitle || card.subtitle,
+    image_url: resultRow?.image_url || card.image_url,
+    button_text: resultRow?.button_text || card.button_text,
+    whatsapp_message: resultRow?.whatsapp_message || card.whatsapp_message,
+    active: resultRow?.active !== false,
+    sort_order: resultRow?.sort_order !== undefined ? Number(resultRow.sort_order) : card.sort_order
   };
+
+  const otherRims = presellRimCardsCache.filter(rc => rc.id !== mappedResult.id);
+  const updatedRims = [...otherRims, mappedResult].sort((a, b) => a.sort_order - b.sort_order);
+  savePresellRimCardsLocal(updatedRims);
+
+  return mappedResult;
 }
 
 export async function deletePresellRimCardDb(id: string): Promise<void> {
   const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
   
-  const currentRims = getRimCards().filter(rc => rc.id !== id);
-  saveRimCards(currentRims);
+  const currentRims = getPresellRimCards().filter(rc => rc.id !== id);
+  savePresellRimCardsLocal(currentRims);
 
   if (isSupabaseConnected && id && id.length === 36 && !id.startsWith('rc-')) {
     try {
-      await supabase.from('rim_cards').delete().eq('id', id);
+      await supabase.from('presell_rim_cards').delete().eq('id', id);
     } catch (err) {
-      console.warn('Supabase delete rim card failed:', err);
+      console.warn('Supabase delete presell_rim_cards failed:', err);
     }
   }
 }
 
 export function getPresellBrandCards(): PresellBrandCard[] {
-  const brands = getBrands(); // Lookup from standard brands table
-  return brands
-    .filter(b => b.active)
-    .map((b, idx) => ({
-      id: b.id,
-      brand_name: b.name,
-      logo_url: b.logo || '',
-      whatsapp_message: `Olá, gostaria de consultar pneus da marca ${b.name}.`,
-      active: b.active,
-      sort_order: idx
-    }));
+  if (typeof window === 'undefined') return DEFAULT_PRESELL_BRAND_CARDS;
+  try {
+    const stored = localStorage.getItem(PRESELL_BRAND_CARDS_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {}
+  return presellBrandCardsCache.length > 0 ? presellBrandCardsCache : DEFAULT_PRESELL_BRAND_CARDS;
 }
 
 export function savePresellBrandCardsLocal(cards: PresellBrandCard[]): void {
-  const originalBrands = getBrands();
-  const updatedBrands = cards.map(c => {
-    const match = originalBrands.find(ob => ob.id === c.id || ob.name.toLowerCase() === c.brand_name.toLowerCase());
-    return {
-      id: match ? match.id : c.id,
-      name: c.brand_name,
-      logo: c.logo_url,
-      active: c.active
-    };
-  });
-  saveBrands(updatedBrands);
+  presellBrandCardsCache = cards;
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PRESELL_BRAND_CARDS_KEY, JSON.stringify(cards));
+    window.dispatchEvent(new Event('pneu_center_presell_brand_cards_updated'));
+  } catch (err) {
+    console.error('Error saving presell brand cards', err);
+  }
 }
 
 export async function savePresellBrandCardDb(card: PresellBrandCard): Promise<PresellBrandCard> {
   const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
-
-  const localBrands = getBrands();
-  const existing = localBrands.find(b => b.name.toLowerCase() === card.brand_name.toLowerCase() || b.id === card.id);
-  const brandIdToSave = existing ? existing.id : card.id;
-
-  const payload: any = {
-    name: card.brand_name,
-    logo_url: card.logo_url || null,
-    active: card.active,
-    updated_at: new Date().toISOString()
-  };
-
   let resultRow: any = null;
 
+  const payload: any = {
+    brand_name: card.brand_name,
+    logo_url: card.logo_url || null,
+    whatsapp_message: card.whatsapp_message || '',
+    active: card.active !== false,
+    sort_order: Number(card.sort_order) || 0
+  };
+
   if (isSupabaseConnected) {
-    const isIdReal = brandIdToSave && (brandIdToSave.length === 36 || !brandIdToSave.startsWith('bc-') || !isNaN(Number(brandIdToSave)));
-    const numericId = isIdReal && !isNaN(Number(brandIdToSave)) ? Number(brandIdToSave) : null;
-    const dbId = numericId !== null ? numericId : brandIdToSave;
+    const isIdReal = card.id && (card.id.length === 36 || !card.id.startsWith('bc-') || !isNaN(Number(card.id)));
+    const numericId = isIdReal && !isNaN(Number(card.id)) ? Number(card.id) : null;
+    const dbId = numericId !== null ? numericId : card.id;
 
     if (isIdReal) {
       const { data, error } = await supabase
-        .from('brands')
+        .from('presell_brand_cards')
         .update(payload)
         .eq('id', dbId)
         .select();
       if (!error && data && data.length > 0) {
         resultRow = data[0];
       } else if (error) {
-        console.error('Error updating brand in presell flow:', error);
+        console.error('Error updating pre-sell brand in presell flow:', error);
         throw error;
       }
     }
 
     if (!resultRow) {
       const { data, error } = await supabase
-        .from('brands')
+        .from('presell_brand_cards')
         .insert([payload])
         .select();
       if (error) {
-        console.error('Error inserting brand in presell flow:', error);
+        console.error('Error inserting brand to presell_brand_cards:', error);
         throw error;
       }
       resultRow = data?.[0];
     }
   }
 
-  const mappedResult = mapBrandFromRow(resultRow || {
-    id: brandIdToSave,
-    name: card.brand_name,
-    logo_url: card.logo_url,
-    active: card.active
-  });
-
-  const otherBrands = getBrands().filter(b => b.id !== mappedResult.id && b.name.toLowerCase() !== mappedResult.name.toLowerCase());
-  saveBrands([mappedResult, ...otherBrands]);
-
-  return {
-    id: mappedResult.id,
-    brand_name: mappedResult.name,
-    logo_url: mappedResult.logo || '',
-    whatsapp_message: card.whatsapp_message || `Olá, gostaria de consultar pneus da marca ${mappedResult.name}.`,
-    active: mappedResult.active,
-    sort_order: card.sort_order
+  const mappedResult: PresellBrandCard = {
+    id: resultRow?.id?.toString() || card.id,
+    brand_name: resultRow?.brand_name || card.brand_name,
+    logo_url: resultRow?.logo_url || card.logo_url,
+    whatsapp_message: resultRow?.whatsapp_message || card.whatsapp_message,
+    active: resultRow?.active !== false,
+    sort_order: resultRow?.sort_order !== undefined ? Number(resultRow.sort_order) : card.sort_order
   };
+
+  const otherBrands = presellBrandCardsCache.filter(b => b.id !== mappedResult.id);
+  const updatedBrands = [...otherBrands, mappedResult].sort((a, b) => a.sort_order - b.sort_order);
+  savePresellBrandCardsLocal(updatedBrands);
+
+  return mappedResult;
 }
 
 export async function deletePresellBrandCardDb(id: string): Promise<void> {
   const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
   
-  const currentBrands = getBrands().filter(b => b.id !== id);
-  saveBrands(currentBrands);
+  const currentBrands = getPresellBrandCards().filter(b => b.id !== id);
+  savePresellBrandCardsLocal(currentBrands);
 
   if (isSupabaseConnected && id && id.length === 36 && !id.startsWith('bc-')) {
     try {
-      await supabase.from('brands').delete().eq('id', id);
+      await supabase.from('presell_brand_cards').delete().eq('id', id);
     } catch (err) {
-      console.warn('Supabase delete brand failed:', err);
+      console.warn('Supabase delete presell_brand_cards failed:', err);
     }
   }
 }
@@ -1530,13 +1486,19 @@ export async function syncFromSupabase(): Promise<void> {
       productsResult,
       brandsResult,
       rimsResult,
-      rimMediaResult
+      rimMediaResult,
+      presellSettingsResult,
+      presellRimsResult,
+      presellBrandsResult
     ] = await Promise.all([
       supabase.from('site_settings').select('*'),
       supabase.from('products').select('*'),
       supabase.from('brands').select('*'),
       supabase.from('rim_cards').select('*'),
-      supabase.from('rim_media_settings').select('*')
+      supabase.from('rim_media_settings').select('*'),
+      supabase.from('presell_settings').select('*'),
+      supabase.from('presell_rim_cards').select('*').order('sort_order', { ascending: true }),
+      supabase.from('presell_brand_cards').select('*').order('sort_order', { ascending: true })
     ]);
 
     const { data: settingsData, error: settingsError } = settingsResult;
@@ -1544,6 +1506,9 @@ export async function syncFromSupabase(): Promise<void> {
     const { data: brandData, error: brandError } = brandsResult;
     const { data: rimData, error: rimError } = rimsResult;
     const { data: rimMediaData, error: rimMediaError } = rimMediaResult;
+    const { data: pSettingsData, error: pSettingsError } = presellSettingsResult;
+    const { data: pRimsData, error: pRimsError } = presellRimsResult;
+    const { data: pBrandsData, error: pBrandsError } = presellBrandsResult;
 
     // 1. Process site_settings
     if (!settingsError && settingsData && settingsData.length > 0) {
@@ -1563,29 +1528,29 @@ export async function syncFromSupabase(): Promise<void> {
       window.dispatchEvent(new Event('pneu_center_settings_updated'));
       window.dispatchEvent(new Event('pneu_center_logo_updated'));
 
-      // Dynamically extract and cache PresellSettings from main site_settings row (id = 1)
-      const mappedPresellSettings: PresellSettings = {
-        id: settings.id?.toString() || '1',
-        hero_title: settings.presell_hero_title || '',
-        hero_subtitle: settings.presell_hero_subtitle || '',
-        hero_button_text: settings.presell_button_text || '',
-        hero_whatsapp_message: settings.presell_whatsapp_message || '',
-        hero_media_url: settings.presell_hero_media_url || '',
-        hero_media_type: (settings.presell_hero_media_type as any) || 'image',
-        background_image_url: settings.presell_background_image_url || '',
-        notice_text: settings.presell_notice_text || '',
-        mobile_fixed_button: settings.mobile_fixed_button !== false,
-        active: settings.active !== false
-      };
-      localStorage.setItem(PRESELL_SETTINGS_KEY, JSON.stringify(mappedPresellSettings));
-      window.dispatchEvent(new Event('pneu_center_presell_settings_updated'));
-
       console.log("site_settings carregado:", settings);
       console.log("about_media_url:", settings.about_media_url);
       console.log("hero_media_url:", settings.hero_media_url);
       console.log("extra_banner_url:", settings.extra_banner_url);
-      console.log("presell_hero_media_url:", settings.presell_hero_media_url);
-      console.log("presell_background_image_url:", settings.presell_background_image_url);
+    }
+
+    // Process presell_settings
+    if (!pSettingsError && pSettingsData && pSettingsData.length > 0) {
+      const row = pSettingsData[0];
+      const mappedPresellSettings: PresellSettings = {
+        id: row.id?.toString(),
+        hero_title: row.hero_title || '',
+        hero_subtitle: row.hero_subtitle || '',
+        hero_button_text: row.hero_button_text || row.button_text || '',
+        hero_whatsapp_message: row.hero_whatsapp_message || row.whatsapp_message || '',
+        hero_media_url: row.hero_media_url || '',
+        hero_media_type: row.hero_media_type || 'image',
+        background_image_url: row.background_image_url || '',
+        notice_text: row.notice_text || '',
+        mobile_fixed_button: row.mobile_fixed_button !== false,
+        active: row.active !== false
+      };
+      savePresellSettingsLocal(mappedPresellSettings);
     }
 
     // 2. Process products
@@ -1600,10 +1565,24 @@ export async function syncFromSupabase(): Promise<void> {
       const mappedBrands = brandData.map(mapBrandFromRow);
       localStorage.setItem(BRANDS_STORE_KEY, JSON.stringify(mappedBrands));
       window.dispatchEvent(new Event('pneu_center_brands_updated'));
+      console.log("brands carregadas:", mappedBrands);
+    }
 
-      // Dynamically extract and cache PresellBrandCards from public brands
-      const activeBrands = mappedBrands.filter(b => b.active);
-      const mappedPresellBrands: PresellBrandCard[] = activeBrands.map((b, idx) => ({
+    // Process presell_brand_cards
+    if (!pBrandsError && pBrandsData && pBrandsData.length > 0) {
+      const mappedPresellBrands: PresellBrandCard[] = pBrandsData.map((row: any) => ({
+        id: row.id?.toString(),
+        brand_name: row.brand_name || '',
+        logo_url: row.logo_url || '',
+        whatsapp_message: row.whatsapp_message || `Olá, gostaria de consultar pneus da marca ${row.brand_name}.`,
+        active: row.active !== false,
+        sort_order: row.sort_order !== undefined ? Number(row.sort_order) : 0
+      }));
+      savePresellBrandCardsLocal(mappedPresellBrands);
+    } else {
+      // Fallback: If presell_brand_cards are empty, extract dynamic presell brands from active brands
+      const storedBrands = getBrands().filter(b => b.active);
+      const mappedPresellBrands = storedBrands.map((b, idx) => ({
         id: b.id,
         brand_name: b.name,
         logo_url: b.logo || '',
@@ -1611,10 +1590,7 @@ export async function syncFromSupabase(): Promise<void> {
         active: b.active,
         sort_order: idx
       }));
-      localStorage.setItem(PRESELL_BRAND_CARDS_KEY, JSON.stringify(mappedPresellBrands));
-      window.dispatchEvent(new Event('pneu_center_presell_brand_cards_updated'));
-
-      console.log("brands carregadas:", mappedBrands);
+      savePresellBrandCardsLocal(mappedPresellBrands);
     }
 
     // 4. Process rim_media_settings
@@ -1629,7 +1605,7 @@ export async function syncFromSupabase(): Promise<void> {
       saveRimMediaSettingsLocal(mappedRimMedia);
     }
 
-    // 5. Process rim_cards
+    // 5. Process rim_cards (standard site rim cards)
     if (!rimError && rimData) {
       const mappedRims = rimData.map(mapRimCardFromRow);
       localStorage.setItem(RIM_CARDS_STORE_KEY, JSON.stringify(mappedRims));
@@ -1660,9 +1636,27 @@ export async function syncFromSupabase(): Promise<void> {
       }
 
       window.dispatchEvent(new Event('pneu_center_rimcards_updated'));
+      console.log("rim_cards carregados:", mappedRims);
+    }
 
-      // Dynamically extract and cache PresellRimCards from standard rim cards table
-      const mappedPresellRims: PresellRimCard[] = mappedRims.map(rc => ({
+    // Process presell_rim_cards
+    if (!pRimsError && pRimsData && pRimsData.length > 0) {
+      const mappedPresellRims: PresellRimCard[] = pRimsData.map((row: any) => ({
+        id: row.id?.toString(),
+        title: row.title || `Aro ${row.rim}`,
+        rim: row.rim?.toString() || '15',
+        subtitle: row.subtitle || row.description || '',
+        image_url: row.image_url || '',
+        button_text: row.button_text || 'FALAR COM ESPECIALISTA',
+        whatsapp_message: row.whatsapp_message || `Olá, gostaria de consultar pneus Aro ${row.rim}.`,
+        active: row.active !== false,
+        sort_order: row.sort_order !== undefined ? Number(row.sort_order) : 0
+      }));
+      savePresellRimCardsLocal(mappedPresellRims);
+    } else {
+      // Fallback: If presell_rim_cards are empty, extract dynamic presell rims from standard rim cards
+      const mappedRims = getRimCards();
+      const mappedPresellRims = mappedRims.map(rc => ({
         id: rc.id,
         title: rc.name,
         rim: rc.rim.toString(),
@@ -1673,14 +1667,7 @@ export async function syncFromSupabase(): Promise<void> {
         active: rc.active,
         sort_order: rc.sort_order ?? rc.rim
       })).sort((a, b) => a.sort_order - b.sort_order);
-
-      localStorage.setItem(PRESELL_RIM_CARDS_KEY, JSON.stringify(mappedPresellRims));
-      window.dispatchEvent(new Event('pneu_center_presell_rim_cards_updated'));
-
-      console.log("rim_cards carregados:", mappedRims);
-      mappedRims.forEach(card => {
-        console.log("rim card image_url:", card.image);
-      });
+      savePresellRimCardsLocal(mappedPresellRims);
     }
 
     isSupabaseSynced = true;
