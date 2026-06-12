@@ -29,6 +29,7 @@ import {
   Layers,
   ChevronRight,
   Award,
+  Activity,
   Film,
   RefreshCw,
   CheckSquare,
@@ -154,6 +155,17 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [diagnosticSource, setDiagnosticSource] = useState<string>('');
   const [migrationStatus, setMigrationStatus] = useState<{success?: boolean, msg?: string} | null>(null);
   const [isMigratingLocal, setIsMigratingLocal] = useState(false);
+
+  // States for Site Settings Save/Load Test
+  const [siteSettingsTestStatus, setSiteSettingsTestStatus] = useState<{
+    testing: boolean;
+    result: string | null;
+    success: boolean | null;
+  }>({
+    testing: false,
+    result: null,
+    success: null
+  });
 
   // CSV Import / Export states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -2150,6 +2162,58 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       setDiagnosticSource(`Erro: ${err.message || 'Tabela não encontrada'}`);
     } finally {
       setDiagnosticIsTesting(false);
+    }
+  };
+
+  const handleTestSiteSettingsSave = async () => {
+    setSiteSettingsTestStatus({ testing: true, result: null, success: null });
+    try {
+      const settings = getSettings();
+      const timestamp = new Date().toISOString();
+      const originalText = settings.institutionalText || '';
+      const testText = `${originalText} [TEST_OK_${timestamp}]`;
+
+      const tempSettings = { ...settings, institutionalText: testText };
+      saveSettings(tempSettings);
+      await saveSettingsDb(tempSettings);
+
+      // Force refresh live database values bypass local caching
+      await syncFromSupabase();
+
+      const reloaded = getSettings();
+      if (reloaded.institutionalText === testText) {
+        // Restore safely
+        const restoredSettings = { ...reloaded, institutionalText: originalText };
+        saveSettings(restoredSettings);
+        await saveSettingsDb(restoredSettings);
+        await syncFromSupabase();
+
+        setSiteSettingsTestStatus({
+          testing: false,
+          result: `Teste de Salvamento: OK! A comunicação bidirecional com a tabela 'site_settings' está funcionando perfeitamente em tempo real (Timestamp: ${timestamp}).`,
+          success: true
+        });
+        triggerFeedback('Teste de Salvamento: OK!', 'success');
+      } else {
+        throw new Error('O valor lido do Supabase não bate com o enviado. Verifique se o banco de dados possui a coluna institutional_text ou se as chaves estão corretas.');
+      }
+    } catch (err: any) {
+      console.error('Error during site_settings test:', err);
+      // Restore original text anyway if it changed locally but DB failed
+      try {
+        const settings = getSettings();
+        if (settings.institutionalText && settings.institutionalText.includes('[TEST_OK_')) {
+          const cleanLocal = { ...settings, institutionalText: settings.institutionalText.split(' [TEST_OK_')[0] };
+          saveSettings(cleanLocal);
+        }
+      } catch {}
+
+      setSiteSettingsTestStatus({
+        testing: false,
+        result: `Erro no Teste de Salvamento: ${err.message || err}`,
+        success: false
+      });
+      triggerFeedback('Erro no Teste de Salvamento.', 'error');
     }
   };
 
@@ -5851,6 +5915,43 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                           </button>
                         </div>
                       </div>
+
+                      {/* CARD C: SITE SETTINGS PERSISTENCE TEST ZONE */}
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+                            <Activity className="h-3.5 w-3.5 text-emerald-500" />
+                            Teste de Salvamento (site_settings)
+                          </h4>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            Executa um teste automatizado completo salvando e lendo um dado temporário no Supabase para auditar a saúde de gravação bidirecional em tempo real.
+                          </p>
+                        </div>
+
+                        <div>
+                          <button
+                            type="button"
+                            disabled={siteSettingsTestStatus.testing}
+                            onClick={handleTestSiteSettingsSave}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs px-4 py-2.5 rounded-lg uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-sm w-full sm:w-auto"
+                          >
+                            {siteSettingsTestStatus.testing ? 'Testando gravação...' : 'Testar Comunicação site_settings'}
+                          </button>
+                        </div>
+
+                        {siteSettingsTestStatus.result !== null && (
+                          <div className={`p-3.5 rounded-lg text-xs leading-relaxed border transition-all ${
+                            siteSettingsTestStatus.success 
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-medium' 
+                              : 'bg-rose-50 border-rose-200 text-rose-900'
+                          }`}>
+                            <div className="flex items-center gap-2 font-extrabold uppercase text-[10px] tracking-wider mb-1">
+                              {siteSettingsTestStatus.success ? '✅ Teste de Salvamento: OK!' : '❌ Erro no Diagnóstico'}
+                            </div>
+                            {siteSettingsTestStatus.result}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* DIAGNOSTIC RESULTS DISPLAY AND TABLES */}
@@ -7099,62 +7200,45 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                   </div>
                   
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Caso visualize erros de conexão nas tabelas da Presell, execute o DDL abaixo no painel de controle do seu banco de dados ou SQL Editor do Supabase para criá-las instantaneamente:
+                    Se for necessário adicionar novos recursos ou consertar colunas ausentes no banco de dados, execute o DDL abaixo no painel ou no SQL Editor do seu Supabase:
                   </p>
                   
                   <div className="bg-slate-950 p-3 rounded-lg border border-slate-850 font-mono text-[9px] text-slate-350 leading-relaxed max-h-[180px] overflow-y-auto select-all">
-                    {`-- Executar no SQL Editor do Supabase
-CREATE TABLE IF NOT EXISTS public.presell_settings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    hero_title TEXT NOT NULL,
-    hero_subtitle TEXT NOT NULL,
-    hero_button_text TEXT NOT NULL,
-    hero_whatsapp_message TEXT NOT NULL,
-    hero_media_url TEXT,
-    hero_media_type TEXT DEFAULT 'image',
-    background_image_url TEXT,
-    notice_text TEXT,
-    mobile_fixed_button BOOLEAN DEFAULT TRUE,
-    active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
-);
+                    {`-- Executar no SQL Editor do Supabase para migrar a tabela site_settings
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_commercial_name TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_legal_name TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_cnpj TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_address TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_text TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_media_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_media_type TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS about_media_alt TEXT;
 
-CREATE TABLE IF NOT EXISTS public.presell_rim_cards (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    rim TEXT NOT NULL,
-    subtitle TEXT NOT NULL,
-    image_url TEXT,
-    button_text TEXT,
-    whatsapp_message TEXT NOT NULL,
-    active BOOLEAN DEFAULT TRUE,
-    sort_order INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
-);
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS hero_media_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS hero_media_type TEXT DEFAULT 'image';
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS hero_border_color TEXT DEFAULT '#f97316';
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS hero_glow_color TEXT DEFAULT '#f97316';
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS hero_border_radius TEXT DEFAULT '24';
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS hero_glow_intensity TEXT DEFAULT '0.4';
 
-CREATE TABLE IF NOT EXISTS public.presell_brand_cards (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    brand_name TEXT NOT NULL,
-    logo_url TEXT,
-    whatsapp_message TEXT NOT NULL,
-    active BOOLEAN DEFAULT TRUE,
-    sort_order INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
-);
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS extra_banner_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS extra_banner_type TEXT DEFAULT 'image';
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS extra_banner_alt TEXT;
 
--- Habilitar leitura pública / bypass RLS
-ALTER TABLE public.presell_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.presell_rim_cards ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.presell_brand_cards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS presell_hero_title TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS presell_hero_subtitle TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS presell_button_text TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS presell_whatsapp_message TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS presell_hero_media_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS presell_hero_media_type TEXT DEFAULT 'image';
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS presell_background_image_url TEXT;
+ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS presell_notice_text TEXT;
 
-CREATE POLICY "Leitura Publica Settings" ON public.presell_settings FOR SELECT USING (true);
-CREATE POLICY "Leitura Publica Rims" ON public.presell_rim_cards FOR SELECT USING (true);
-CREATE POLICY "Leitura Publica Brands" ON public.presell_brand_cards FOR SELECT USING (true);
-
-CREATE POLICY "Acesso Total Autenticado Settings" ON public.presell_settings USING (true) WITH CHECK (true);
-CREATE POLICY "Acesso Total Autenticado Rims" ON public.presell_rim_cards USING (true) WITH CHECK (true);
-CREATE POLICY "Acesso Total Autenticado Brands" ON public.presell_brand_cards USING (true) WITH CHECK (true);`}
+-- Executar para migrar a tabela rim_cards
+ALTER TABLE public.rim_cards ADD COLUMN IF NOT EXISTS subtitle TEXT;
+ALTER TABLE public.rim_cards ADD COLUMN IF NOT EXISTS button_text TEXT DEFAULT 'FALAR COM ESPECIALISTA';
+ALTER TABLE public.rim_cards ADD COLUMN IF NOT EXISTS whatsapp_message TEXT;
+ALTER TABLE public.rim_cards ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0;`}
                   </div>
                 </div>
 
