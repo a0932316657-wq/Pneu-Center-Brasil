@@ -314,7 +314,7 @@ export default function PresellPage() {
               <img 
                 src={logo} 
                 alt="Pneu Center Brasil" 
-                className="h-9 sm:h-11 w-auto object-contain max-w-[200px]" 
+                className="h-10 sm:h-13 w-auto object-contain max-w-[220px] sm:max-w-[280px]" 
               />
             ) : (
               <div className="font-display font-black tracking-tighter text-lg sm:text-xl text-white uppercase flex items-center gap-0.5">
@@ -403,7 +403,7 @@ export default function PresellPage() {
 
             {/* Media/Illustration Box - order-1 on mobile so image is rendered on top of context tags */}
             <div className="lg:col-span-5 flex justify-center order-1 lg:order-2">
-              <div className="relative w-full max-w-sm sm:max-w-md h-72 sm:h-96 flex items-center justify-center">
+              <div className={`relative w-full ${settings.hero_media_url && settings.hero_media_url.trim() !== '' ? 'max-w-md sm:max-w-lg lg:max-w-xl aspect-video h-auto' : 'max-w-sm sm:max-w-md h-72 sm:h-96'} flex items-center justify-center`}>
                 
                 {/* Radiant border behind image */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/30 to-orange-500/30 rounded-3xl blur-xl" />
@@ -418,14 +418,14 @@ export default function PresellPage() {
                         loop 
                         muted 
                         playsInline 
-                        className="w-full h-full object-cover rounded-2xl" 
+                        className="w-full h-full object-contain rounded-2xl bg-slate-900/40" 
                       />
                     ) : (
                       <img 
                         src={settings.hero_media_url} 
                         alt="Catálogo Pneus" 
                         loading="eager"
-                        className="w-full h-full object-cover rounded-2xl" 
+                        className="w-full h-full object-contain rounded-2xl bg-slate-900/40" 
                       />
                     )
                   ) : (

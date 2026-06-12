@@ -895,7 +895,7 @@ export default function App() {
 
                     {/* RIGHT COLUMN: GORGEOUS ANIMATED TIRE WITH CIRCULATING BRANDS */}
                     <div className="lg:col-span-5 flex flex-col items-center justify-center relative order-2 lg:order-2">
-                       <div className="relative w-full max-w-sm sm:max-w-md h-72 sm:h-96 flex items-center justify-center overflow-visible">
+                       <div className={`relative w-full ${siteSettings.heroImageUrl && siteSettings.heroImageUrl.trim() !== '' ? 'max-w-md sm:max-w-lg lg:max-w-xl aspect-video h-auto' : 'max-w-sm sm:max-w-md h-72 sm:h-96'} flex items-center justify-center overflow-visible`}>
                         
                         {/* Radiant background glow behind the tire */}
                         <div className="absolute h-48 w-48 sm:h-64 sm:w-64 rounded-full bg-orange-500/10 blur-3xl z-0" />
@@ -1000,7 +1000,7 @@ export default function App() {
                                 repeat: Infinity,
                                 ease: "easeInOut"
                               }}
-                              className="z-10 bg-slate-950/70 backdrop-blur-md inline-block relative shrink-0 transition-all duration-300 select-none pointer-events-none"
+                              className={`z-10 bg-slate-950/70 backdrop-blur-md ${hasCustomHero ? 'w-full h-full flex items-center justify-center' : 'inline-block relative shrink-0'} transition-all duration-305 select-none pointer-events-none`}
                               style={{
                                 padding: hasCustomHero ? '0px' : '20px',
                                 borderRadius: bRad,
@@ -1015,7 +1015,7 @@ export default function App() {
                                   loop
                                   muted
                                   playsInline
-                                  className="h-52 sm:h-72 w-auto object-contain select-none pointer-events-none block animate-fade-in"
+                                  className={`${hasCustomHero ? 'w-full h-full' : 'h-52 sm:h-72 w-auto'} object-contain select-none pointer-events-none block animate-fade-in`}
                                   style={{
                                     borderRadius: bRad,
                                   }}
@@ -1025,7 +1025,7 @@ export default function App() {
                                   src={activeHeroUrl}
                                   alt="Destaque Pneu Center Brasil"
                                   referrerPolicy="no-referrer"
-                                  className="h-52 sm:h-72 w-auto object-contain select-none pointer-events-none block animate-fade-in"
+                                  className={`${hasCustomHero ? 'w-full h-full' : 'h-52 sm:h-72 w-auto'} object-contain select-none pointer-events-none block animate-fade-in`}
                                   style={{
                                     borderRadius: bRad,
                                     mixBlendMode: hasCustomHero ? 'normal' : 'lighten'

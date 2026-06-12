@@ -44,7 +44,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                 <img 
                   src={logo.trim()} 
                   alt="Pneu Center Brasil" 
-                  className="h-10 w-auto object-contain max-w-[150px] cursor-pointer"
+                  className="h-11 sm:h-13 w-auto object-contain max-w-[180px] sm:max-w-[260px] cursor-pointer"
                   onClick={() => onNavigate('home')}
                 />
               ) : (

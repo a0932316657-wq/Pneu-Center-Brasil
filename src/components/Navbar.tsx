@@ -69,9 +69,9 @@ export default function Navbar({ currentRoute, onNavigate }: NavbarProps) {
           >
             {logo && logo.trim() ? (
               <img 
-                src={logo.trim() || null} 
+                src={logo.trim()} 
                 alt={settings.commercialName || 'Pneu Center Brasil Logo'} 
-                className="h-11 w-auto object-contain max-w-[160px] cursor-pointer"
+                className="h-11 sm:h-13 w-auto object-contain max-w-[200px] sm:max-w-[280px] md:max-w-[320px] cursor-pointer"
               />
             ) : (
               <>
@@ -176,7 +176,7 @@ export default function Navbar({ currentRoute, onNavigate }: NavbarProps) {
                 <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
                   <div className="flex items-center gap-2">
                     {logo && logo.trim() ? (
-                      <img src={logo.trim() || null} alt={settings.commercialName} className="h-8 w-auto object-contain max-w-[120px]" />
+                      <img src={logo.trim()} alt={settings.commercialName} className="h-9 sm:h-11 w-auto object-contain max-w-[160px] sm:max-w-[220px]" />
                     ) : (
                       <>
                         <div className="h-8 w-8 flex items-center justify-center rounded bg-orange-500 font-display font-black text-sm text-slate-950">
