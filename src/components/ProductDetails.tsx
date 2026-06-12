@@ -78,6 +78,9 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
               loading="lazy"
               decoding="async"
               onLoad={() => setMainImageLoaded(true)}
+              onError={(e) => {
+                e.currentTarget.src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
+              }}
               className={`h-full w-full object-contain p-8 object-center transition-all duration-300 ${mainImageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
             />
             
@@ -95,11 +98,25 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
               <span className="block text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold">Galeria do Produto:</span>
               <div className="flex gap-2 bg-slate-100 p-2 rounded-xl overflow-x-auto">
                 <div className="h-14 w-18 border-2 border-orange-500 bg-checkerboard rounded overflow-hidden flex items-center justify-center shrink-0">
-                  <img src={resolveProductImage(product)} alt="principal" className="h-full w-full object-contain p-1" />
+                  <img 
+                    src={resolveProductImage(product)} 
+                    alt="principal" 
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
+                    }}
+                    className="h-full w-full object-contain p-1" 
+                  />
                 </div>
                 {product.gallery.map((galleryImg, idx) => (
                   <div key={idx} className="h-14 w-18 border border-slate-200 bg-checkerboard rounded overflow-hidden flex items-center justify-center shrink-0 hover:border-slate-400 transition-colors">
-                    <img src={galleryImg || null} alt={`Foto adicional ${idx + 1}`} className="h-full w-full object-contain p-1" />
+                    <img 
+                      src={galleryImg || undefined} 
+                      alt={`Foto adicional ${idx + 1}`} 
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
+                      }}
+                      className="h-full w-full object-contain p-1" 
+                    />
                   </div>
                 ))}
               </div>
@@ -121,6 +138,9 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
                   <img
                     src={effectiveSealUrl}
                     alt="Selo de homologação INMETRO"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                     className="h-full w-full object-contain"
                     referrerPolicy="no-referrer"
                   />

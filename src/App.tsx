@@ -177,6 +177,7 @@ export default function App() {
   const [isTabTransitioning, setIsTabTransitioning] = useState(false);
   const [singleFetchedProduct, setSingleFetchedProduct] = useState<Product | null>(null);
   const [isFetchingSingle, setIsFetchingSingle] = useState(false);
+  const [failedBrandLogos, setFailedBrandLogos] = useState<Record<string, boolean>>({});
 
   // Trigger high quality spinning tire loading transition when route switches
   useEffect(() => {
@@ -959,9 +960,14 @@ export default function App() {
                                 }}
                                 className="absolute cursor-pointer select-none bg-slate-900/95 backdrop-blur-md border border-orange-500/20 text-white shadow-2xl rounded-2xl p-2 flex items-center justify-center hover:border-orange-500 transition-all hover:scale-110"
                               >
-                                {brand.logo && brand.logo.trim() ? (
+                                {brand.logo && brand.logo.trim() && !failedBrandLogos[brand.id || idx] ? (
                                   <div className="h-6 w-9 rounded-lg bg-white overflow-hidden flex items-center justify-center p-0.5">
-                                    <img src={brand.logo.trim() || null} alt={brand.name} className="h-full w-full object-contain" />
+                                    <img 
+                                      src={brand.logo.trim()} 
+                                      alt={brand.name} 
+                                      onError={() => setFailedBrandLogos(p => ({ ...p, [brand.id || idx]: true }))}
+                                      className="h-full w-full object-contain" 
+                                    />
                                   </div>
                                 ) : (
                                   <span className="h-6 w-6 rounded-full bg-orange-600 text-slate-950 font-black text-xs flex items-center justify-center">
@@ -1292,8 +1298,13 @@ export default function App() {
                         className="group flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-orange-500/5 border border-slate-200 hover:border-orange-500 rounded-2xl w-24 sm:w-28 h-24 sm:h-28 transition-all duration-300 hover:shadow-md cursor-pointer shrink-0"
                       >
                         <div className="h-10 sm:h-12 w-full flex items-center justify-center p-1 overflow-hidden transition-transform group-hover:scale-105 duration-350">
-                          {brand.logo && brand.logo.trim() ? (
-                            <img src={brand.logo.trim() || null} alt={brand.name} className="h-full w-full object-contain" />
+                          {brand.logo && brand.logo.trim() && !failedBrandLogos[brand.id] ? (
+                            <img 
+                              src={brand.logo.trim()} 
+                              alt={brand.name} 
+                              onError={() => setFailedBrandLogos(p => ({ ...p, [brand.id]: true }))}
+                              className="h-full w-full object-contain" 
+                            />
                           ) : (
                             <div className="text-xs sm:text-sm font-sans font-black text-slate-400 uppercase tracking-wider">
                               {brand.name.substring(0, 3).toUpperCase()}
@@ -1943,8 +1954,13 @@ export default function App() {
                   >
                     {/* Brand Logo Panel */}
                     <div className="h-12 w-20 flex items-center justify-center rounded-lg bg-white border border-slate-150 p-1.5 group-hover:scale-105 transition-transform duration-300 overflow-hidden">
-                      {brand.logo && brand.logo.trim() ? (
-                        <img src={brand.logo.trim() || null} alt={brand.name} className="h-full w-full object-contain" />
+                      {brand.logo && brand.logo.trim() && !failedBrandLogos[brand.id] ? (
+                        <img 
+                          src={brand.logo.trim()} 
+                          alt={brand.name} 
+                          onError={() => setFailedBrandLogos(p => ({ ...p, [brand.id]: true }))}
+                          className="h-full w-full object-contain" 
+                        />
                       ) : (
                         <div className="text-sm font-black text-slate-400 font-mono">
                           {brand.name.substring(0, 2).toUpperCase()}

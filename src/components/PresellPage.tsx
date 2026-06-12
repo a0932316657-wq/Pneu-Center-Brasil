@@ -27,6 +27,7 @@ import {
   Brand
 } from '../lib/appStore';
 import { PresellRimCard, PresellBrandCard, PresellSettings } from '../types';
+import { supabase } from '../lib/supabaseClient';
 
 // Backup image imports if custom URLs are missing
 import defaultHeroTire from '../assets/images/hero_tires_1780836675879.png';
@@ -48,15 +49,54 @@ export default function PresellPage() {
     return getPresellRimCards().filter((card) => card.active);
   });
 
-  // Fetch brand listings from Presell Campaign or general Brands Panel as fallback
-  const fetchActiveBrands = (): any[] => {
-    const list = getPresellBrandCards().filter(b => b.active);
-    if (list.length > 0) return list;
-    return getBrands().filter(b => b.active);
+  // State to record failed image URLs to fall back to text
+  const [failedBrandImages, setFailedBrandImages] = useState<Record<string, boolean>>({});
+
+  // Fetch active brands directly from the 'brands' table in Supabase
+  const loadBrandsLiveFromSupabase = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('*')
+        .eq('active', true);
+      
+      if (error) throw error;
+      
+      if (data) {
+        const loaded = data.map((row: any) => ({
+          id: row.id?.toString() || '',
+          brand_name: row.name || '',
+          logo_url: row.logo_url || row.logo || '',
+          active: row.active !== false,
+          whatsapp_message: `Olá, gostaria de consultar pneus da marca ${row.name}.`
+        }));
+        
+        // Remove duplicates by brand_name to ensure clean presentation
+        const tracker = new Set<string>();
+        const uniqueList: any[] = [];
+        for (const item of loaded) {
+          const key = (item.brand_name || '').trim().toLowerCase();
+          if (key && !tracker.has(key)) {
+            tracker.add(key);
+            uniqueList.push(item);
+          }
+        }
+        setBrandCards(uniqueList);
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar marcas diretamente do Supabase na página Presell:', err);
+    }
   };
 
   const [brandCards, setBrandCards] = useState<any[]>(() => {
-    return fetchActiveBrands();
+    // Immediate render with local cache on initialization
+    return getBrands().filter(b => b.active).map(b => ({
+      id: b.id,
+      brand_name: b.name,
+      logo_url: b.logo || '',
+      whatsapp_message: `Olá, gostaria de consultar pneus da marca ${b.name}.`,
+      active: b.active
+    }));
   });
 
   const [logo, setLogo] = useState<string | null>(getLogo());
@@ -66,6 +106,8 @@ export default function PresellPage() {
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
 
   useEffect(() => {
+    loadBrandsLiveFromSupabase();
+
     const handleSettingsUpdate = () => {
       setSettings(getPresellSettings());
     };
@@ -73,7 +115,7 @@ export default function PresellPage() {
       setRimCards(getPresellRimCards().filter((card) => card.active));
     };
     const handleBrandsUpdate = () => {
-      setBrandCards(fetchActiveBrands());
+      loadBrandsLiveFromSupabase();
     };
     const handleLogoUpdate = () => {
       setLogo(getLogo());
@@ -439,6 +481,7 @@ export default function PresellPage() {
                 const brandWaUrl = generateWhatsAppUrl(brandMsg);
                 const brandNameText = brand.brand_name || brand.name || '';
                 const brandImgLogo = brand.logo_url || brand.logo;
+                const isImageFailedOrAbsent = !brandImgLogo || brandImgLogo.trim() === '' || failedBrandImages[`${brand.id || idx}`];
 
                 return (
                   <a
@@ -449,17 +492,20 @@ export default function PresellPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-orange-500/40 px-5 py-3 rounded-2xl select-none transition-all cursor-pointer shrink-0"
                   >
-                    {brandImgLogo && brandImgLogo.trim() !== '' ? (
-                      <div className="h-7 w-10 bg-white rounded flex items-center justify-center p-0.5 overflow-hidden">
+                    {!isImageFailedOrAbsent ? (
+                      <div className="h-7 w-12 bg-white rounded flex items-center justify-center p-0.5 overflow-hidden">
                         <img 
                           src={brandImgLogo} 
                           alt={brandNameText} 
                           loading="lazy"
+                          onError={() => {
+                            setFailedBrandImages(prev => ({ ...prev, [`${brand.id || idx}`]: true }));
+                          }}
                           className="h-full w-full object-contain" 
                         />
                       </div>
                     ) : (
-                      <div className="h-7 w-7 rounded-full bg-orange-600 text-slate-950 font-black text-xs flex items-center justify-center font-bold">
+                      <div className="h-7 w-7 rounded-sm bg-orange-600 text-slate-950 font-black text-xs flex items-center justify-center font-mono">
                         {brandNameText.charAt(0).toUpperCase()}
                       </div>
                     )}

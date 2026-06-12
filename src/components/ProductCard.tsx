@@ -47,6 +47,9 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
           loading="lazy"
           decoding="async"
           onLoad={() => setImageLoaded(true)}
+          onError={(e) => {
+            e.currentTarget.src = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
+          }}
           className={`h-full w-full object-contain p-4 object-center transition-all duration-500 group-hover:scale-105 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
         />
         {/* Brand Badge Overlay */}
