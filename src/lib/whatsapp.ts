@@ -61,11 +61,7 @@ export function getProductMessage(
   price?: number,
   priceStatus?: string
 ): string {
-  const hasPrice = priceStatus === 'exibir' && price !== undefined && price > 0;
-  const priceStr = hasPrice 
-    ? ` que está no valor de R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : '';
-  return `Olá, gostaria de mais informações sobre o pneu ${productName} (Medida: ${measure})${priceStr}.`;
+  return `Olá, vim pelo site Pneu Center Brasil e gostaria de tirar dúvidas sobre o ${productName}. Medida: ${measure}. Quero saber mais sobre entrega e condições comerciais.`;
 }
 
 /**

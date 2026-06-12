@@ -20,7 +20,7 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
     openWhatsAppChat(msg);
   };
 
-  const productSlug = product.slug || slugify(product.name) || product.id;
+  const productSlug = product.id;
 
   return (
     <motion.div

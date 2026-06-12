@@ -25,6 +25,36 @@ export interface SiteSettings {
   featuredMediaType?: 'image' | 'video';
   featuredMediaAlt?: string;
   institutionalText?: string;
+
+  // Exact Supabase field names for full confidence
+  about_commercial_name?: string;
+  about_legal_name?: string;
+  about_cnpj?: string;
+  about_address?: string;
+  about_text?: string;
+  about_media_url?: string;
+  about_media_type?: string;
+  about_media_alt?: string;
+
+  hero_media_url?: string;
+  hero_media_type?: string;
+  hero_border_color?: string;
+  hero_glow_color?: string;
+  hero_border_radius?: string;
+  hero_glow_intensity?: string;
+
+  extra_banner_url?: string;
+  extra_banner_type?: string;
+  extra_banner_alt?: string;
+
+  presell_hero_title?: string;
+  presell_hero_subtitle?: string;
+  presell_button_text?: string;
+  presell_whatsapp_message?: string;
+  presell_hero_media_url?: string;
+  presell_hero_media_type?: string;
+  presell_background_image_url?: string;
+  presell_notice_text?: string;
 }
 
 export interface Brand {
@@ -66,7 +96,37 @@ const DEFAULT_SETTINGS: SiteSettings = {
   institutionalMediaAlt: 'Pneu Center Brasil • Distribuição Digital',
   featuredMediaUrl: '',
   featuredMediaType: 'image',
-  featuredMediaAlt: 'Destaque Especial Pneu Center Brasil'
+  featuredMediaAlt: 'Destaque Especial Pneu Center Brasil',
+
+  // Extra extended defaults
+  about_commercial_name: 'Pneu Center Brasil',
+  about_legal_name: 'CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA',
+  about_cnpj: '20.085.983/0001-13',
+  about_address: 'Av. Professor Francisco Morato, 2001, Butantã, São Paulo/SP, CEP 05513-200',
+  about_text: 'A Pneu Center Brasil é especialista independente no comércio e distribuição de pneus de alta performance. Atuando com seriedade, transparência e agilidade logística, nossa equipe comercial auxilia cada cliente na escolha ideal para o modelo de seu veículo conversando diretamente pelo WhatsApp.',
+  about_media_url: '',
+  about_media_type: 'image',
+  about_media_alt: 'Pneu Center Brasil • Distribuição Digital',
+
+  hero_media_url: '',
+  hero_media_type: 'image',
+  hero_border_color: '#f97316',
+  hero_glow_color: '#f97316',
+  hero_border_radius: '24',
+  hero_glow_intensity: '0.4',
+
+  extra_banner_url: '',
+  extra_banner_type: 'image',
+  extra_banner_alt: 'Destaque Especial Pneu Center Brasil',
+
+  presell_hero_title: 'CONSULTAR PREÇO AGORA NO COMPRE DIRETO',
+  presell_hero_subtitle: 'Fale com nossos especialistas por WhatsApp e garanta a melhor oferta em pneus para seu veículo.',
+  presell_button_text: 'FALAR COM ESPECIALISTA',
+  presell_whatsapp_message: 'Olá, gostaria de consultar pneus para meu carro.',
+  presell_hero_media_url: '',
+  presell_hero_media_type: 'image',
+  presell_background_image_url: '',
+  presell_notice_text: '⚠️ ATENÇÃO: Preços promocionais válidos por tempo limitado ou enquanto durarem os estoques de campanha.'
 };
 
 const DEFAULT_BRANDS: Brand[] = [
@@ -345,7 +405,7 @@ function parseSpecs(rawSpecs: any): string[] {
   return [];
 }
 
-function mapProductFromRow(row: any): Product {
+export function mapProductFromRow(row: any): Product {
   const priceNum = (row.price != null && row.price !== '') ? Number(row.price) : 0;
   
   let computedShowPrice = false;
@@ -628,6 +688,106 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
             console.warn('Error reading fallback seals:', e);
           }
           break;
+        case 'about_commercial_name':
+        case 'aboutCommercialName':
+          resultSettings.about_commercial_name = val;
+          break;
+        case 'about_legal_name':
+        case 'aboutLegalName':
+          resultSettings.about_legal_name = val;
+          break;
+        case 'about_cnpj':
+        case 'aboutCnpj':
+          resultSettings.about_cnpj = val;
+          break;
+        case 'about_address':
+        case 'aboutAddress':
+          resultSettings.about_address = val;
+          break;
+        case 'about_text':
+        case 'aboutText':
+          resultSettings.about_text = val;
+          break;
+        case 'about_media_url':
+        case 'aboutMediaUrl':
+          resultSettings.about_media_url = val;
+          break;
+        case 'about_media_type':
+        case 'aboutMediaType':
+          resultSettings.about_media_type = val;
+          break;
+        case 'about_media_alt':
+        case 'aboutMediaAlt':
+          resultSettings.about_media_alt = val;
+          break;
+        case 'hero_media_url':
+        case 'heroMediaUrl':
+          resultSettings.hero_media_url = val;
+          break;
+        case 'hero_media_type':
+        case 'heroMediaType':
+          resultSettings.hero_media_type = val;
+          break;
+        case 'hero_border_color':
+        case 'heroBorderColor':
+          resultSettings.hero_border_color = val;
+          break;
+        case 'hero_glow_color':
+        case 'heroGlowColor':
+          resultSettings.hero_glow_color = val;
+          break;
+        case 'hero_border_radius':
+        case 'heroBorderRadius':
+          resultSettings.hero_border_radius = val;
+          break;
+        case 'hero_glow_intensity':
+        case 'heroGlowIntensity':
+          resultSettings.hero_glow_intensity = val;
+          break;
+        case 'extra_banner_url':
+        case 'extraBannerUrl':
+          resultSettings.extra_banner_url = val;
+          break;
+        case 'extra_banner_type':
+        case 'extraBannerType':
+          resultSettings.extra_banner_type = val;
+          break;
+        case 'extra_banner_alt':
+        case 'extraBannerAlt':
+          resultSettings.extra_banner_alt = val;
+          break;
+        case 'presell_hero_title':
+        case 'presellHeroTitle':
+          resultSettings.presell_hero_title = val;
+          break;
+        case 'presell_hero_subtitle':
+        case 'presellHeroSubtitle':
+          resultSettings.presell_hero_subtitle = val;
+          break;
+        case 'presell_button_text':
+        case 'presellButtonText':
+          resultSettings.presell_button_text = val;
+          break;
+        case 'presell_whatsapp_message':
+        case 'presellWhatsappMessage':
+          resultSettings.presell_whatsapp_message = val;
+          break;
+        case 'presell_hero_media_url':
+        case 'presellHeroMediaUrl':
+          resultSettings.presell_hero_media_url = val;
+          break;
+        case 'presell_hero_media_type':
+        case 'presellHeroMediaType':
+          resultSettings.presell_hero_media_type = val;
+          break;
+        case 'presell_background_image_url':
+        case 'presellBackgroundImageUrl':
+          resultSettings.presell_background_image_url = val;
+          break;
+        case 'presell_notice_text':
+        case 'presellNoticeText':
+          resultSettings.presell_notice_text = val;
+          break;
       }
     }
   } else {
@@ -654,6 +814,37 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
     resultSettings.institutionalMediaUrl = row.institutional_media_url || row.institutionalMediaUrl || resultSettings.institutionalMediaUrl;
     resultSettings.institutionalMediaType = row.institutional_media_type || row.institutionalMediaType || resultSettings.institutionalMediaType;
     resultSettings.institutionalMediaAlt = row.institutional_media_alt || row.institutionalMediaAlt || resultSettings.institutionalMediaAlt;
+
+    // Extended database settings columns mapping with fallbacks to avoid blank configurations
+    resultSettings.about_commercial_name = row.about_commercial_name || row.aboutCommercialName || resultSettings.about_commercial_name || row.commercial_name || row.commercialName || resultSettings.commercialName;
+    resultSettings.about_legal_name = row.about_legal_name || row.aboutLegalName || resultSettings.about_legal_name || row.corporate_name || row.corporateName || resultSettings.corporateName;
+    resultSettings.about_cnpj = row.about_cnpj || row.aboutCnpj || resultSettings.about_cnpj || row.cnpj || resultSettings.cnpj;
+    resultSettings.about_address = row.about_address || row.aboutAddress || resultSettings.about_address || row.address || resultSettings.address;
+    resultSettings.about_text = row.about_text || row.aboutText || resultSettings.about_text || row.institutional_text || row.institutionalText || resultSettings.institutionalText;
+    resultSettings.about_media_url = row.about_media_url || row.aboutMediaUrl || resultSettings.about_media_url || row.institutional_media_url || row.institutionalMediaUrl || resultSettings.institutionalMediaUrl;
+    resultSettings.about_media_type = row.about_media_type || row.aboutMediaType || resultSettings.about_media_type || row.institutional_media_type || row.institutionalMediaType || resultSettings.institutionalMediaType;
+    resultSettings.about_media_alt = row.about_media_alt || row.aboutMediaAlt || resultSettings.about_media_alt || row.institutional_media_alt || row.institutionalMediaAlt || resultSettings.institutionalMediaAlt;
+
+    resultSettings.hero_media_url = row.hero_media_url || row.heroMediaUrl || resultSettings.hero_media_url || row.hero_image_url || row.heroImageUrl || resultSettings.heroImageUrl;
+    resultSettings.hero_media_type = row.hero_media_type || row.heroMediaType || resultSettings.hero_media_type || row.heroMediaType || resultSettings.heroMediaType;
+    resultSettings.hero_border_color = row.hero_border_color || row.heroBorderColor || resultSettings.hero_border_color || resultSettings.heroBorderColor;
+    resultSettings.hero_glow_color = row.hero_glow_color || row.heroGlowColor || resultSettings.hero_glow_color || resultSettings.heroGlowColor;
+    resultSettings.hero_border_radius = row.hero_border_radius || row.heroBorderRadius || resultSettings.hero_border_radius || resultSettings.heroBorderRadius;
+    resultSettings.hero_glow_intensity = row.hero_glow_intensity || row.heroGlowIntensity || resultSettings.hero_glow_intensity || resultSettings.heroGlowIntensity;
+
+    resultSettings.extra_banner_url = row.extra_banner_url || row.extraBannerUrl || resultSettings.extra_banner_url || row.featured_media_url || row.featuredMediaUrl || resultSettings.featuredMediaUrl;
+    resultSettings.extra_banner_type = row.extra_banner_type || row.extraBannerType || resultSettings.extra_banner_type || row.featured_media_type || row.featuredMediaType || resultSettings.featuredMediaType;
+    resultSettings.extra_banner_alt = row.extra_banner_alt || row.extraBannerAlt || resultSettings.extra_banner_alt || row.featured_media_alt || row.featuredMediaAlt || resultSettings.featuredMediaAlt;
+
+    resultSettings.presell_hero_title = row.presell_hero_title || row.presellHeroTitle || resultSettings.presell_hero_title;
+    resultSettings.presell_hero_subtitle = row.presell_hero_subtitle || row.presellHeroSubtitle || resultSettings.presell_hero_subtitle;
+    resultSettings.presell_button_text = row.presell_button_text || row.presellButtonText || resultSettings.presell_button_text;
+    resultSettings.presell_whatsapp_message = row.presell_whatsapp_message || row.presellWhatsappMessage || resultSettings.presell_whatsapp_message;
+    resultSettings.presell_hero_media_url = row.presell_hero_media_url || row.presellHeroMediaUrl || resultSettings.presell_hero_media_url;
+    resultSettings.presell_hero_media_type = row.presell_hero_media_type || row.presellHeroMediaType || resultSettings.presell_hero_media_type;
+    resultSettings.presell_background_image_url = row.presell_background_image_url || row.presellBackgroundImageUrl || resultSettings.presell_background_image_url;
+    resultSettings.presell_notice_text = row.presell_notice_text || row.presellNoticeText || resultSettings.presell_notice_text;
+
     resultLogo = row.logo_url || row.logoUrl || row.logo || null;
 
     if (row.rim_default_media_fallback) {
@@ -669,6 +860,27 @@ function mapSettingsFromDb(rows: any[]): { settings: SiteSettings; logo: string 
       } catch (e) {}
     }
   }
+
+  // Enforce bidirectionality and legacy structures match the modern custom keys
+  resultSettings.commercialName = resultSettings.about_commercial_name || resultSettings.commercialName;
+  resultSettings.corporateName = resultSettings.about_legal_name || resultSettings.corporateName;
+  resultSettings.cnpj = resultSettings.about_cnpj || resultSettings.cnpj;
+  resultSettings.address = resultSettings.about_address || resultSettings.address;
+  resultSettings.institutionalText = resultSettings.about_text || resultSettings.institutionalText;
+  resultSettings.institutionalMediaUrl = resultSettings.about_media_url || resultSettings.institutionalMediaUrl;
+  resultSettings.institutionalMediaType = (resultSettings.about_media_type as any) || resultSettings.institutionalMediaType;
+  resultSettings.institutionalMediaAlt = resultSettings.about_media_alt || resultSettings.institutionalMediaAlt;
+
+  resultSettings.heroImageUrl = resultSettings.hero_media_url || resultSettings.heroImageUrl;
+  resultSettings.heroMediaType = (resultSettings.hero_media_type as any) || resultSettings.heroMediaType;
+  resultSettings.heroBorderColor = resultSettings.hero_border_color || resultSettings.heroBorderColor;
+  resultSettings.heroGlowColor = resultSettings.hero_glow_color || resultSettings.heroGlowColor;
+  resultSettings.heroBorderRadius = resultSettings.hero_border_radius || resultSettings.heroBorderRadius;
+  resultSettings.heroGlowIntensity = resultSettings.hero_glow_intensity || resultSettings.heroGlowIntensity;
+
+  resultSettings.featuredMediaUrl = resultSettings.extra_banner_url || resultSettings.featuredMediaUrl;
+  resultSettings.featuredMediaType = (resultSettings.extra_banner_type as any) || resultSettings.featuredMediaType;
+  resultSettings.featuredMediaAlt = resultSettings.extra_banner_alt || resultSettings.featuredMediaAlt;
 
   return { settings: resultSettings, logo: resultLogo };
 }
@@ -1714,7 +1926,40 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
         { key: 'institutional_media_alt', value: settings.institutionalMediaAlt || '' },
         { key: 'institutionalMediaAlt', value: settings.institutionalMediaAlt || '' },
         { key: 'institutional_text', value: settings.institutionalText || '' },
-        { key: 'institutionalText', value: settings.institutionalText || '' }
+        { key: 'institutionalText', value: settings.institutionalText || '' },
+
+        // Modern Custom Keys (About / Institutional)
+        { key: 'about_commercial_name', value: settings.about_commercial_name || settings.commercialName },
+        { key: 'about_legal_name', value: settings.about_legal_name || settings.corporateName },
+        { key: 'about_cnpj', value: settings.about_cnpj || settings.cnpj },
+        { key: 'about_address', value: settings.about_address || settings.address },
+        { key: 'about_text', value: settings.about_text || settings.institutionalText },
+        { key: 'about_media_url', value: settings.about_media_url || settings.institutionalMediaUrl },
+        { key: 'about_media_type', value: settings.about_media_type || settings.institutionalMediaType },
+        { key: 'about_media_alt', value: settings.about_media_alt || settings.institutionalMediaAlt },
+
+        // Modern Custom Keys (Hero Card / Image)
+        { key: 'hero_media_url', value: settings.hero_media_url || settings.heroImageUrl },
+        { key: 'hero_media_type', value: settings.hero_media_type || settings.heroMediaType },
+        { key: 'hero_border_color', value: settings.hero_border_color || settings.heroBorderColor },
+        { key: 'hero_glow_color', value: settings.hero_glow_color || settings.heroGlowColor },
+        { key: 'hero_border_radius', value: settings.hero_border_radius || settings.heroBorderRadius },
+        { key: 'hero_glow_intensity', value: settings.hero_glow_intensity || settings.heroGlowIntensity },
+
+        // Modern Custom Keys (Extra Banner / featured)
+        { key: 'extra_banner_url', value: settings.extra_banner_url || settings.featuredMediaUrl },
+        { key: 'extra_banner_type', value: settings.extra_banner_type || settings.featuredMediaType },
+        { key: 'extra_banner_alt', value: settings.extra_banner_alt || settings.featuredMediaAlt },
+
+        // Modern Custom Keys (Presell settings)
+        { key: 'presell_hero_title', value: settings.presell_hero_title || '' },
+        { key: 'presell_hero_subtitle', value: settings.presell_hero_subtitle || '' },
+        { key: 'presell_button_text', value: settings.presell_button_text || '' },
+        { key: 'presell_whatsapp_message', value: settings.presell_whatsapp_message || '' },
+        { key: 'presell_hero_media_url', value: settings.presell_hero_media_url || '' },
+        { key: 'presell_hero_media_type', value: settings.presell_hero_media_type || 'image' },
+        { key: 'presell_background_image_url', value: settings.presell_background_image_url || '' },
+        { key: 'presell_notice_text', value: settings.presell_notice_text || '' }
       ];
       
       const validDbKeys = rows.map(r => r.key);
@@ -1730,30 +1975,7 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
           }
         }
       } else {
-        const initialKeys = [
-          { key: 'commercial_name', value: settings.commercialName },
-          { key: 'corporate_name', value: settings.corporateName },
-          { key: 'cnpj', value: settings.cnpj },
-          { key: 'address', value: settings.address },
-          { key: 'whatsapp_text', value: settings.whatsappText },
-          { key: 'whatsapp_raw', value: settings.whatsappRaw },
-          { key: 'email', value: settings.email },
-          { key: 'hours', value: settings.hours },
-          { key: 'slogan', value: settings.slogan },
-          { key: 'hero_image_url', value: settings.heroImageUrl || '' },
-          { key: 'hero_media_type', value: settings.heroMediaType || 'image' },
-          { key: 'featured_media_url', value: settings.featuredMediaUrl || '' },
-          { key: 'featured_media_type', value: settings.featuredMediaType || 'image' },
-          { key: 'featured_media_alt', value: settings.featuredMediaAlt || '' },
-          { key: 'hero_border_color', value: settings.heroBorderColor || '' },
-          { key: 'hero_glow_color', value: settings.heroGlowColor || '' },
-          { key: 'hero_border_radius', value: settings.heroBorderRadius || '' },
-          { key: 'hero_glow_intensity', value: settings.heroGlowIntensity || '' },
-          { key: 'institutional_media_url', value: settings.institutionalMediaUrl || '' },
-          { key: 'institutional_media_type', value: settings.institutionalMediaType || 'image' },
-          { key: 'institutional_media_alt', value: settings.institutionalMediaAlt || '' },
-          { key: 'institutional_text', value: settings.institutionalText || '' }
-        ];
+        const initialKeys = keys.map(k => ({ key: k.key, value: k.value }));
         await supabase.from('site_settings').upsert(initialKeys);
       }
     } else {
@@ -1803,6 +2025,39 @@ export async function saveSettingsDb(settings: SiteSettings): Promise<void> {
       setField('institutionalMediaAlt', settings.institutionalMediaAlt || '');
       setField('institutional_text', settings.institutionalText || '');
       setField('institutionalText', settings.institutionalText || '');
+
+      // Modern Custom Keys (About / Institutional)
+      setField('about_commercial_name', settings.about_commercial_name || settings.commercialName);
+      setField('about_legal_name', settings.about_legal_name || settings.corporateName);
+      setField('about_cnpj', settings.about_cnpj || settings.cnpj);
+      setField('about_address', settings.about_address || settings.address);
+      setField('about_text', settings.about_text || settings.institutionalText);
+      setField('about_media_url', settings.about_media_url || settings.institutionalMediaUrl);
+      setField('about_media_type', settings.about_media_type || settings.institutionalMediaType);
+      setField('about_media_alt', settings.about_media_alt || settings.institutionalMediaAlt);
+
+      // Hero Card
+      setField('hero_media_url', settings.hero_media_url || settings.heroImageUrl);
+      setField('hero_media_type', settings.hero_media_type || settings.heroMediaType);
+      setField('hero_border_color', settings.hero_border_color || settings.heroBorderColor);
+      setField('hero_glow_color', settings.hero_glow_color || settings.heroGlowColor);
+      setField('hero_border_radius', settings.hero_border_radius || settings.heroBorderRadius);
+      setField('hero_glow_intensity', settings.hero_glow_intensity || settings.heroGlowIntensity);
+
+      // Extra Banner
+      setField('extra_banner_url', settings.extra_banner_url || settings.featuredMediaUrl);
+      setField('extra_banner_type', settings.extra_banner_type || settings.featuredMediaType);
+      setField('extra_banner_alt', settings.extra_banner_alt || settings.featuredMediaAlt);
+
+      // Presell Campaign
+      setField('presell_hero_title', settings.presell_hero_title);
+      setField('presell_hero_subtitle', settings.presell_hero_subtitle);
+      setField('presell_button_text', settings.presell_button_text);
+      setField('presell_whatsapp_message', settings.presell_whatsapp_message);
+      setField('presell_hero_media_url', settings.presell_hero_media_url);
+      setField('presell_hero_media_type', settings.presell_hero_media_type);
+      setField('presell_background_image_url', settings.presell_background_image_url);
+      setField('presell_notice_text', settings.presell_notice_text);
 
       if (rows && rows.length > 0) {
         const rowId = rows[0].id;
@@ -2333,3 +2588,22 @@ export function resolveProductImage(product: { image?: string; rim?: number } | 
   }
   return 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600';
 }
+
+/**
+ * Tests persistence on site_settings and verifies Supabase write capability
+ */
+export async function testSupabaseSave(): Promise<{ success: boolean; message: string }> {
+  try {
+    const isSupabaseConnected = !isSupabaseUrlAbsent && !isSupabaseKeyAbsent;
+    if (!isSupabaseConnected) {
+      return { success: false, message: 'Supabase não está conectado (ausente de URL ou chave).' };
+    }
+    const currentSettings = getSettings();
+    await saveSettingsDb(currentSettings);
+    return { success: true, message: 'Sucesso: Conexão ativa e gravação realizada com sucesso!' };
+  } catch (err: any) {
+    console.error('testSupabaseSave error:', err);
+    return { success: false, message: `Erro de banco: ${err.message || JSON.stringify(err)}` };
+  }
+}
+

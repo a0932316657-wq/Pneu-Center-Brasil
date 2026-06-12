@@ -38,7 +38,7 @@ export default function ProductDetails({ product, onBackToCatalog }: ProductDeta
     { label: 'Montagem', value: product.mounting },
     { label: 'Cor das Letras', value: product.letter_color },
     { label: 'Profundidade do Sulco', value: product.groove_depth },
-  ].filter(spec => spec.value && spec.value.trim() !== '');
+  ].filter(spec => spec.value !== undefined && spec.value !== null && String(spec.value).trim() !== '');
 
   return (
     <motion.div

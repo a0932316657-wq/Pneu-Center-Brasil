@@ -81,7 +81,8 @@ import {
   getPresellBrandCards,
   savePresellBrandCardsLocal,
   savePresellBrandCardDb,
-  deletePresellBrandCardDb
+  deletePresellBrandCardDb,
+  testSupabaseSave
 } from '../lib/appStore';
 import { supabase, uploadFile, uploadMedia, uploadPresellMedia, isSupabaseUrlAbsent, isSupabaseKeyAbsent } from '../lib/supabaseClient';
 import { BRANDS } from '../data';
@@ -1090,6 +1091,24 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isUploadingInstitutional, setIsUploadingInstitutional] = useState(false);
   const [isSavingInstitutional, setIsSavingInstitutional] = useState(false);
+  const [isTestingSave, setIsTestingSave] = useState(false);
+
+  const handleTestSaveClick = async () => {
+    setIsTestingSave(true);
+    triggerFeedback('Iniciando teste de comunicação direta com tabela site_settings...');
+    try {
+      const res = await testSupabaseSave();
+      if (res.success) {
+        triggerFeedback(res.message, 'success');
+      } else {
+        triggerFeedback(res.message, 'error');
+      }
+    } catch (err: any) {
+      triggerFeedback(`Erro no teste de persistência: ${err.message || err}`, 'error');
+    } finally {
+      setIsTestingSave(false);
+    }
+  };
 
   const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1100,27 +1119,45 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setIsUploadingHero(true);
     try {
       const { publicUrl, mediaType } = await uploadMedia(file, 'hero');
-      setSiteSettings(prev => ({
-        ...prev,
+      const updated = {
+        ...siteSettings,
         heroImageUrl: publicUrl,
-        heroMediaType: mediaType
-      }));
-      triggerFeedback('Mídia de destaque (Imagem/Vídeo) enviada com sucesso! Lembre-se de clicar em salvar para aplicar.');
+        heroMediaType: mediaType,
+        hero_media_url: publicUrl,
+        hero_media_type: mediaType
+      };
+      setSiteSettings(updated);
+      await saveSettingsDb(updated);
+      saveSettings(updated);
+      triggerFeedback('Mídia de destaque (Imagem/Vídeo) enviada e salva com sucesso no banco de dados!');
+      onRefreshPublicData();
     } catch (err: any) {
       console.error(err);
-      triggerFeedback(`Erro ao enviar mídia de destaque: ${err.message || err}`, 'error');
+      triggerFeedback(`Erro ao enviar/salvar mídia de destaque: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingHero(false);
     }
   };
 
-  const handleRemoveHeroImage = () => {
-    setSiteSettings(prev => ({
-      ...prev,
+  const handleRemoveHeroImage = async () => {
+    if (!(await checkAuth())) return;
+    const updated = {
+      ...siteSettings,
       heroImageUrl: '',
-      heroMediaType: 'image'
-    }));
-    triggerFeedback('Imagem de destaque removida. Clique em salvar para confirmar.');
+      heroMediaType: 'image',
+      hero_media_url: '',
+      hero_media_type: 'image'
+    };
+    setSiteSettings(updated);
+    try {
+      await saveSettingsDb(updated);
+      saveSettings(updated);
+      triggerFeedback('Mídia de destaque removida com sucesso!');
+      onRefreshPublicData();
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao remover mídia do banco: ${err.message || err}`, 'error');
+    }
   };
 
   const handleFeaturedMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1132,27 +1169,45 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setIsUploadingHero(true);
     try {
       const { publicUrl, mediaType } = await uploadMedia(file, 'banners');
-      setSiteSettings(prev => ({
-        ...prev,
+      const updated = {
+        ...siteSettings,
         featuredMediaUrl: publicUrl,
-        featuredMediaType: mediaType
-      }));
-      triggerFeedback('Mídia de banner de destaque enviada com sucesso! Lembre-se de salvar.');
+        featuredMediaType: mediaType,
+        extra_banner_url: publicUrl,
+        extra_banner_type: mediaType
+      };
+      setSiteSettings(updated);
+      await saveSettingsDb(updated);
+      saveSettings(updated);
+      triggerFeedback('Banner de destaque extra enviado e salvo com sucesso no banco de dados!');
+      onRefreshPublicData();
     } catch (err: any) {
       console.error(err);
-      triggerFeedback(`Erro ao enviar mídia de banner: ${err.message || err}`, 'error');
+      triggerFeedback(`Erro ao enviar/salvar banner: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingHero(false);
     }
   };
 
-  const handleRemoveFeaturedMedia = () => {
-    setSiteSettings(prev => ({
-      ...prev,
+  const handleRemoveFeaturedMedia = async () => {
+    if (!(await checkAuth())) return;
+    const updated = {
+      ...siteSettings,
       featuredMediaUrl: '',
-      featuredMediaType: 'image'
-    }));
-    triggerFeedback('Mídia de banner removida. Clique em salvar para confirmar.');
+      featuredMediaType: 'image',
+      extra_banner_url: '',
+      extra_banner_type: 'image'
+    };
+    setSiteSettings(updated);
+    try {
+      await saveSettingsDb(updated);
+      saveSettings(updated);
+      triggerFeedback('Banner de destaque extra removido com sucesso!');
+      onRefreshPublicData();
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao remover banner do banco: ${err.message || err}`, 'error');
+    }
   };
 
   const handleSaveHeroSettings = async () => {
@@ -1181,28 +1236,45 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     setIsUploadingInstitutional(true);
     try {
       const { publicUrl, mediaType } = await uploadMedia(file, 'institutional');
-      
-      setSiteSettings(prev => ({
-        ...prev,
+      const updated = {
+        ...siteSettings,
         institutionalMediaUrl: publicUrl,
-        institutionalMediaType: mediaType
-      }));
-      triggerFeedback('Mídia institucional enviada com sucesso! Lembre-se de clicar em salvar para aplicar.');
+        institutionalMediaType: mediaType,
+        about_media_url: publicUrl,
+        about_media_type: mediaType
+      };
+      setSiteSettings(updated);
+      await saveSettingsDb(updated);
+      saveSettings(updated);
+      triggerFeedback('Mídia institucional enviada e salva com sucesso no banco de dados!');
+      onRefreshPublicData();
     } catch (err: any) {
       console.error(err);
-      triggerFeedback(`Erro ao enviar mídia institucional: ${err.message || err}`, 'error');
+      triggerFeedback(`Erro ao enviar/salvar mídia institucional: ${err.message || err}`, 'error');
     } finally {
       setIsUploadingInstitutional(false);
     }
   };
 
-  const handleRemoveInstitutionalMedia = () => {
-    setSiteSettings(prev => ({
-      ...prev,
+  const handleRemoveInstitutionalMedia = async () => {
+    if (!(await checkAuth())) return;
+    const updated = {
+      ...siteSettings,
       institutionalMediaUrl: '',
-      institutionalMediaType: 'image'
-    }));
-    triggerFeedback('Mídia institucional removida. Clique em salvar para confirmar.');
+      institutionalMediaType: 'image',
+      about_media_url: '',
+      about_media_type: 'image'
+    };
+    setSiteSettings(updated);
+    try {
+      await saveSettingsDb(updated);
+      saveSettings(updated);
+      triggerFeedback('Mídia institucional removida com sucesso!');
+      onRefreshPublicData();
+    } catch (err: any) {
+      console.error(err);
+      triggerFeedback(`Erro ao remover mídia institucional do banco: ${err.message || err}`, 'error');
+    }
   };
 
   const handleSaveInstitutionalSettings = async () => {
@@ -4408,6 +4480,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
+                  onClick={handleTestSaveClick}
+                  disabled={isTestingSave}
+                  className="rounded-lg bg-slate-900 border border-slate-750 text-white hover:bg-slate-800 px-4 py-3.5 text-xs font-black uppercase cursor-pointer"
+                >
+                  {isTestingSave ? 'Testando...' : 'Testar salvamento'}
+                </button>
+                <button
+                  type="button"
                   onClick={handleSaveInstitutionalSettings}
                   disabled={isSavingInstitutional || isUploadingInstitutional}
                   className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3.5 text-xs font-black uppercase cursor-pointer shadow-md shadow-orange-655/10 disabled:opacity-50"
@@ -4623,6 +4703,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                   <div className="flex items-center justify-end gap-3 pt-5 border-t border-slate-150">
                     <button
                       type="button"
+                      onClick={handleTestSaveClick}
+                      disabled={isTestingSave}
+                      className="rounded-lg bg-slate-900 border border-slate-700 text-white hover:bg-slate-800 px-4 py-3.5 text-xs font-black uppercase cursor-pointer"
+                    >
+                      {isTestingSave ? 'Testando...' : 'Testar salvamento'}
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleSaveHeroSettings}
                       disabled={isSavingLogo}
                       className="rounded-lg bg-orange-600 hover:bg-orange-500 text-slate-950 px-6 py-3.5 text-xs font-black uppercase cursor-pointer shadow-md shadow-orange-600/10 disabled:opacity-50"
@@ -4735,6 +4823,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
 
                   {/* Actions Bar for Featured Banner */}
                   <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-150">
+                    <button
+                      type="button"
+                      onClick={handleTestSaveClick}
+                      disabled={isTestingSave}
+                      className="rounded-lg bg-slate-900 border border-slate-700 text-white hover:bg-slate-800 px-4 py-3.5 text-xs font-black uppercase cursor-pointer"
+                    >
+                      {isTestingSave ? 'Testando...' : 'Testar salvamento'}
+                    </button>
                     <button
                       type="button"
                       onClick={handleSaveHeroSettings}
@@ -6131,10 +6227,24 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                                       const { publicUrl, mediaType } = await uploadPresellMedia(files[0], 'presell/hero');
                                       setPresellHeroMediaUrl(publicUrl);
                                       setPresellHeroMediaType(mediaType);
-                                      triggerFeedback('Mídia de destaque enviada com sucesso!', 'success');
+                                      
+                                      const payload: PresellSettings = {
+                                        hero_title: presellHeroTitle,
+                                        hero_subtitle: presellHeroSubtitle,
+                                        hero_button_text: presellHeroButtonText,
+                                        hero_whatsapp_message: presellHeroWhatsappMessage,
+                                        hero_media_url: publicUrl,
+                                        hero_media_type: mediaType,
+                                        background_image_url: presellBackgroundUrl,
+                                        notice_text: presellNoticeText,
+                                        mobile_fixed_button: presellMobileFixedBtn,
+                                        active: true
+                                      };
+                                      await savePresellSettingsDb(payload);
+                                      triggerFeedback('Mídia de destaque enviada e salva com sucesso!', 'success');
                                     } catch (err: any) {
                                       console.error(err);
-                                      triggerFeedback(`Erro ao enviar mídia: ${err.message || err}`, 'error');
+                                      triggerFeedback(`Erro ao enviar/salvar mídia: ${err.message || err}`, 'error');
                                     } finally {
                                       setIsUploadingPresellHero(false);
                                     }
@@ -6147,10 +6257,28 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                             {presellHeroMediaUrl && (
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={async () => {
                                   setPresellHeroMediaUrl('');
                                   setPresellHeroMediaType('image');
-                                  triggerFeedback('Mídia de destaque removida. O site exibirá o pneu 3D padrão.', 'success');
+                                  try {
+                                    const payload: PresellSettings = {
+                                      hero_title: presellHeroTitle,
+                                      hero_subtitle: presellHeroSubtitle,
+                                      hero_button_text: presellHeroButtonText,
+                                      hero_whatsapp_message: presellHeroWhatsappMessage,
+                                      hero_media_url: '',
+                                      hero_media_type: 'image',
+                                      background_image_url: presellBackgroundUrl,
+                                      notice_text: presellNoticeText,
+                                      mobile_fixed_button: presellMobileFixedBtn,
+                                      active: true
+                                    };
+                                    await savePresellSettingsDb(payload);
+                                    triggerFeedback('Mídia de destaque removida e sincronizada no banco!', 'success');
+                                  } catch (err: any) {
+                                    console.error(err);
+                                    triggerFeedback('Erro ao remover mídia do banco.', 'error');
+                                  }
                                 }}
                                 className="text-xs font-bold text-red-600 hover:underline hover:text-red-800 uppercase"
                               >
@@ -6221,10 +6349,24 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                                     try {
                                       const { publicUrl } = await uploadPresellMedia(files[0], 'presell/background');
                                       setPresellBackgroundUrl(publicUrl);
-                                      triggerFeedback('Imagem de fundo enviada com sucesso!', 'success');
+                                      
+                                      const payload: PresellSettings = {
+                                        hero_title: presellHeroTitle,
+                                        hero_subtitle: presellHeroSubtitle,
+                                        hero_button_text: presellHeroButtonText,
+                                        hero_whatsapp_message: presellHeroWhatsappMessage,
+                                        hero_media_url: presellHeroMediaUrl,
+                                        hero_media_type: presellHeroMediaType,
+                                        background_image_url: publicUrl,
+                                        notice_text: presellNoticeText,
+                                        mobile_fixed_button: presellMobileFixedBtn,
+                                        active: true
+                                      };
+                                      await savePresellSettingsDb(payload);
+                                      triggerFeedback('Imagem de fundo enviada e salva com sucesso!', 'success');
                                     } catch (err: any) {
                                       console.error(err);
-                                      triggerFeedback(`Erro ao enviar fundo: ${err.message || err}`, 'error');
+                                      triggerFeedback(`Erro ao enviar/salvar fundo: ${err.message || err}`, 'error');
                                     } finally {
                                       setIsUploadingPresellBg(false);
                                     }
@@ -6237,9 +6379,27 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                             {presellBackgroundUrl && (
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={async () => {
                                   setPresellBackgroundUrl('');
-                                  triggerFeedback('Imagem de fundo removida. O site exibirá a cor padrão escura.', 'success');
+                                  try {
+                                    const payload: PresellSettings = {
+                                      hero_title: presellHeroTitle,
+                                      hero_subtitle: presellHeroSubtitle,
+                                      hero_button_text: presellHeroButtonText,
+                                      hero_whatsapp_message: presellHeroWhatsappMessage,
+                                      hero_media_url: presellHeroMediaUrl,
+                                      hero_media_type: presellHeroMediaType,
+                                      background_image_url: '',
+                                      notice_text: presellNoticeText,
+                                      mobile_fixed_button: presellMobileFixedBtn,
+                                      active: true
+                                    };
+                                    await savePresellSettingsDb(payload);
+                                    triggerFeedback('Imagem de fundo removida e sincronizada no banco!', 'success');
+                                  } catch (err: any) {
+                                    console.error(err);
+                                    triggerFeedback('Erro ao remover imagem de fundo do banco.', 'error');
+                                  }
                                 }}
                                 className="text-xs font-bold text-red-600 hover:underline hover:text-red-800 uppercase"
                               >
@@ -6290,7 +6450,15 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                     </div>
                   </div>
 
-                  <div className="pt-2">
+                  <div className="pt-2 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleTestSaveClick}
+                      disabled={isTestingSave}
+                      className="bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white font-extrabold text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition-colors cursor-pointer"
+                    >
+                      {isTestingSave ? 'Testando...' : 'Testar salvamento'}
+                    </button>
                     <button
                       type="submit"
                       disabled={isSavingPresellSettings}

@@ -47,8 +47,11 @@ import {
   syncFromSupabase,
   fetchRimDefaultMediaDb,
   fetchRimInmetroSealsDb,
-  isSyncedWithSupabase
+  isSyncedWithSupabase,
+  mapProductFromRow,
+  isValidUUID
 } from './lib/appStore';
+import { supabase } from './lib/supabaseClient';
 
 // Custom components
 import Navbar from './components/Navbar';
@@ -140,6 +143,29 @@ function parseHash(): RouteState {
   return { path: 'home' };
 }
 
+export function findProductResilient(list: Product[], identifier: string | undefined): Product | undefined {
+  if (!identifier) return undefined;
+  const decoded = decodeURIComponent(identifier).trim();
+  
+  // Try finding exactly by ID or slug
+  const foundExact = list.find((p) => p.id === decoded || (p.slug && p.slug.trim() !== '' && p.slug === decoded));
+  if (foundExact) return foundExact;
+
+  // Try slugified name matching
+  const foundSlugified = list.find((p) => {
+    const sName = slugify(p.name);
+    return sName && sName === decoded;
+  });
+  if (foundSlugified) return foundSlugified;
+
+  // Normalization comparison fallback
+  const decodedClean = decoded.toLowerCase().replace(/[^a-z0-9-]/g, '');
+  return list.find((p) => {
+    const sNameClean = slugify(p.name).toLowerCase().replace(/[^a-z0-9-]/g, '');
+    return sNameClean && sNameClean === decodedClean;
+  });
+}
+
 export default function App() {
   const [routeState, setRouteState] = useState<RouteState>(parseHash);
   const [isLoadingProducts, setIsLoadingProducts] = useState(!isSyncedWithSupabase());
@@ -149,6 +175,8 @@ export default function App() {
   const [rimCards, setRimCards] = useState<RimCard[]>(getRimCards());
   const [siteSettings, setSiteSettings] = useState(getSettings());
   const [isTabTransitioning, setIsTabTransitioning] = useState(false);
+  const [singleFetchedProduct, setSingleFetchedProduct] = useState<Product | null>(null);
+  const [isFetchingSingle, setIsFetchingSingle] = useState(false);
 
   // Trigger high quality spinning tire loading transition when route switches
   useEffect(() => {
@@ -308,8 +336,9 @@ export default function App() {
     }
 
     if (route === 'produto' && productId) {
-      const match = products.find(p => p.id === productId || p.slug === productId);
-      const targetParam = (match && match.slug) ? match.slug : productId;
+      const match = findProductResilient(products, productId);
+      console.log("Produto clicado:", productId, match ? match.name : "Novo ou vindo de cotação");
+      const targetParam = (match && match.slug && match.slug.trim() !== '') ? match.slug : productId;
       window.history.pushState({ path: 'produto', productId: targetParam, selectedRim: currentRim, selectedBrand: currentBrand }, '', `#/produto/${targetParam}`);
       setRouteState({ path: 'produto', productId: targetParam });
       return;
@@ -513,13 +542,13 @@ export default function App() {
       const hash = window.location.hash;
       const isOldRoute = hash.startsWith('#/product/');
 
-      const matchById = products.find(p => p.id === productId);
-      const matchBySlug = products.find(p => (p.slug || slugify(p.name)) === productId);
-      const match = matchById || matchBySlug;
+      const match = findProductResilient(products, productId);
 
       if (match) {
-        const targetSlug = match.slug || slugify(match.name);
-        if (productId === match.id || isOldRoute) {
+        // Se o produto possuir slug válido, usa. Senão, mantém/usa o UUID.
+        const targetSlug = (match.slug && match.slug.trim() !== '') ? match.slug : match.id;
+        
+        if (productId !== targetSlug || isOldRoute) {
           window.history.replaceState({
             path: 'produto',
             productId: targetSlug,
@@ -530,7 +559,67 @@ export default function App() {
         }
       }
     }
-  }, [routeState, products, selectedRim, selectedBrand]);
+  }, [routeState.path, routeState.productId, products, selectedRim, selectedBrand]);
+
+  // Fallback dinâmico: se o pneu não for encontrado em cache/memória local, sincroniza do Supabase em tempo real
+  useEffect(() => {
+    const fetchSingleIfMissing = async () => {
+      if (routeState.path === 'produto' && routeState.productId && !isLoadingProducts) {
+        const foundLocal = findProductResilient(products, routeState.productId);
+        if (!foundLocal) {
+          setIsFetchingSingle(true);
+          try {
+            console.log("Produto não encontrado localmente. Buscando no Supabase pelo identificador:", routeState.productId);
+            const isUUID = isValidUUID(routeState.productId);
+            
+            let query = supabase.from('products').select('*');
+            if (isUUID) {
+              query = query.eq('id', routeState.productId);
+            } else {
+              query = query.eq('slug', routeState.productId);
+            }
+            
+            const { data, error } = await query;
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+              const mapped = mapProductFromRow(data[0]);
+              console.log("Produto avulso encontrado no Supabase:", mapped);
+              setSingleFetchedProduct(mapped);
+            } else {
+              // Tenta busca global fallback no banco para bater via slugify caso seja slug de nome
+              const { data: allData, error: allErr } = await supabase.from('products').select('*');
+              if (!allErr && allData) {
+                const allMapped = allData.map(mapProductFromRow);
+                const foundFallback = findProductResilient(allMapped, routeState.productId);
+                if (foundFallback) {
+                  console.log("Produto avulso encontrado via fallback de nome slugificado:", foundFallback);
+                  setSingleFetchedProduct(foundFallback);
+                } else {
+                  console.error("Produto não encontrado no banco de dados. ID:", routeState.productId);
+                  setSingleFetchedProduct(null);
+                }
+              } else {
+                console.error("Produto não encontrado no banco de dados. ID:", routeState.productId);
+                setSingleFetchedProduct(null);
+              }
+            }
+          } catch (err) {
+            console.error("Erro ao recuperar pneu individual do Supabase:", err);
+            setSingleFetchedProduct(null);
+          } finally {
+            setIsFetchingSingle(false);
+          }
+        } else {
+          setSingleFetchedProduct(null);
+        }
+      } else {
+        setSingleFetchedProduct(null);
+      }
+    };
+
+    fetchSingleIfMissing();
+  }, [routeState.path, routeState.productId, products, isLoadingProducts]);
 
   // Catalog item filtering logic (excludes inactive items)
   const filteredProducts = products.filter((p) => p.active !== false).filter((product) => {
@@ -1778,8 +1867,21 @@ export default function App() {
                   );
                 }
 
-                const item = products.find((p) => p.slug === routeState.productId || p.id === routeState.productId);
+                if (isFetchingSingle) {
+                  return (
+                    <div className="mx-auto max-w-md text-center py-20 px-4 space-y-4">
+                      <div className="flex justify-center">
+                        <RefreshCw className="h-10 w-10 text-orange-600 animate-spin" />
+                      </div>
+                      <h2 className="font-display font-black text-xl text-slate-800 uppercase tracking-tight">Buscando pneu no banco...</h2>
+                      <p className="text-xs text-slate-500 font-sans">Sincronizando especificações técnicas e imagens. Só um instante.</p>
+                    </div>
+                  );
+                }
+
+                const item = findProductResilient(products, routeState.productId) || singleFetchedProduct;
                 if (item) {
+                  console.log("Produto encontrado para detalhes:", item.id, item.name);
                   return (
                     <ProductDetails
                       product={item}
@@ -1787,6 +1889,7 @@ export default function App() {
                     />
                   );
                 } else {
+                  console.error("Produto não encontrado no detalhe. ID:", routeState.productId);
                   // Fallback detail item 404
                   return (
                     <div className="mx-auto max-w-md text-center py-20 px-4 space-y-5">
