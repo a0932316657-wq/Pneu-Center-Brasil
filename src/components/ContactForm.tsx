@@ -21,7 +21,7 @@ export default function ContactForm() {
 
   const handleWhatsAppRedirect = (text: string) => {
     const encoded = encodeURIComponent(text);
-    const url = `https://wa.me/5511995946993?text=${encoded}`;
+    const url = `https://wa.me/551195796840?text=${encoded}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -60,7 +60,12 @@ export default function ContactForm() {
                 </div>
                 <div>
                   <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">Telefone/WhatsApp:</span>
-                  <p className="text-base font-extrabold text-slate-800 select-all">(11) 99594-6993</p>
+                  <p className="text-base font-extrabold text-slate-800 select-all">
+                    Principal: (11) 9579-6840
+                  </p>
+                  <p className="text-sm font-semibold text-slate-550 select-all">
+                    Secundário: (11) 99594-6993
+                  </p>
                   <span className="block text-[11px] text-slate-500">Clique no botão abaixo ou chame diretamente</span>
                 </div>
               </div>
@@ -162,7 +167,7 @@ export default function ContactForm() {
                     required
                     value={formData.phone}
                     onChange={handleChange}
-                    placeholder="Ex: (11) 99594-6993"
+                    placeholder="Ex: (11) 9579-6840"
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-mono"
                   />
                 </div>

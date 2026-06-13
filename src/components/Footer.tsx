@@ -98,14 +98,26 @@ export default function Footer({ onNavigate }: FooterProps) {
               <p className="font-bold">CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA</p>
               <p>CNPJ: <span className="font-mono">20.085.983/0001-13</span></p>
               
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-green-500 shrink-0" />
-                <button 
-                  onClick={() => openWhatsAppChat("Olá, gostaria de solicitar um orçamento para pneus.")}
-                  className="font-mono hover:text-green-400 text-left transition-colors font-bold"
-                >
-                  (11) 99594-6993
-                </button>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-orange-500 shrink-0" />
+                  <span className="text-[11px] text-slate-400 font-medium">WhatsApp Principal:</span>
+                  <button 
+                    onClick={() => openWhatsAppChat("Olá, gostaria de solicitar um orçamento para pneus.")}
+                    className="font-mono hover:text-orange-400 text-left transition-colors font-extrabold text-white text-xs"
+                  >
+                    (11) 9579-6840
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 pl-6">
+                  <span className="text-[11px] text-slate-400">Secundário:</span>
+                  <button 
+                    onClick={() => window.open("https://wa.me/5511995946993?text=Olá,%20gostaria%20de%20atendimento%20suporte.", "_blank", "noopener,noreferrer")}
+                    className="font-mono hover:text-green-400 text-left transition-colors font-bold text-slate-300 text-[11px]"
+                  >
+                    (11) 99594-6993
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">

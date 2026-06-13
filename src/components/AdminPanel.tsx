@@ -4080,7 +4080,7 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                     required
                     value={siteSettings.whatsappText}
                     onChange={(e) => setSiteSettings({ ...siteSettings, whatsappText: e.target.value })}
-                    placeholder="Ex: (11) 99594-6993"
+                    placeholder="Ex: (11) 9579-6840"
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-mono"
                   />
                 </div>
@@ -4088,14 +4088,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
                 {/* WhatsApp raw number (No symbols, with country code) */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Número WhatsApp Limpo (API celular - Ex: 5511995946993) *
+                    Número WhatsApp Limpo (API celular - Ex: 551195796840) *
                   </label>
                   <input
                     type="text"
                     required
                     value={siteSettings.whatsappRaw}
                     onChange={(e) => setSiteSettings({ ...siteSettings, whatsappRaw: e.target.value.replace(/\D/g, '') })}
-                    placeholder="Ex: 5511995946993"
+                    placeholder="Ex: 551195796840"
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-mono"
                   />
                 </div>

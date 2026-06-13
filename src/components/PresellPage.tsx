@@ -359,7 +359,7 @@ export default function PresellPage() {
     }
   };
 
-  const WHATSAPP_NUM = '5511995946993';
+  const WHATSAPP_NUM = '551195796840';
 
   const generateWhatsAppUrl = (message: string): string => {
     return `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(message)}`;
@@ -1059,7 +1059,7 @@ export default function PresellPage() {
               </div>
               <h3 className="font-bold text-xs uppercase tracking-wider text-slate-200">Atendimento Oficial</h3>
               <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                O único número oficial autorizado para negociações em nossa central de vendas é o (11) 99594-6993. Não responda a contatos estranhos.
+                Os números oficiais autorizados para negociações em nossa central de vendas são o (11) 9579-6840 (Principal) e o (11) 99594-6993 (Secundário). Não responda a contatos estranhos.
               </p>
             </div>
 
@@ -1133,7 +1133,8 @@ export default function PresellPage() {
             </div>
             <div className="space-y-2 md:border-l md:border-slate-800 md:pl-6">
               <p className="font-bold text-white text-sm uppercase">Contato Oficial</p>
-              <p><span className="text-slate-500 font-medium font-sans">WhatsApp SAC:</span> (11) 99594-6993</p>
+              <p><span className="text-slate-500 font-medium font-sans">WhatsApp Principal:</span> (11) 9579-6840</p>
+              <p><span className="text-slate-500 font-medium font-sans">WhatsApp Secundário:</span> (11) 99594-6993</p>
               <p><span className="text-slate-500 font-medium">E-mail:</span> contato.pneucenterbrasil@gmail.com</p>
               <p><span className="text-slate-500 font-medium">Atendimento:</span> Multimarcas Independente de Venda Consultiva</p>
             </div>

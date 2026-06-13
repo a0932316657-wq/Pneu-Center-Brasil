@@ -50,16 +50,6 @@ export default function Navbar({ currentRoute, onNavigate }: NavbarProps) {
   return (
     <>
       <header id="main-header" className="sticky top-0 z-50 w-full border-b border-slate-700 bg-[#0B1B32]/95 backdrop-blur-md text-white">
-        {/* Transparency Banner Top */}
-        <div id="transparency-banner-top" className="bg-[#061021] px-4 py-2 text-center text-xs font-semibold tracking-wide text-orange-400 md:text-sm border-b border-slate-800/80">
-          <span className="inline-flex items-center gap-1.5 justify-center flex-wrap font-sans">
-            <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-            <span>Fixo e WhatsApp: <strong>(11) 99594-6993</strong></span>
-            <span className="hidden md:inline text-slate-600">•</span>
-            <span>Catálogo Informativo Online • Nenhuma venda direta no site • Atendimento 100% via WhatsApp</span>
-          </span>
-        </div>
-
         <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo Brand */}
           <div 
