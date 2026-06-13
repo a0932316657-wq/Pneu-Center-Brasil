@@ -24,7 +24,9 @@ import {
   getLogo,
   getSettings,
   getBrands,
-  Brand
+  Brand,
+  DEFAULT_PRESELL_SETTINGS,
+  DEFAULT_PRESELL_RIM_CARDS
 } from '../lib/appStore';
 import { PresellRimCard, PresellBrandCard, PresellSettings } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -69,6 +71,11 @@ export default function PresellPage() {
   // Policies active accordion state
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
 
+  const getFallbackImageForRim = (rimValue: string): string => {
+    const match = DEFAULT_PRESELL_RIM_CARDS.find(c => c.rim === rimValue);
+    return match?.image_url || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?q=80&w=600&auto=format&fit=crop';
+  };
+
   // Load all presell configurations live from Supabase
   const loadPresellDataLive = async () => {
     try {
@@ -82,24 +89,25 @@ export default function PresellPage() {
         const row = settingsData[0];
         fetchedSettings = {
           id: row.id?.toString(),
-          hero_title: row.hero_title || '',
-          hero_subtitle: row.hero_subtitle || '',
-          hero_button_text: row.button_text || row.hero_button_text || '',
-          hero_whatsapp_message: row.whatsapp_message || row.hero_whatsapp_message || '',
-          hero_media_url: row.hero_media_url || '',
-          hero_media_type: row.hero_media_type || 'image',
-          background_image_url: row.background_image_url || '',
-          notice_text: row.notice_text || '',
+          hero_title: row.hero_title || DEFAULT_PRESELL_SETTINGS.hero_title,
+          hero_subtitle: row.hero_subtitle || DEFAULT_PRESELL_SETTINGS.hero_subtitle,
+          hero_button_text: row.button_text || row.hero_button_text || DEFAULT_PRESELL_SETTINGS.hero_button_text,
+          hero_whatsapp_message: row.whatsapp_message || row.hero_whatsapp_message || DEFAULT_PRESELL_SETTINGS.hero_whatsapp_message,
+          hero_media_url: row.hero_media_url || DEFAULT_PRESELL_SETTINGS.hero_media_url || '',
+          hero_media_type: row.hero_media_type || DEFAULT_PRESELL_SETTINGS.hero_media_type || 'image',
+          background_image_url: row.background_image_url || DEFAULT_PRESELL_SETTINGS.background_image_url || '',
+          notice_text: row.notice_text || DEFAULT_PRESELL_SETTINGS.notice_text,
           mobile_fixed_button: row.mobile_fixed_button !== false,
           active: row.active !== false
         };
+      } else {
+        // Safe DB independent fallback
+        fetchedSettings = {
+          ...DEFAULT_PRESELL_SETTINGS,
+          ...fetchedSettings
+        };
       }
       setSettings(fetchedSettings);
-
-      // Console logs as requested
-      console.log("PRESELL settings carregado:", fetchedSettings);
-      console.log("PRESELL hero_media_url:", fetchedSettings?.hero_media_url);
-      console.log("PRESELL background_image_url:", fetchedSettings?.background_image_url);
 
       // 2. Fetch presell_rim_cards
       const { data: rimsData, error: rimsError } = await supabase
@@ -108,7 +116,7 @@ export default function PresellPage() {
         .eq('active', true)
         .order('sort_order', { ascending: true });
 
-      let fetchedRims = getPresellRimCards().filter(rc => rc.active);
+      let fetchedRims: PresellRimCard[] = [];
       if (!rimsError && rimsData && rimsData.length > 0) {
         fetchedRims = rimsData.map((row: any) => ({
           id: row.id?.toString(),
@@ -121,11 +129,18 @@ export default function PresellPage() {
           active: row.active !== false,
           sort_order: row.sort_order !== undefined ? Number(row.sort_order) : 0
         }));
+      } else {
+        // Fallback to static defaults
+        fetchedRims = DEFAULT_PRESELL_RIM_CARDS.filter(r => r.active);
       }
       setRimCards(fetchedRims);
 
-      console.log("PRESELL rim cards carregados:", fetchedRims);
-      console.log("PRESELL primeiro card image_url:", fetchedRims?.[0]?.image_url);
+      // Debugging logs requested:
+      console.log("PRESELL settings:", fetchedSettings);
+      console.log("PRESELL hero_media_url:", fetchedSettings?.hero_media_url);
+      console.log("PRESELL background_image_url:", fetchedSettings?.background_image_url);
+      console.log("PRESELL rim cards:", fetchedRims);
+      console.log("PRESELL card Aro 13:", fetchedRims?.find((c: any) => c.rim === '13'));
 
       // 3. Fetch presell_brand_cards
       const { data: brandsData, error: brandsError } = await supabase
@@ -604,51 +619,58 @@ export default function PresellPage() {
 
           {/* Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {rimCards.map((card) => {
-              const cardWaUrl = generateWhatsAppUrl(card.whatsapp_message || `Olá, gostaria de conferir o catálogo de pneus aro ${card.rim}.`);
-              const specs = getRimSpecs(card.rim);
-              
-              return (
-                <div 
-                  key={card.id}
-                  className="bg-slate-900 border border-slate-800/80 rounded-3xl overflow-hidden hover:border-orange-500/50 transition-all duration-300 shadow-xl hover:shadow-orange-500/5 flex flex-col h-full group transform hover:-translate-y-1"
-                >
-                  {/* Square 1:1 image slot */}
-                  <div className="relative aspect-square w-full bg-slate-950 overflow-hidden">
-                    {card.image_url ? (
-                      <img 
-                        src={card.image_url} 
-                        alt={card.title} 
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 p-6">
-                        <Sparkles className="h-12 w-12 text-orange-500/20 mb-2" />
-                        <span className="text-3xl font-black font-display text-slate-700">ARO {card.rim}</span>
+            {(() => {
+              const isFallback = rimCards.length === 0 || rimCards.every((c) => !c.id || c.id.startsWith('rc-'));
+              return rimCards.map((card) => {
+                const cardWaUrl = generateWhatsAppUrl(card.whatsapp_message || `Olá, gostaria de conferir o catálogo de pneus aro ${card.rim}.`);
+                const specs = getRimSpecs(card.rim);
+                const imageUrlToUse = card.image_url || getFallbackImageForRim(card.rim);
+                
+                return (
+                  <div 
+                    key={card.id}
+                    className="bg-slate-900 border border-slate-800/80 rounded-3xl overflow-hidden hover:border-orange-500/50 transition-all duration-300 shadow-xl hover:shadow-orange-500/5 flex flex-col h-full group transform hover:-translate-y-1"
+                  >
+                    {/* Square 1:1 image slot */}
+                    <div className="relative aspect-square w-full bg-slate-950 overflow-hidden">
+                      {imageUrlToUse ? (
+                        <img 
+                          src={imageUrlToUse} 
+                          alt={card.title} 
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 p-6">
+                          <Sparkles className="h-12 w-12 text-orange-500/20 mb-2" />
+                          <span className="text-3xl font-black font-display text-slate-700">ARO {card.rim}</span>
+                        </div>
+                      )}
+                      
+                      {/* Floating badge for Rim Size */}
+                      <div className="absolute top-4 left-4 bg-orange-600 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-lg uppercase tracking-wider shadow-lg">
+                        Aro {card.rim}
                       </div>
-                    )}
-                    
-                    {/* Floating badge for Rim Size */}
-                    <div className="absolute top-4 left-4 bg-orange-600 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-lg uppercase tracking-wider shadow-lg">
-                      Aro {card.rim}
-                    </div>
 
-                    {/* Floating status tag - e.g. "Mais Procurado" */}
-                    <div className={`absolute top-4 right-4 border px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-md ${specs.badgeColor}`}>
-                      {specs.badgeText}
-                    </div>
+                      {/* Floating status tag - e.g. "Mais Procurado" - only shown under fallback mode */}
+                      {isFallback && (
+                        <div className={`absolute top-4 right-4 border px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-md ${specs.badgeColor}`}>
+                          {specs.badgeText}
+                        </div>
+                      )}
 
-                    {/* Bottom overlay for active stock */}
-                    <div className="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-sm border border-slate-800/60 rounded-xl px-3 py-2 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-[11px] text-slate-200 font-bold uppercase tracking-wider">Estoque Pronta-Entrega</span>
-                      </div>
-                      <span className="text-xs text-orange-400 font-black font-mono">{specs.stock}</span>
+                      {/* Bottom overlay for active stock - only shown under fallback mode */}
+                      {isFallback && (
+                        <div className="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-sm border border-slate-800/60 rounded-xl px-3 py-2 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-[11px] text-slate-200 font-bold uppercase tracking-wider">Estoque Pronta-Entrega</span>
+                          </div>
+                          <span className="text-xs text-orange-400 font-black font-mono">{specs.stock}</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
 
                   {/* Body Info */}
                   <div className="p-5 flex-grow flex flex-col justify-between gap-5 text-left">
@@ -695,7 +717,8 @@ export default function PresellPage() {
                   </div>
                 </div>
               );
-            })}
+            });
+          })()}
 
             {/* Custom "Não sei meu aro" card */}
             <div className="bg-slate-900 border-2 border-dashed border-slate-800 rounded-3xl overflow-hidden p-6 hover:border-blue-500/40 transition-all shadow-lg flex flex-col justify-between h-full min-h-[350px]">

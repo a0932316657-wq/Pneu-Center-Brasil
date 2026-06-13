@@ -1210,52 +1210,55 @@ export async function savePresellSettingsDb(settings: PresellSettings): Promise<
     const { data: rows, error: selectErr } = await supabase.from('presell_settings').select('*');
     if (selectErr) throw selectErr;
 
-    const payload = {
+    const cols = rows && rows.length > 0 ? Object.keys(rows[0]) : [];
+
+    const payload: any = {
+      id: 1,
       hero_title: settings.hero_title,
       hero_subtitle: settings.hero_subtitle,
-      hero_button_text: settings.hero_button_text,
-      hero_whatsapp_message: settings.hero_whatsapp_message,
+      button_text: settings.hero_button_text,
+      whatsapp_message: settings.hero_whatsapp_message,
       hero_media_url: settings.hero_media_url || null,
       hero_media_type: settings.hero_media_type || 'image',
       background_image_url: settings.background_image_url || null,
       notice_text: settings.notice_text || null,
-      mobile_fixed_button: settings.mobile_fixed_button !== false,
-      active: settings.active !== false
+      updated_at: new Date().toISOString()
     };
 
-    if (rows && rows.length > 0) {
-      const rowId = rows[0].id;
-      const { error: updateErr } = await supabase.from('presell_settings').update(payload).eq('id', rowId);
-      if (updateErr) throw updateErr;
-    } else {
-      try {
-        const { error: insertErr } = await supabase.from('presell_settings').insert({ id: 1, ...payload });
-        if (insertErr) {
-          const { error: insertErr2 } = await supabase.from('presell_settings').insert(payload);
-          if (insertErr2) throw insertErr2;
-        }
-      } catch {
-        const { error: insertErr2 } = await supabase.from('presell_settings').insert(payload);
-        if (insertErr2) throw insertErr2;
-      }
+    if (cols.includes('active') || cols.length === 0) {
+      payload.active = settings.active !== false;
+    }
+    if (cols.includes('mobile_fixed_button')) {
+      payload.mobile_fixed_button = settings.mobile_fixed_button !== false;
     }
 
-    // Refresh settings data to secure in memory cache
-    const { data: freshRows } = await supabase.from('presell_settings').select('*');
-    if (freshRows && freshRows.length > 0) {
-      const row = freshRows[0];
+    const { error: upsertErr } = await supabase
+      .from('presell_settings')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (upsertErr) throw upsertErr;
+
+    // Depois de salvar, buscar novamente singularmente
+    const { data: freshRow, error: refreshErr } = await supabase
+      .from('presell_settings')
+      .select('*')
+      .eq('id', 1)
+      .single();
+
+    if (refreshErr) throw refreshErr;
+    if (freshRow) {
       const mapped = {
-        id: row.id?.toString(),
-        hero_title: row.hero_title || '',
-        hero_subtitle: row.hero_subtitle || '',
-        hero_button_text: row.hero_button_text || row.button_text || '',
-        hero_whatsapp_message: row.hero_whatsapp_message || row.whatsapp_message || '',
-        hero_media_url: row.hero_media_url || '',
-        hero_media_type: row.hero_media_type || 'image',
-        background_image_url: row.background_image_url || '',
-        notice_text: row.notice_text || '',
-        mobile_fixed_button: row.mobile_fixed_button !== false,
-        active: row.active !== false
+        id: freshRow.id?.toString() || '1',
+        hero_title: freshRow.hero_title || '',
+        hero_subtitle: freshRow.hero_subtitle || '',
+        hero_button_text: freshRow.button_text || freshRow.hero_button_text || '',
+        hero_whatsapp_message: freshRow.whatsapp_message || freshRow.hero_whatsapp_message || '',
+        hero_media_url: freshRow.hero_media_url || '',
+        hero_media_type: freshRow.hero_media_type || 'image',
+        background_image_url: freshRow.background_image_url || '',
+        notice_text: freshRow.notice_text || '',
+        mobile_fixed_button: freshRow.mobile_fixed_button !== false,
+        active: freshRow.active !== false
       };
       savePresellSettingsLocal(mapped);
     }
@@ -1300,11 +1303,12 @@ export async function savePresellRimCardDb(card: PresellRimCard): Promise<Presel
     button_text: card.button_text || 'FALAR COM ESPECIALISTA',
     whatsapp_message: card.whatsapp_message || '',
     active: card.active !== false,
-    sort_order: Number(card.sort_order) || 0
+    sort_order: Number(card.sort_order) || 0,
+    updated_at: new Date().toISOString()
   };
 
   if (isSupabaseConnected) {
-    const isIdReal = card.id && (card.id.length === 36 || !card.id.startsWith('rc-') || !isNaN(Number(card.id)));
+    const isIdReal = card.id && (card.id.length === 36 || (!card.id.startsWith('rc-') && isNaN(Number(card.id)) === false));
     const numericId = isIdReal && !isNaN(Number(card.id)) ? Number(card.id) : null;
     const dbId = numericId !== null ? numericId : card.id;
 
@@ -1320,18 +1324,17 @@ export async function savePresellRimCardDb(card: PresellRimCard): Promise<Presel
         console.error('Error updating rim card in presell flow:', error);
         throw error;
       }
-    }
-
-    if (!resultRow) {
+    } else {
       const { data, error } = await supabase
         .from('presell_rim_cards')
-        .insert([payload])
+        .upsert(payload, { onConflict: 'rim' })
         .select();
-      if (error) {
-        console.error('Error inserting rim card in presell flow:', error);
+      if (!error && data && data.length > 0) {
+        resultRow = data[0];
+      } else if (error) {
+        console.error('Error upserting rim card by rim in presell flow:', error);
         throw error;
       }
-      resultRow = data?.[0];
     }
   }
 
@@ -1347,7 +1350,33 @@ export async function savePresellRimCardDb(card: PresellRimCard): Promise<Presel
     sort_order: resultRow?.sort_order !== undefined ? Number(resultRow.sort_order) : card.sort_order
   };
 
-  const otherRims = presellRimCardsCache.filter(rc => rc.id !== mappedResult.id);
+  if (isSupabaseConnected) {
+    const { data: allRows } = await supabase
+      .from('presell_rim_cards')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (allRows && allRows.length > 0) {
+      const mappedList: PresellRimCard[] = allRows.map((row: any) => ({
+        id: row.id?.toString(),
+        title: row.title || `Aro ${row.rim}`,
+        rim: row.rim?.toString() || '15',
+        subtitle: row.subtitle || row.description || '',
+        image_url: row.image_url || '',
+        button_text: row.button_text || 'FALAR COM ESPECIALISTA',
+        whatsapp_message: row.whatsapp_message || `Olá, gostaria de consultar pneus Aro ${row.rim}.`,
+        active: row.active !== false,
+        sort_order: row.sort_order !== undefined ? Number(row.sort_order) : 0
+      }));
+      savePresellRimCardsLocal(mappedList);
+      
+      const updatedMatch = mappedList.find(rc => rc.rim === mappedResult.rim);
+      if (updatedMatch) {
+        return updatedMatch;
+      }
+    }
+  }
+
+  const otherRims = presellRimCardsCache.filter(rc => rc.id !== mappedResult.id && rc.rim !== mappedResult.rim);
   const updatedRims = [...otherRims, mappedResult].sort((a, b) => a.sort_order - b.sort_order);
   savePresellRimCardsLocal(updatedRims);
 

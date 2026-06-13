@@ -1167,6 +1167,345 @@ export default function App() {
                 </div>
               </section>
 
+              {/* BUSQUE POR MARCA */}
+              <section id="marcas-section" className="py-16 bg-white border-b border-slate-200">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  <div className="text-center max-w-xl mx-auto mb-10">
+                    <h2 className="font-sans text-2xl font-black text-slate-800 uppercase tracking-tight">
+                      Busque pneus por marca
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-2 font-sans">
+                      Selecione o fabricante de sua preferência para visualizar os modelos disponíveis em nosso catálogo de reposição.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+                    {brands.filter(b => b.active).map((brand) => (
+                      <button
+                        key={brand.id}
+                        onClick={() => {
+                          filterByBrand(brand.name);
+                        }}
+                        className="group flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-orange-500/5 border border-slate-200 hover:border-orange-500 rounded-2xl w-24 sm:w-28 h-24 sm:h-28 transition-all duration-300 hover:shadow-md cursor-pointer shrink-0"
+                      >
+                        <div className="h-10 sm:h-12 w-full flex items-center justify-center p-1 overflow-hidden transition-transform group-hover:scale-105 duration-350">
+                          {brand.logo && brand.logo.trim() && !failedBrandLogos[brand.id] ? (
+                            <img 
+                              src={brand.logo.trim()} 
+                              alt={brand.name} 
+                              onError={() => setFailedBrandLogos(p => ({ ...p, [brand.id]: true }))}
+                              className="h-full w-full object-contain" 
+                            />
+                          ) : (
+                            <div className="text-xs sm:text-sm font-sans font-black text-slate-400 uppercase tracking-wider">
+                              {brand.name.substring(0, 3).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[10px] sm:text-xs font-sans font-bold uppercase text-slate-700 group-hover:text-orange-600 mt-1 sm:mt-1.5 truncate max-w-full">
+                          {brand.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* HIGHLIGHT PRODUCTS */}
+              <section className="py-16 sm:py-20 bg-slate-50 border-t border-b border-slate-200">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  
+                  {/* Section Title with Hourly Rotation Notice */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4">
+                    <div className="space-y-1.5">
+                      <h2 className="font-sans text-2xl font-black uppercase text-slate-800 tracking-tight">
+                        Pneus em Destaque
+                      </h2>
+                      <p className="text-xs sm:text-sm text-slate-500 leading-normal flex flex-wrap items-center gap-2">
+                        <span>Alguns dos modelos mais procurados no Butantã e em toda São Paulo</span>
+                        <span className="inline-flex items-center gap-1 bg-orange-500/10 text-orange-700 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border border-orange-500/20 uppercase tracking-wider animate-pulse">
+                          <RefreshCw className="h-2.5 w-2.5 animate-spin duration-[6000ms]" />
+                          Vitrine Rotativa de Hora em Hora
+                        </span>
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigateTo('catalogo')}
+                      className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors uppercase font-sans cursor-pointer"
+                    >
+                      <span>Ver Catálogo Completo</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Two lists stacked: First Grid (Row 1) and Second Grid (Row 2) */}
+                  <div className="space-y-12">
+                    
+                    {/* Grid 1: Top selection of 4 tires */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                        <span className="text-xs font-mono font-black uppercase text-slate-450 tracking-widest">
+                          SELEÇÃO ROTATIVA • BLOCO A
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {hourlyFeatured.list1.map((prod) => (
+                          <ProductCard
+                            key={prod.id}
+                            product={prod}
+                            onViewDetails={handleFeatureTireClick}
+                          />
+                        ))}
+                        {hourlyFeatured.list1.length === 0 && (
+                          <p className="col-span-full text-center text-xs text-slate-400 font-sans py-6">
+                            Nenhum pneu ativo disponível nesta rotação.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Grid 2: Bottom selection of 4 tires */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                        <span className="text-xs font-mono font-black uppercase text-slate-450 tracking-widest">
+                          SELEÇÃO ROTATIVA • BLOCO B
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {hourlyFeatured.list2.map((prod) => (
+                          <ProductCard
+                            key={prod.id}
+                            product={prod}
+                            onViewDetails={handleFeatureTireClick}
+                          />
+                        ))}
+                        {hourlyFeatured.list2.length === 0 && (
+                          <p className="col-span-full text-center text-xs text-slate-400 font-sans py-6">
+                            Nenhum pneu ativo disponível nesta rotação.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Big prominent centered bottom Catalog CTA Button */}
+                  <div className="mt-14 flex justify-center">
+                    <button
+                      id="btn-destaque-catalogo-completo-centered"
+                      onClick={() => navigateTo('catalogo')}
+                      className="inline-flex items-center justify-center gap-3 rounded-2xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-display font-black text-xs uppercase tracking-widest px-10 py-5 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:shadow-orange-500/15 cursor-pointer max-w-sm w-full sm:w-auto"
+                    >
+                      <Compass className="h-4.5 w-4.5 shrink-0" />
+                      <span>Ver Catálogo Completo</span>
+                      <ChevronRight className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:translate-x-1" />
+                    </button>
+                  </div>
+
+                </div>
+              </section>
+
+              {/* BUSQUE PELO ARO */}
+              <section id="aros-section" className="py-16 bg-slate-50 border-b border-slate-200">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  <div className="text-center max-w-xl mx-auto mb-10">
+                    <h2 className="font-sans text-2xl font-black text-slate-800 uppercase tracking-tight">
+                      Busque pneus pelo aro
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 mt-2 font-sans">
+                      Clique no diâmetro do aro do seu veículo para ver instantaneamente a gama de marcas e perfis disponíveis.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {rimCards.filter(rc => rc.active).map((card) => (
+                      <button
+                        key={card.id}
+                        onClick={() => {
+                          filterByRim(`Aro ${card.rim}`);
+                        }}
+                        className="group relative h-56 rounded-2xl overflow-hidden border-2 border-slate-200 hover:border-orange-500 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between p-5 text-left w-full cursor-pointer bg-slate-900"
+                      >
+                        {/* Background Image of standard tire */}
+                        <div className="absolute inset-0 z-0">
+                          {card.image && card.image.trim() ? (
+                            <MediaRenderer
+                              src={card.image.trim()}
+                              mediaType={card.mediaType}
+                              alt={card.name}
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-40 group-hover:opacity-50"
+                            />
+                          ) : null}
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-900/60" />
+                        </div>
+
+                        {/* Top Area: Badge & Header */}
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="inline-flex items-center rounded-md bg-orange-500/10 px-2 py-1 text-[10px] font-mono font-black text-orange-400 border border-orange-500/20 uppercase tracking-widest">
+                              Diâmetro R{card.rim}
+                            </span>
+                          </div>
+                          <h3 className="font-sans font-black text-white text-lg sm:text-xl uppercase tracking-tight group-hover:text-orange-400 transition-colors">
+                            Pneus {card.name}
+                          </h3>
+                        </div>
+
+                        {/* Bottom Area: Custom CTA / Description */}
+                        <div className="relative z-10 w-full mt-auto">
+                          <p className="text-xs text-slate-300 font-sans leading-normal mb-3 opacity-90">
+                            {card.description || `Disponíveis em diversas medidas e marcas para o seu veículo.`}
+                          </p>
+                          <div className="w-full bg-orange-600 group-hover:bg-orange-50 text-slate-950 font-display font-extrabold text-[11px] uppercase tracking-wider py-2.5 px-4 rounded-xl flex items-center justify-between transition-colors shadow-md">
+                            <span>Ver modelos disponíveis para aro {card.rim}</span>
+                            <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" />
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* SEÇÃO DE CONFIANÇA & SOBRE NÓS INTEGRADO */}
+              <section id="sobre-section" className="py-16 bg-white border-b border-slate-200">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                  
+                  {/* Top area: main layout with text on left and 9:16 media on right */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+                    
+                    {/* Left text column: Institutional overview */}
+                    <div className="lg:col-span-7 space-y-6">
+                      <div className="space-y-2">
+                        <span className="inline-block text-[11px] font-mono uppercase bg-orange-100 text-orange-700 rounded px-2.5 py-1 font-bold leading-none">
+                          CONFIABILIDADE DOCUMENTADA
+                        </span>
+                        <h2 className="font-sans text-3xl font-black text-slate-800 uppercase tracking-tight leading-tight">
+                          {siteSettings.commercialName || 'Pneu Center Brasil'} • Distribuição Digital
+                        </h2>
+                        <p className="text-xs sm:text-sm text-slate-500 font-sans font-semibold">
+                          Unimos a agilidade das pesquisas do catálogo virtual com a segurança de nossa curadoria técnica individualizada.
+                        </p>
+                      </div>
+
+                      <div className="space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed font-sans">
+                        <p>
+                          A <strong>{siteSettings.commercialName || 'Pneu Center Brasil'}</strong> é operada de forma consolidada pela empresa sob razão social de <strong>{siteSettings.corporateName || 'CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA'}</strong>, portadora do CNPJ oficial e regularizado <strong>{siteSettings.cnpj || '20.085.983/0001-13'}</strong>. Nossa operação técnica comercial está localizada em sede física estabelecida na {siteSettings.address || 'Av. Professor Francisco Morato, 2001, no bairro do Butantã, São Paulo - SP'}.
+                        </p>
+                        <p>
+                          Defendemos uma postura profissional transparente: <strong>não operamos com sistemas robóticos de faturamento direto online</strong>. Ao encontrar um pneu correspondente no catálogo, nosso consultor técnico inicia um contato direto via WhatsApp para garantir que a medida do pneu selecionado atenda perfeitamente o manual do condutor de seu carro, confirmando fisicamente o estoque antes de qualquer cobrança comercial.
+                        </p>
+                      </div>
+
+                      <div className="border-l-4 border-orange-500 bg-slate-50 p-4 rounded-r-xl border border-slate-200">
+                        <p className="text-xs text-slate-750 font-medium uppercase tracking-wider mb-1 flex items-center gap-1.5 font-bold">
+                          <ShieldCheck className="h-4.5 w-4.5 text-emerald-650" />
+                          Compromisso Antigolpe & Anti-Fraude
+                        </p>
+                        <p className="text-xs text-slate-500 leading-relaxed font-sans">
+                          Não solicitamos senhas de acesso, dados sigilosos ou depósitos direcionados a terceiros não homologados em nosso portal. Nossa negociação é transparente do início ao fim with emissão de nota fiscal garantida.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right column: 9:16 vertical media container */}
+                    <div className="lg:col-span-5 flex justify-center w-full">
+                      <div className="relative w-full max-w-[340px] aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-950 flex items-center justify-center group/inst">
+                        {/* Soft overlay pattern */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-orange-500/5 via-transparent to-transparent opacity-40 group-hover/inst:opacity-60 transition-opacity duration-300 pointer-events-none z-10" />
+
+                        {siteSettings.institutionalMediaUrl ? (
+                          <MediaRenderer
+                            src={siteSettings.institutionalMediaUrl}
+                            mediaType={siteSettings.institutionalMediaType || (isVideoUrl(siteSettings.institutionalMediaUrl) ? 'video' : 'image')}
+                            alt={siteSettings.institutionalMediaAlt || 'Distribuição Digital de Pneus'}
+                            className="w-full h-full object-cover select-none pointer-events-none block"
+                          />
+                        ) : (
+                          // Premium fallback 9:16 card when no custom media is configured
+                          <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 p-6 flex flex-col justify-between">
+                            <div className="absolute inset-0 opacity-5" style={{
+                              backgroundImage: 'radial-gradient(#f97316 1px, transparent 1px)',
+                              backgroundSize: '24px 24px'
+                            }} />
+                            <div className="space-y-4 pt-4">
+                              <div className="inline-flex rounded-xl bg-orange-500/10 p-3 border border-orange-500/20">
+                                <Award className="h-6 w-6 text-orange-500" />
+                              </div>
+                              <h3 className="font-sans text-xl font-bold uppercase tracking-wide text-slate-200 leading-tight">
+                                Distribuição<br />
+                                de Alta<br />
+                                Performance
+                              </h3>
+                              <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+                                Logística otimizada, envio assegurado e suporte de especialistas dedicados para todo o território nacional.
+                              </p>
+                            </div>
+                            
+                            {/* Visual decorative circles/rims */}
+                            <div className="relative h-28 w-full scale-110 translate-y-6 flex justify-end items-end opacity-20 group-hover/inst:opacity-30 transition-opacity duration-300">
+                              <div className="w-24 h-24 rounded-full border-4 border-dashed border-slate-400 animate-[spin_60s_linear_infinite]" />
+                              <div className="w-16 h-16 rounded-full border-4 border-dashed border-slate-405 animate-[spin_40s_linear_infinite] -ml-6" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Bottom area: 4 trust badges in grid */}
+                  <div className="mt-16 pt-10 border-t border-slate-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      
+                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
+                        <div className="inline-flex rounded-lg bg-orange-500/10 p-2.5 border border-orange-500/20 w-fit">
+                          <Building2 className="h-6 w-6 text-orange-600" />
+                        </div>
+                        <div className="mt-4">
+                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Razão Social Registrada</h4>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">Razão oficial CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA comprovada legalmente.</p>
+                        </div>
+                      </div>
+
+                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
+                        <div className="inline-flex rounded-lg bg-emerald-500/10 p-2.5 border border-emerald-500/20 w-fit">
+                          <ShieldCheck className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <div className="mt-4">
+                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Garantias & NF Confirmadas</h4>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">1 ano de garantia total garantido pela nossa loja e 5 anos oficial direto de fábrica. Pneus novos originais com Nota Fiscal tudo certinho.</p>
+                        </div>
+                      </div>
+
+                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
+                        <div className="inline-flex rounded-lg bg-indigo-500/10 p-2.5 border border-indigo-500/20 w-fit">
+                          <UserCheck className="h-6 w-6 text-indigo-600" />
+                        </div>
+                        <div className="mt-4">
+                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Atendimento Especializado</h4>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">Consultores humanos aptos para orientar sobre índices de velocidade e especificações de carga técnica.</p>
+                        </div>
+                      </div>
+
+                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
+                        <div className="inline-flex rounded-lg bg-blue-500/10 p-2.5 border border-blue-500/20 w-fit">
+                          <Wrench className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="mt-4">
+                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Showroom no Butantã</h4>
+                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">Sede moderna e de fácil acesso integrada para logística rápida de retirada por agendamentos.</p>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+              </section>
+
               {/* HOW IT WORKS PREVIEW */}
               <section className="py-16 bg-slate-100/50 font-sans border-b border-slate-200">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -1276,50 +1615,6 @@ export default function App() {
                 </div>
               </section>
 
-              {/* BUSQUE POR MARCA */}
-              <section id="marcas-section" className="py-16 bg-white border-b border-slate-200">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                  <div className="text-center max-w-xl mx-auto mb-10">
-                    <h2 className="font-sans text-2xl font-black text-slate-800 uppercase tracking-tight">
-                      Busque pneus por marca
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-2 font-sans">
-                      Selecione o fabricante de sua preferência para visualizar os modelos disponíveis em nosso catálogo de reposição.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-                    {brands.filter(b => b.active).map((brand) => (
-                      <button
-                        key={brand.id}
-                        onClick={() => {
-                          filterByBrand(brand.name);
-                        }}
-                        className="group flex flex-col items-center justify-center p-4 bg-slate-50 hover:bg-orange-500/5 border border-slate-200 hover:border-orange-500 rounded-2xl w-24 sm:w-28 h-24 sm:h-28 transition-all duration-300 hover:shadow-md cursor-pointer shrink-0"
-                      >
-                        <div className="h-10 sm:h-12 w-full flex items-center justify-center p-1 overflow-hidden transition-transform group-hover:scale-105 duration-350">
-                          {brand.logo && brand.logo.trim() && !failedBrandLogos[brand.id] ? (
-                            <img 
-                              src={brand.logo.trim()} 
-                              alt={brand.name} 
-                              onError={() => setFailedBrandLogos(p => ({ ...p, [brand.id]: true }))}
-                              className="h-full w-full object-contain" 
-                            />
-                          ) : (
-                            <div className="text-xs sm:text-sm font-sans font-black text-slate-400 uppercase tracking-wider">
-                              {brand.name.substring(0, 3).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-[10px] sm:text-xs font-sans font-bold uppercase text-slate-700 group-hover:text-orange-600 mt-1 sm:mt-1.5 truncate max-w-full">
-                          {brand.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
               {/* FEATURED BANNER EXTRA */}
               {siteSettings.featuredMediaUrl && siteSettings.featuredMediaUrl.trim() !== '' && (
                 <section id="banner-destaque-home" className="py-12 bg-slate-100/30 border-b border-slate-200">
@@ -1357,301 +1652,6 @@ export default function App() {
                   </div>
                 </section>
               )}
-
-              {/* BUSQUE PELO ARO */}
-              <section id="aros-section" className="py-16 bg-slate-50 border-b border-slate-200">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                  <div className="text-center max-w-xl mx-auto mb-10">
-                    <h2 className="font-sans text-2xl font-black text-slate-800 uppercase tracking-tight">
-                      Busque pneus pelo aro
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-2 font-sans">
-                      Clique no diâmetro do aro do seu veículo para ver instantaneamente a gama de marcas e perfis disponíveis.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {rimCards.filter(rc => rc.active).map((card) => (
-                      <button
-                        key={card.id}
-                        onClick={() => {
-                          filterByRim(`Aro ${card.rim}`);
-                        }}
-                        className="group relative h-56 rounded-2xl overflow-hidden border-2 border-slate-200 hover:border-orange-500 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between p-5 text-left w-full cursor-pointer bg-slate-900"
-                      >
-                        {/* Background Image of standard tire */}
-                        <div className="absolute inset-0 z-0">
-                          {card.image && card.image.trim() ? (
-                            <MediaRenderer
-                              src={card.image.trim()}
-                              mediaType={card.mediaType}
-                              alt={card.name}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-40 group-hover:opacity-50"
-                            />
-                          ) : null}
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-900/60" />
-                        </div>
-
-                        {/* Top Area: Badge & Header */}
-                        <div className="relative z-10">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="inline-flex items-center rounded-md bg-orange-500/10 px-2 py-1 text-[10px] font-mono font-black text-orange-400 border border-orange-500/20 uppercase tracking-widest">
-                              Diâmetro R{card.rim}
-                            </span>
-                          </div>
-                          <h3 className="font-sans font-black text-white text-lg sm:text-xl uppercase tracking-tight group-hover:text-orange-400 transition-colors">
-                            Pneus {card.name}
-                          </h3>
-                        </div>
-
-                        {/* Bottom Area: Custom CTA / Description */}
-                        <div className="relative z-10 w-full mt-auto">
-                          <p className="text-xs text-slate-300 font-sans leading-normal mb-3 opacity-90">
-                            {card.description || `Disponíveis em diversas medidas e marcas para o seu veículo.`}
-                          </p>
-                          <div className="w-full bg-orange-600 group-hover:bg-orange-500 text-slate-950 font-display font-extrabold text-[11px] uppercase tracking-wider py-2.5 px-4 rounded-xl flex items-center justify-between transition-colors shadow-md">
-                            <span>Ver modelos disponíveis para aro {card.rim}</span>
-                            <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" />
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              {/* HIGHLIGHT PRODUCTS */}
-              <section className="py-16 sm:py-20 bg-slate-50 border-t border-b border-slate-200">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                  
-                  {/* Section Title with Hourly Rotation Notice */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4">
-                    <div className="space-y-1.5">
-                      <h2 className="font-sans text-2xl font-black uppercase text-slate-800 tracking-tight">
-                        Pneus em Destaque
-                      </h2>
-                      <p className="text-xs sm:text-sm text-slate-500 leading-normal flex flex-wrap items-center gap-2">
-                        <span>Alguns dos modelos mais procurados no Butantã e em toda São Paulo</span>
-                        <span className="inline-flex items-center gap-1 bg-orange-500/10 text-orange-700 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border border-orange-500/20 uppercase tracking-wider animate-pulse">
-                          <RefreshCw className="h-2.5 w-2.5 animate-spin duration-[6000ms]" />
-                          Vitrine Rotativa de Hora em Hora
-                        </span>
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => navigateTo('catalogo')}
-                      className="inline-flex items-center gap-1 text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors uppercase font-sans cursor-pointer"
-                    >
-                      <span>Ver Catálogo Completo</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  {/* Two lists stacked: First Grid (Row 1) and Second Grid (Row 2) */}
-                  <div className="space-y-12">
-                    
-                    {/* Grid 1: Top selection of 4 tires */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
-                        <span className="text-xs font-mono font-black uppercase text-slate-450 tracking-widest">
-                          SELEÇÃO ROTATIVA • BLOCO A
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {hourlyFeatured.list1.map((prod) => (
-                          <ProductCard
-                            key={prod.id}
-                            product={prod}
-                            onViewDetails={handleFeatureTireClick}
-                          />
-                        ))}
-                        {hourlyFeatured.list1.length === 0 && (
-                          <p className="col-span-full text-center text-xs text-slate-400 font-sans py-6">
-                            Nenhum pneu ativo disponível nesta rotação.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Grid 2: Bottom selection of 4 tires */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
-                        <span className="text-xs font-mono font-black uppercase text-slate-450 tracking-widest">
-                          SELEÇÃO ROTATIVA • BLOCO B
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {hourlyFeatured.list2.map((prod) => (
-                          <ProductCard
-                            key={prod.id}
-                            product={prod}
-                            onViewDetails={handleFeatureTireClick}
-                          />
-                        ))}
-                        {hourlyFeatured.list2.length === 0 && (
-                          <p className="col-span-full text-center text-xs text-slate-400 font-sans py-6">
-                            Nenhum pneu ativo disponível nesta rotação.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Big prominent centered bottom Catalog CTA Button */}
-                  <div className="mt-14 flex justify-center">
-                    <button
-                      id="btn-destaque-catalogo-completo-centered"
-                      onClick={() => navigateTo('catalogo')}
-                      className="inline-flex items-center justify-center gap-3 rounded-2xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-display font-black text-xs uppercase tracking-widest px-10 py-5 transition-all duration-300 hover:scale-[1.03] hover:shadow-xl hover:shadow-orange-500/15 cursor-pointer max-w-sm w-full sm:w-auto"
-                    >
-                      <Compass className="h-4.5 w-4.5 shrink-0" />
-                      <span>Ver Catálogo Completo</span>
-                      <ChevronRight className="h-4.5 w-4.5 shrink-0 transition-transform group-hover:translate-x-1" />
-                    </button>
-                  </div>
-
-                </div>
-              </section>
-
-              {/* SEÇÃO DE CONFIANÇA & SOBRE NÓS INTEGRADO */}
-              <section id="sobre-section" className="py-16 bg-white border-b border-slate-200">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                  
-                  {/* Top area: main layout with text on left and 9:16 media on right */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-                    
-                    {/* Left text column: Institutional overview */}
-                    <div className="lg:col-span-7 space-y-6">
-                      <div className="space-y-2">
-                        <span className="inline-block text-[11px] font-mono uppercase bg-orange-100 text-orange-700 rounded px-2.5 py-1 font-bold leading-none">
-                          CONFIABILIDADE DOCUMENTADA
-                        </span>
-                        <h2 className="font-sans text-3xl font-black text-slate-800 uppercase tracking-tight leading-tight">
-                          {siteSettings.commercialName || 'Pneu Center Brasil'} • Distribuição Digital
-                        </h2>
-                        <p className="text-xs sm:text-sm text-slate-500 font-sans font-semibold">
-                          Unimos a agilidade das pesquisas do catálogo virtual com a segurança de nossa curadoria técnica individualizada.
-                        </p>
-                      </div>
-
-                      <div className="space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed font-sans">
-                        <p>
-                          A <strong>{siteSettings.commercialName || 'Pneu Center Brasil'}</strong> é operada de forma consolidada pela empresa sob razão social de <strong>{siteSettings.corporateName || 'CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA'}</strong>, portadora do CNPJ oficial e regularizado <strong>{siteSettings.cnpj || '20.085.983/0001-13'}</strong>. Nossa operação técnica comercial está localizada em sede física estabelecida na {siteSettings.address || 'Av. Professor Francisco Morato, 2001, no bairro do Butantã, São Paulo - SP'}.
-                        </p>
-                        <p>
-                          Defendemos uma postura profissional transparente: <strong>não operamos com sistemas robóticos de faturamento direto online</strong>. Ao encontrar um pneu correspondente no catálogo, nosso consultor técnico inicia um contato direto via WhatsApp para garantir que a medida do pneu selecionado atenda perfeitamente o manual do condutor de seu carro, confirmando fisicamente o estoque antes de qualquer cobrança comercial.
-                        </p>
-                      </div>
-
-                      <div className="border-l-4 border-orange-500 bg-slate-50 p-4 rounded-r-xl border border-slate-200">
-                        <p className="text-xs text-slate-750 font-medium uppercase tracking-wider mb-1 flex items-center gap-1.5 font-bold">
-                          <ShieldCheck className="h-4.5 w-4.5 text-emerald-650" />
-                          Compromisso Antigolpe & Anti-Fraude
-                        </p>
-                        <p className="text-xs text-slate-500 leading-relaxed font-sans">
-                          Não solicitamos senhas de acesso, dados sigilosos ou depósitos direcionados a terceiros não homologados em nosso portal. Nossa negociação é transparente do início ao fim com emissão de nota fiscal garantida.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Right column: 9:16 vertical media container */}
-                    <div className="lg:col-span-5 flex justify-center w-full">
-                      <div className="relative w-full max-w-[340px] aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-950 flex items-center justify-center group/inst">
-                        {/* Soft overlay pattern */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-orange-500/5 via-transparent to-transparent opacity-40 group-hover/inst:opacity-60 transition-opacity duration-300 pointer-events-none z-10" />
-
-                        {siteSettings.institutionalMediaUrl ? (
-                          <MediaRenderer
-                            src={siteSettings.institutionalMediaUrl}
-                            mediaType={siteSettings.institutionalMediaType || (isVideoUrl(siteSettings.institutionalMediaUrl) ? 'video' : 'image')}
-                            alt={siteSettings.institutionalMediaAlt || 'Distribuição Digital de Pneus'}
-                            className="w-full h-full object-cover select-none pointer-events-none block"
-                          />
-                        ) : (
-                          // Premium fallback 9:16 card when no custom media is configured
-                          <div className="w-full h-full relative overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 p-6 flex flex-col justify-between">
-                            <div className="absolute inset-0 opacity-5" style={{
-                              backgroundImage: 'radial-gradient(#f97316 1px, transparent 1px)',
-                              backgroundSize: '24px 24px'
-                            }} />
-                            <div className="space-y-4 pt-4">
-                              <div className="inline-flex rounded-xl bg-orange-500/10 p-3 border border-orange-500/20">
-                                <Award className="h-6 w-6 text-orange-500" />
-                              </div>
-                              <h3 className="font-sans text-xl font-bold uppercase tracking-wide text-slate-200 leading-tight">
-                                Distribuição<br />
-                                de Alta<br />
-                                Performance
-                              </h3>
-                              <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
-                                Logística otimizada, envio assegurado e suporte de especialistas dedicados para todo o território nacional.
-                              </p>
-                            </div>
-                            
-                            {/* Visual decorative circles/rims */}
-                            <div className="relative h-28 w-full scale-110 translate-y-6 flex justify-end items-end opacity-20 group-hover/inst:opacity-30 transition-opacity duration-300">
-                              <div className="w-24 h-24 rounded-full border-4 border-dashed border-slate-400 animate-[spin_60s_linear_infinite]" />
-                              <div className="w-16 h-16 rounded-full border-4 border-dashed border-slate-400 animate-[spin_40s_linear_infinite] -ml-6" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Bottom area: 4 trust badges in grid */}
-                  <div className="mt-16 pt-10 border-t border-slate-100">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      
-                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
-                        <div className="inline-flex rounded-lg bg-orange-500/10 p-2.5 border border-orange-500/20 w-fit">
-                          <Building2 className="h-6 w-6 text-orange-600" />
-                        </div>
-                        <div className="mt-4">
-                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Razão Social Registrada</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5Packed">Razão oficial CENTRO AUTOMOTIVO PNEU DO MEU CARRO LTDA comprovada legalmente.</p>
-                        </div>
-                      </div>
-
-                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
-                        <div className="inline-flex rounded-lg bg-emerald-500/10 p-2.5 border border-emerald-500/20 w-fit">
-                          <ShieldCheck className="h-6 w-6 text-emerald-600" />
-                        </div>
-                        <div className="mt-4">
-                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Garantias & NF Confirmadas</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">1 ano de garantia total garantido pela nossa loja e 5 anos oficial direto de fábrica. Pneus novos originais com Nota Fiscal tudo certinho.</p>
-                        </div>
-                      </div>
-
-                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
-                        <div className="inline-flex rounded-lg bg-indigo-500/10 p-2.5 border border-indigo-500/20 w-fit">
-                          <UserCheck className="h-6 w-6 text-indigo-600" />
-                        </div>
-                        <div className="mt-4">
-                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Atendimento Especializado</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">Consultores humanos aptos para orientar sobre índices de velocidade e especificações de carga técnica.</p>
-                        </div>
-                      </div>
-
-                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50/40 transition-all duration-300 flex flex-col justify-between min-h-[160px] group/card">
-                        <div className="inline-flex rounded-lg bg-blue-500/10 p-2.5 border border-blue-500/20 w-fit">
-                          <Wrench className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div className="mt-4">
-                          <h4 className="font-sans font-extrabold text-sm uppercase text-slate-800 tracking-wider">Showroom no Butantã</h4>
-                          <p className="text-[11px] text-slate-500 font-sans leading-relaxed mt-1.5">Sede moderna e de fácil acesso integrada para logística rápida de retirada por agendamentos.</p>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-
-                </div>
-              </section>
 
               {/* FAQS SEGMENT */}
               <section className="py-16 sm:py-20 bg-slate-100/50 border-t border-slate-205">
