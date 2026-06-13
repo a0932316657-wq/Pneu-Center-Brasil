@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
 import { HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FAQS } from '../data';
+
+const LOCAL_FAQS = [
+  {
+    question: 'O site vende direto?',
+    answer: 'Não. Este site é um catálogo digital informativo. Não há checkout ou pagamento online. Toda transação é negociada e finalizada de forma segura por nossa equipe comercial.'
+  },
+  {
+    question: 'Como confirmo disponibilidade?',
+    answer: 'Basta escolher a medida ou modelo no site e clicar em "Consultar no WhatsApp" para que nossa equipe confirme o estoque instantaneamente.'
+  },
+  {
+    question: 'Os preços podem variar?',
+    answer: 'Sim. Devido à alta rotatividade e flutuação de custos de distribuidores, os preços e condições são sempre confirmados e garantidos no atendimento direto.'
+  },
+  {
+    question: 'Como falar com o atendimento?',
+    answer: 'Você pode clicar em qualquer botão de WhatsApp do site para ser direcionado ao nosso canal oficial de atendimento humano.'
+  }
+];
 
 export default function FAQSection() {
-  const [openIndexes, setOpenIndexes] = useState<number[]>(FAQS.map((_, i) => i));
+  const [openIndexes, setOpenIndexes] = useState<number[]>([0]);
 
   const toggleFAQ = (index: number) => {
     setOpenIndexes((prev) =>
@@ -13,14 +31,14 @@ export default function FAQSection() {
   };
 
   return (
-    <div id="faq-accordion-holder" className="space-y-4 max-w-3xl mx-auto">
-      {FAQS.map((faq, index) => {
+    <div id="faq-accordion-holder" className="space-y-4 max-w-3xl mx-auto font-sans">
+      {LOCAL_FAQS.map((faq, index) => {
         const isOpen = openIndexes.includes(index);
         return (
           <div
             key={index}
             id={`faq-item-${index}`}
-            className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-all shadow-xs hover:border-slate-350 hover:shadow-sm"
+            className="rounded-xl border border-slate-205 bg-white overflow-hidden transition-all shadow-xs hover:border-slate-350 hover:shadow-sm"
           >
             <button
               onClick={() => toggleFAQ(index)}

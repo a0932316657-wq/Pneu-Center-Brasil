@@ -1501,6 +1501,40 @@ export function isSyncedWithSupabase(): boolean {
   return isSupabaseSynced;
 }
 
+export async function fetchAllProducts(): Promise<{ data: any[] | null; error: any }> {
+  try {
+    const allProducts: any[] = [];
+    let from = 0;
+    const limit = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .range(from, from + limit - 1);
+
+      if (error) {
+        return { data: null, error };
+      }
+
+      if (data && data.length > 0) {
+        allProducts.push(...data);
+        if (data.length < limit) {
+          hasMore = false;
+        } else {
+          from += limit;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+    return { data: allProducts, error: null };
+  } catch (err) {
+    return { data: null, error: err };
+  }
+}
+
 /**
  * ------------------------------------------------------------------------
  * ASYNCHRONOUS CLOUD SYNCHRONIZER (BACKGROUND OR EXPLICIT PULLS)
@@ -1521,7 +1555,7 @@ export async function syncFromSupabase(): Promise<void> {
       presellBrandsResult
     ] = await Promise.all([
       supabase.from('site_settings').select('*'),
-      supabase.from('products').select('*'),
+      fetchAllProducts(),
       supabase.from('brands').select('*'),
       supabase.from('rim_cards').select('*'),
       supabase.from('rim_media_settings').select('*'),

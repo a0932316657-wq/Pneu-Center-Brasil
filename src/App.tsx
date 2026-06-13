@@ -21,7 +21,9 @@ import {
   AlertTriangle,
   FileText,
   MessageSquare,
-  MapPin
+  MapPin,
+  Frown,
+  Building
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -56,6 +58,7 @@ import { supabase } from './lib/supabaseClient';
 // Custom components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import HomeViewNew from './components/HomeViewNew';
 import { MediaRenderer } from './components/MediaRenderer';
 import ProductCard from './components/ProductCard';
 import ProductDetails from './components/ProductDetails';
@@ -179,6 +182,103 @@ export default function App() {
   const [isFetchingSingle, setIsFetchingSingle] = useState(false);
   const [failedBrandLogos, setFailedBrandLogos] = useState<Record<string, boolean>>({});
 
+  // New States for Simplified & Powerful Home Searcher
+  const [activeSearchTab, setActiveSearchTab] = useState<'medida' | 'marca' | 'aro' | 'rapida'>('medida');
+  const [searchMedidaLargura, setSearchMedidaLargura] = useState('');
+  const [searchMedidaAltura, setSearchMedidaAltura] = useState('');
+  const [searchMedidaAro, setSearchMedidaAro] = useState('');
+  const [searchMarca, setSearchMarca] = useState('');
+  const [searchAro, setSearchAro] = useState('');
+  const [searchRapidaText, setSearchRapidaText] = useState('');
+  
+  // Search Results States for Home page
+  const [homeSearchActive, setHomeSearchActive] = useState(false);
+  const [homeSearchResults, setHomeSearchResults] = useState<Product[]>([]);
+  const [homeSearchQueryLabel, setHomeSearchQueryLabel] = useState('');
+
+  // Accordion toggle for company info
+  const [showCompanyDetails, setShowCompanyDetails] = useState(false);
+
+  const handleHomeSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    let filtered: Product[] = [];
+    let queryLabel = '';
+    let searchString = '';
+    
+    if (activeSearchTab === 'medida') {
+      const w = searchMedidaLargura.trim();
+      const h = searchMedidaAltura.trim();
+      const r = searchMedidaAro.trim();
+      queryLabel = `${w}/${h} R${r}`.trim();
+      searchString = queryLabel;
+      
+      filtered = products.filter(p => {
+        if (p.active === false) return false;
+        const cleanP = p.measure.replace(/\s+/g, '').toLowerCase();
+        let match = true;
+        if (w) match = match && cleanP.includes(w.toLowerCase());
+        if (h) match = match && cleanP.includes('/' + h.toLowerCase());
+        if (r) match = match && cleanP.includes('r' + r.toLowerCase());
+        return match;
+      });
+    } else if (activeSearchTab === 'marca') {
+      const m = searchMarca.trim();
+      queryLabel = m;
+      searchString = m;
+      filtered = products.filter(p => {
+        if (p.active === false) return false;
+        return p.brand.toLowerCase() === m.toLowerCase();
+      });
+    } else if (activeSearchTab === 'aro') {
+      const a = searchAro.trim();
+      queryLabel = `Aro ${a}`;
+      searchString = a;
+      filtered = products.filter(p => {
+        if (p.active === false) return false;
+        return p.rim === Number(a);
+      });
+    } else {
+      const val = searchRapidaText.trim();
+      queryLabel = val;
+      searchString = val;
+      filtered = products.filter(p => {
+        if (p.active === false) return false;
+        const s = val.toLowerCase();
+        return (
+          p.name.toLowerCase().includes(s) ||
+          p.measure.toLowerCase().includes(s) ||
+          p.brand.toLowerCase().includes(s)
+        );
+      });
+    }
+    
+    setHomeSearchResults(filtered);
+    setHomeSearchQueryLabel(queryLabel);
+    setHomeSearchActive(true);
+    
+    // GTM event trigger for search
+    try {
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      (window as any).dataLayer.push({
+        event: 'search',
+        search_string: searchString,
+        filter_type: activeSearchTab,
+        content_category: 'Pneus'
+      });
+    } catch (err) {
+      console.warn("GTM push failed:", err);
+    }
+    
+    // Smooth scroll to results
+    setTimeout(() => {
+      const el = document.getElementById('search-results-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   // Trigger high quality spinning tire loading transition when route switches
   useEffect(() => {
     setIsTabTransitioning(true);
@@ -244,6 +344,62 @@ export default function App() {
   const [selectedMeasure, setSelectedMeasure] = useState('');
   const [showFilterNotice, setShowFilterNotice] = useState(false);
   const [sortBy, setSortBy] = useState('marca');
+
+  // GTM Catalog Search & Filter Tracking
+  useEffect(() => {
+    if (!productsLoaded) return;
+    const query = searchQuery.trim();
+    if (query) {
+      const timer = setTimeout(() => {
+        try {
+          (window as any).dataLayer = (window as any).dataLayer || [];
+          (window as any).dataLayer.push({
+            event: 'search',
+            search_string: query,
+            filter_type: 'barra_busca',
+            content_category: 'Pneus'
+          });
+        } catch (e) {
+          console.warn("GTM catalog search tracking failed:", e);
+        }
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [searchQuery, productsLoaded]);
+
+  useEffect(() => {
+    if (!productsLoaded) return;
+    if (selectedBrand && selectedBrand !== 'Todas') {
+      try {
+        (window as any).dataLayer = (window as any).dataLayer || [];
+        (window as any).dataLayer.push({
+          event: 'search',
+          search_string: selectedBrand,
+          filter_type: 'marca',
+          content_category: 'Pneus'
+        });
+      } catch (e) {
+        console.warn("GTM brand tracking failed:", e);
+      }
+    }
+  }, [selectedBrand, productsLoaded]);
+
+  useEffect(() => {
+    if (!productsLoaded) return;
+    if (selectedRim && selectedRim !== 'Todos') {
+      try {
+        (window as any).dataLayer = (window as any).dataLayer || [];
+        (window as any).dataLayer.push({
+          event: 'search',
+          search_string: selectedRim,
+          filter_type: 'aro',
+          content_category: 'Pneus'
+        });
+      } catch (e) {
+        console.warn("GTM rim tracking failed:", e);
+      }
+    }
+  }, [selectedRim, productsLoaded]);
 
   // Refs to always access the latest state inside popstate callback
   const selectedRimRef = React.useRef(selectedRim);
@@ -825,7 +981,23 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-            >              {/* HERO SECTION */}
+            >
+              <HomeViewNew
+                products={products}
+                brands={brands}
+                rimCards={rimCards}
+                siteSettings={siteSettings}
+                navigateTo={navigateTo}
+                filterByBrand={filterByBrand}
+                filterByRim={filterByRim}
+              />
+            </motion.div>
+          )}
+
+          {/* OLD HOME SECTIONS COMMENTED OUT */}
+          {false && (
+            <motion.div>
+              {/* HERO SECTION */}
               <section id="hero-block" className="relative overflow-hidden bg-radial from-slate-900 via-slate-950 to-slate-950 py-16 sm:py-24 border-b border-slate-900">
                 {/* Visual grid backdrop styling */}
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35" />
@@ -1683,10 +1855,10 @@ export default function App() {
             >
               <div className="mb-10 text-center md:text-left">
                 <h1 className="font-sans text-3xl font-black text-slate-800 tracking-tight sm:text-4xl uppercase">
-                  Catálogo de Pneus Automotivos
+                  Catálogo de pneus
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                  Encontre a medida perfeita para seu carro de passeio ou SUV. Todos com status de "disponibilidade sob consulta".
+                  Filtre por medida, aro ou marca.
                 </p>
               </div>
 
@@ -1722,7 +1894,7 @@ export default function App() {
                     onClick={resetFilters}
                     className="text-[11px] font-mono text-slate-400 hover:text-slate-800 transition-all uppercase underline underline-offset-3 cursor-pointer font-bold"
                   >
-                    Redefinir Tudo
+                    Limpar filtros
                   </button>
                 </div>
 
@@ -1732,10 +1904,10 @@ export default function App() {
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Medida do pneu... (Ex: 175/70)"
+                      placeholder="Ex: 205/55 R16, Pirelli, Aro 15..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-mono"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-orange-500 transition-all font-sans"
                     />
                   </div>
 
