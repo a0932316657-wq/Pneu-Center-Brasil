@@ -164,50 +164,50 @@ export default function HomeViewNew({
   return (
     <div className="bg-white">
       {/* 1. HERO PRINCIPAL SIMPLES */}
-      <section id="hero-block" className="relative overflow-hidden bg-radial from-slate-900 via-slate-950 to-slate-950 py-12 sm:py-20 border-b border-slate-900 font-sans">
+      <section id="hero-block" className="relative overflow-hidden bg-radial from-slate-900 via-slate-950 to-slate-950 py-6 sm:py-16 md:py-20 border-b border-slate-900 font-sans">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center text-center lg:text-left">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-y-6 lg:gap-x-10 items-center text-center lg:text-left">
             
             {/* HERO CONTENT */}
-            <div className="lg:col-span-7 flex flex-col space-y-6 lg:items-start lg:text-left">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3.5 py-1 text-xs font-mono font-medium text-orange-400 border border-orange-500/15 mx-auto lg:mx-0">
+            <div className="lg:col-span-7 flex flex-col space-y-4 sm:space-y-6 lg:items-start lg:text-left">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3.5 py-1 text-[10px] sm:text-xs font-mono font-medium text-orange-400 border border-orange-500/15 mx-auto lg:mx-0">
                 <Sparkles className="h-3.5 w-3.5" />
                 <span>Catálogo Oficial Multimarcas</span>
               </div>
 
-              <div className="space-y-3">
-                <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-white uppercase leading-none">
+              <div className="space-y-2 sm:space-y-3">
+                <h1 className="font-display text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight text-white uppercase leading-tight sm:leading-none">
                   Pneus multimarcas <span className="text-orange-500 block">para seu carro</span>
                 </h1>
-                <p className="text-sm text-gray-300 md:text-base leading-relaxed max-w-2xl font-sans">
+                <p className="text-xs sm:text-sm md:text-base text-gray-300 leading-relaxed max-w-2xl font-sans">
                   Consulte pneus por aro, medida ou marca e fale direto com nossa equipe pelo WhatsApp.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md mx-auto lg:mx-0">
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full max-w-md mx-auto lg:mx-0">
                 <button
                   onClick={() => openWhatsAppChat(DEFAULT_WHATSAPP_MESSAGE)}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-555 text-white font-bold px-8 py-4 transition-all hover:shadow-lg hover:shadow-emerald-500/20 cursor-pointer font-display uppercase tracking-wide text-xs whitespace-nowrap"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-555 text-white font-bold px-5 py-3 sm:px-8 sm:py-4 transition-all hover:shadow-lg hover:shadow-emerald-500/20 cursor-pointer font-display uppercase tracking-wide text-[10px] sm:text-xs whitespace-nowrap"
                 >
                   Consultar no WhatsApp
                 </button>
                 <button
                   onClick={() => navigateTo('catalogo')}
-                  className="w-full sm:w-auto rounded-xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-bold px-8 py-4 transition-all hover:shadow-lg hover:shadow-orange-500/15 cursor-pointer font-display uppercase tracking-wide text-xs whitespace-nowrap"
+                  className="w-full sm:w-auto rounded-xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-bold px-5 py-3 sm:px-8 sm:py-4 transition-all hover:shadow-lg hover:shadow-orange-500/15 cursor-pointer font-display uppercase tracking-wide text-[10px] sm:text-xs whitespace-nowrap"
                 >
                   Ver catálogo
                 </button>
               </div>
 
-              <p className="text-[11px] text-gray-400 font-sans leading-normal text-center lg:text-left max-w-md pt-2 border-t border-slate-900/60 w-full">
+              <p className="text-[10px] sm:text-[11px] text-gray-400 font-sans leading-normal text-center lg:text-left max-w-md pt-2 border-t border-slate-900/60 w-full">
                 Catálogo digital. Valores, estoque e entrega são confirmados no atendimento.
               </p>
             </div>
 
             {/* FLOATING TIRE ON THE RIGHT */}
-            <div className="lg:col-span-5 flex flex-col items-center justify-center relative">
+            <div className="hidden md:flex lg:col-span-5 flex-col items-center justify-center relative mt-6 lg:mt-0">
                <div className="relative w-full max-w-sm sm:max-w-md h-72 sm:h-96 flex items-center justify-center overflow-visible">
                 
                 {/* Background glow */}
@@ -330,7 +330,7 @@ export default function HomeViewNew({
                         <img
                           src={activeHeroUrl}
                           alt="Destaque Pneu"
-                          className="h-48 sm:h-64 w-auto object-contain select-none pointer-events-none block rounded-2xl"
+                          className="h-48 sm:h-64 h-auto object-contain select-none pointer-events-none block rounded-2xl"
                           style={{ mixBlendMode: hasCustomHero ? 'normal' : 'lighten' }}
                         />
                       )}
@@ -346,20 +346,20 @@ export default function HomeViewNew({
       </section>
 
       {/* 2. BUSCADOR PRINCIPAL DE PNEUS */}
-      <section className="py-10 bg-slate-50 border-b border-slate-200 font-sans">
+      <section className="py-6 sm:py-10 bg-slate-50 border-b border-slate-200 font-sans">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-6">
-            <h2 className="font-sans text-2xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight">
+          <div className="text-center max-w-xl mx-auto mb-4 sm:mb-6">
+            <h2 className="font-sans text-xl sm:text-3xl font-black text-slate-800 uppercase tracking-tight">
               Encontre seu pneu
             </h2>
-            <p className="text-sm text-slate-500 mt-1 font-sans">
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 font-sans">
               Busque por medida, aro ou marca.
             </p>
           </div>
 
-          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-205 shadow-md p-5 sm:p-6">
+          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
             {/* Tabs */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 border-b border-slate-100 pb-3.5 mb-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-1 sm:gap-1.5 border-b border-slate-100 pb-2.5 mb-4">
               {[
                 { id: 'medida', label: 'Por medida' },
                 { id: 'marca', label: 'Por marca' },
@@ -369,10 +369,10 @@ export default function HomeViewNew({
                 <button
                   key={tab.id}
                   onClick={() => setActiveSearchTab(tab.id as any)}
-                  className={`py-2 px-3 rounded-xl text-xs sm:text-xs font-sans font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`py-1.5 sm:py-2 px-1.5 sm:px-3 rounded-lg text-[10px] sm:text-xs font-sans font-black uppercase tracking-wider transition-all cursor-pointer ${
                     activeSearchTab === tab.id
-                      ? 'bg-orange-600 text-slate-950 shadow-sm'
-                      : 'text-slate-550 hover:bg-slate-50'
+                      ? 'bg-orange-600 text-slate-950 shadow-xs'
+                      : 'text-slate-500 hover:bg-slate-50'
                   }`}
                 >
                   {tab.label}
@@ -382,7 +382,7 @@ export default function HomeViewNew({
 
             <form onSubmit={handleHomeSearch}>
               {activeSearchTab === 'medida' && (
-                <div className="space-y-5">
+                <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="block text-[9px] uppercase font-mono font-black text-slate-500 mb-1">Largura</label>
@@ -391,7 +391,7 @@ export default function HomeViewNew({
                         placeholder="205"
                         value={searchMedidaLargura}
                         onChange={(e) => setSearchMedidaLargura(e.target.value)}
-                        className="w-full text-center py-2.5 px-2 border-2 border-slate-200 rounded-xl font-display font-black text-sm focus:border-orange-500 focus:outline-none"
+                        className="w-full text-center py-2 px-1.5 sm:py-2.5 border border-slate-200 rounded-lg font-display font-black text-xs sm:text-sm focus:border-orange-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -401,7 +401,7 @@ export default function HomeViewNew({
                         placeholder="55"
                         value={searchMedidaAltura}
                         onChange={(e) => setSearchMedidaAltura(e.target.value)}
-                        className="w-full text-center py-2.5 px-2 border-2 border-slate-200 rounded-xl font-display font-black text-sm focus:border-orange-500 focus:outline-none"
+                        className="w-full text-center py-2 px-1.5 sm:py-2.5 border border-slate-200 rounded-lg font-display font-black text-xs sm:text-sm focus:border-orange-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -411,16 +411,16 @@ export default function HomeViewNew({
                         placeholder="16"
                         value={searchMedidaAro}
                         onChange={(e) => setSearchMedidaAro(e.target.value)}
-                        className="w-full text-center py-2.5 px-2 border-2 border-slate-200 rounded-xl font-display font-black text-sm focus:border-orange-500 focus:outline-none"
+                        className="w-full text-center py-2 px-1.5 sm:py-2.5 border border-slate-200 rounded-lg font-display font-black text-xs sm:text-sm focus:border-orange-500 focus:outline-none"
                       />
                     </div>
                   </div>
-                  <p className="text-center font-mono text-[10px] text-slate-400">Ex: 205 / 55 / 16</p>
+                  <p className="text-center font-mono text-[9px] sm:text-[10px] text-slate-400">Ex: 205 / 55 / 16</p>
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs uppercase tracking-wider py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-2"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-[11px] sm:text-xs uppercase tracking-wider py-2.5 sm:py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-1.5"
                   >
-                    <Search className="h-4 w-4" />
+                    <Search className="h-3.5 w-3.5" />
                     <span>Buscar pneu por medida</span>
                   </button>
                 </div>
@@ -433,7 +433,7 @@ export default function HomeViewNew({
                     <select
                       value={searchMarca}
                       onChange={(e) => setSearchMarca(e.target.value)}
-                      className="w-full py-3 px-3 border-2 border-slate-200 rounded-xl font-sans font-bold text-slate-800 bg-white focus:border-orange-500 focus:outline-none cursor-pointer"
+                      className="w-full py-2 sm:py-2.5 px-3 border border-slate-200 rounded-lg font-sans font-bold text-xs sm:text-sm text-slate-800 bg-white focus:border-orange-500 focus:outline-none cursor-pointer"
                     >
                       <option value="">Selecione uma marca...</option>
                       {Array.from(new Set(products.map(p => p.brand))).filter(Boolean).map((br, idx) => (
@@ -443,9 +443,9 @@ export default function HomeViewNew({
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs uppercase tracking-wider py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-2"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-[11px] sm:text-xs uppercase tracking-wider py-2.5 sm:py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-1.5"
                   >
-                    <Search className="h-4 w-4" />
+                    <Search className="h-3.5 w-3.5" />
                     <span>Buscar por Marca</span>
                   </button>
                 </div>
@@ -461,10 +461,10 @@ export default function HomeViewNew({
                           key={aroVal}
                           type="button"
                           onClick={() => setSearchAro(aroVal)}
-                          className={`py-2 rounded-xl border-2 font-display font-black text-xs uppercase transition-all cursor-pointer ${
+                          className={`py-1.5 sm:py-2 rounded-lg border font-display font-black text-[11px] sm:text-xs uppercase transition-all cursor-pointer ${
                             searchAro === aroVal
-                              ? 'border-orange-500 bg-orange-50 text-orange-600'
-                              : 'border-slate-200 hover:border-slate-350 text-slate-700 hover:bg-slate-50'
+                              ? 'border-orange-500 bg-orange-50/70 text-orange-600'
+                              : 'border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           Aro {aroVal}
@@ -474,9 +474,9 @@ export default function HomeViewNew({
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs uppercase tracking-wider py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-2"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-[11px] sm:text-xs uppercase tracking-wider py-2.5 sm:py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-1.5"
                   >
-                    <Search className="h-4 w-4" />
+                    <Search className="h-3.5 w-3.5" />
                     <span>Buscar Aro</span>
                   </button>
                 </div>
@@ -491,14 +491,14 @@ export default function HomeViewNew({
                       placeholder="Ex: 205/55 R16, Pirelli, Aro 15..."
                       value={searchRapidaText}
                       onChange={(e) => setSearchRapidaText(e.target.value)}
-                      className="w-full py-3 px-3 border-2 border-slate-200 rounded-xl font-sans font-medium text-xs focus:border-orange-500 focus:outline-none"
+                      className="w-full py-2.5 px-3 border border-slate-200 rounded-lg font-sans font-medium text-xs focus:border-orange-500 focus:outline-none"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs uppercase tracking-wider py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-2"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-[11px] sm:text-xs uppercase tracking-wider py-2.5 sm:py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-1.5"
                   >
-                    <Search className="h-4 w-4" />
+                    <Search className="h-3.5 w-3.5" />
                     <span>Buscar</span>
                   </button>
                 </div>
@@ -516,13 +516,13 @@ export default function HomeViewNew({
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className="py-10 bg-white border-b border-slate-200 scroll-mt-20 font-sans"
+            className="py-6 sm:py-10 bg-white border-b border-slate-200 scroll-mt-20 font-sans"
           >
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-6">
                 <div className="text-center md:text-left">
                   <h3 className="font-sans font-black text-slate-800 text-lg uppercase tracking-tight">
-                    Resultados para: <span className="text-orange-650">"{homeSearchQueryLabel}"</span>
+                    Resultados para: <span className="text-orange-655">"{homeSearchQueryLabel}"</span>
                   </h3>
                   <p className="text-[11px] text-slate-500 font-sans mt-0.5">
                     Fale no WhatsApp para consulta de preços e prazos.
@@ -535,7 +535,7 @@ export default function HomeViewNew({
 
               {homeSearchResults.length > 0 ? (
                 <div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                     {homeSearchResults.slice(0, 8).map((prod) => (
                       <ProductCard
                         key={prod.id}
@@ -554,7 +554,7 @@ export default function HomeViewNew({
                           filterByBrand(homeSearchQueryLabel);
                           navigateTo('catalogo');
                         }}
-                        className="rounded-xl border-2 border-slate-300 hover:border-orange-500 font-sans font-black text-xs text-slate-850 uppercase tracking-widest py-3 px-6 transition-colors cursor-pointer"
+                        className="rounded-xl border border-slate-300 hover:border-orange-500 font-sans font-black text-xs text-slate-850 uppercase tracking-widest py-3 px-6 transition-colors cursor-pointer"
                       >
                         Ver todos no catálogo completo
                       </button>
@@ -585,18 +585,18 @@ export default function HomeViewNew({
       </AnimatePresence>
 
       {/* 3. MARCAS */}
-      <section id="marcas-section" className="py-10 bg-white border-b border-slate-200 font-sans">
+      <section id="marcas-section" className="py-6 sm:py-10 bg-white border-b border-slate-200 font-sans">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-6">
-            <h2 className="font-sans text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
+          <div className="text-center max-w-xl mx-auto mb-4 sm:mb-6">
+            <h2 className="font-sans text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
               Busque por marca
             </h2>
-            <p className="text-xs text-slate-500 mt-1 font-sans">
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1 font-sans">
               Escolha uma marca para ver as opções disponíveis.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2">
             {(() => {
               const activeBrands = brands.filter(b => b.active);
               const listToDisplay = activeBrands.length > 0 
@@ -607,17 +607,17 @@ export default function HomeViewNew({
                 <button
                   key={brand.id || idx}
                   onClick={() => filterByBrand(brand.name)}
-                  className="flex flex-col items-center justify-center p-3 border border-slate-200 hover:border-orange-500 hover:bg-slate-50/50 rounded-xl transition-all cursor-pointer text-center group h-20"
+                  className="flex flex-col items-center justify-center p-2 sm:p-3 border border-slate-150 hover:border-orange-500 hover:bg-slate-50/50 rounded-xl transition-all cursor-pointer text-center group h-14 sm:h-20"
                 >
                   {brand.logo && brand.logo.trim() && !failedBrandLogos[brand.id || idx] ? (
                     <img
                       src={brand.logo.trim()}
                       alt={brand.name}
                       onError={() => setFailedBrandLogos(p => ({ ...p, [brand.id || idx]: true }))}
-                      className="h-6 max-w-full object-contain filter group-hover:scale-105 transition-transform"
+                      className="h-4 sm:h-6 max-w-full object-contain filter group-hover:scale-105 transition-transform"
                     />
                   ) : (
-                    <span className="font-display font-black text-xs uppercase text-slate-800 tracking-wider group-hover:text-orange-600 transition-colors">
+                    <span className="font-display font-black text-[10px] sm:text-xs uppercase text-slate-800 tracking-wider group-hover:text-orange-600 transition-colors truncate w-full px-1">
                       {brand.name}
                     </span>
                   )}
@@ -629,18 +629,18 @@ export default function HomeViewNew({
       </section>
 
       {/* 4. PNEUS EM DESTAQUE */}
-      <section className="py-10 bg-slate-55/30 border-b border-slate-200 font-sans">
+      <section className="py-6 sm:py-10 bg-slate-50/50 border-b border-slate-200 font-sans">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-6">
-            <h2 className="font-sans text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
+          <div className="text-center max-w-xl mx-auto mb-4 sm:mb-6">
+            <h2 className="font-sans text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
               Pneus em destaque
             </h2>
-            <p className="text-xs text-slate-550 mt-1 font-sans">
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1 font-sans">
               Destaque de pneus com excelente performance e durabilidade.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {products.filter(p => p.active !== false).slice(0, 8).map((prod) => (
               <ProductCard
                 key={prod.id}
@@ -653,10 +653,10 @@ export default function HomeViewNew({
             ))}
           </div>
 
-          <div className="text-center mt-8">
+          <div className="text-center mt-6 sm:mt-8">
             <button
               onClick={() => navigateTo('catalogo')}
-              className="rounded-xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-sans font-black text-xs uppercase tracking-widest py-3.5 px-8 transition-colors cursor-pointer"
+              className="rounded-xl bg-orange-600 hover:bg-orange-550 text-slate-950 font-sans font-black text-[11px] sm:text-xs uppercase tracking-widest py-2.5 px-6 sm:py-3.5 sm:px-8 transition-colors cursor-pointer"
             >
               Ver catálogo completo
             </button>
@@ -665,25 +665,25 @@ export default function HomeViewNew({
       </section>
 
       {/* 5. BUSCA POR ARO */}
-      <section id="aros-section" className="py-10 bg-white border-b border-slate-200 font-sans">
+      <section id="aros-section" className="py-6 sm:py-10 bg-white border-b border-slate-200 font-sans">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-6">
-            <h2 className="font-sans text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
+          <div className="text-center max-w-xl mx-auto mb-4 sm:mb-6">
+            <h2 className="font-sans text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
               Escolha o aro do pneu
             </h2>
-            <p className="text-xs text-slate-500 mt-1 font-sans">
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1 font-sans">
               Pesquise especificamente pelo aro de roda do seu carro.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-3.5">
             {['13', '14', '15', '16', '17', '18'].map((aroNum) => {
               const matchedRimCard = rimCards.find(rc => Number(rc.rim) === Number(aroNum));
               const customImage = (matchedRimCard && matchedRimCard.image && matchedRimCard.image.trim()) || 'https://images.unsplash.com/photo-1551524559-8af4e6624178?auto=format&fit=crop&q=80&w=400';
               return (
                 <div
                   key={aroNum}
-                  className="group relative rounded-2xl overflow-hidden border border-slate-200 hover:border-orange-500 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between p-4 bg-slate-950 h-48 text-left"
+                  className="group relative rounded-xl overflow-hidden border border-slate-200 hover:border-orange-500 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between p-3 sm:p-4 bg-slate-950 h-32 sm:h-48 text-left"
                 >
                   <div className="absolute inset-0 z-0 opacity-40 group-hover:scale-105 transition-transform duration-500">
                     <img
@@ -695,10 +695,10 @@ export default function HomeViewNew({
                   </div>
 
                   <div className="relative z-10">
-                    <span className="inline-block rounded-md bg-orange-600 text-slate-950 px-1.5 py-0.5 text-[9px] font-mono font-black uppercase tracking-wider mb-1.5">
+                    <span className="inline-block rounded bg-orange-600 text-slate-950 px-1 py-0.5 text-[8px] sm:text-[9px] font-mono font-black uppercase tracking-wider mb-1 sm:mb-1.5">
                       Aro {aroNum}
                     </span>
-                    <h3 className="font-sans font-black text-white text-sm uppercase leading-tight">
+                    <h3 className="font-sans font-black text-white text-xs sm:text-sm uppercase leading-tight">
                       Pneus Aro {aroNum}
                     </h3>
                   </div>
@@ -707,7 +707,7 @@ export default function HomeViewNew({
                     onClick={() => {
                       filterByRim(`Aro ${aroNum}`);
                     }}
-                    className="relative z-10 w-full bg-orange-600 group-hover:bg-white text-slate-950 group-hover:text-slate-950 font-display font-extrabold text-[9px] uppercase tracking-wider py-1.5 rounded-xl text-center transition-colors cursor-pointer"
+                    className="relative z-10 w-full bg-orange-600 group-hover:bg-white text-slate-950 group-hover:text-slate-950 font-display font-extrabold text-[8px] sm:text-[9px] uppercase tracking-wider py-1 sm:py-1.5 rounded-lg text-center transition-colors cursor-pointer"
                   >
                     Consultar Aro
                   </button>
@@ -719,30 +719,30 @@ export default function HomeViewNew({
       </section>
 
       {/* 6. COMO FUNCIONA */}
-      <section className="py-10 bg-slate-55/35 border-b border-slate-200 font-sans">
+      <section className="py-6 sm:py-10 bg-slate-50/30 border-b border-slate-200 font-sans">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-6">
-            <h2 className="font-sans text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
+          <div className="text-center max-w-xl mx-auto mb-4 sm:mb-6">
+            <h2 className="font-sans text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
               Como funciona
             </h2>
-            <p className="text-xs text-slate-500 mt-1 font-sans">
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1 font-sans">
               Pronto, rápido e sem complicações.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mx-auto max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mx-auto max-w-4xl">
             {[
               { step: '1', title: 'Escolha a medida, aro ou marca', desc: 'Faça a consulta instantânea no catálogo informativo.' },
               { step: '2', title: 'Consulte disponibilidade', desc: 'Bata um papo rápido com nossos técnicos comerciais.' },
               { step: '3', title: 'Fale com nossa equipe pelo WhatsApp', desc: 'Finalize sua cotação e agende a entrega do seu pneu de forma segura.' },
             ].map((st, idx) => (
-              <div key={idx} className="bg-white rounded-xl border border-slate-205 p-4 flex flex-col justify-between hover:shadow-sm transition-all text-center sm:text-left">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-600 font-sans font-extrabold text-slate-950 mb-2.5 mx-auto sm:mx-0">
+              <div key={idx} className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex flex-col justify-between hover:shadow-xs transition-all text-center sm:text-left">
+                <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-orange-600 font-sans font-extrabold text-slate-950 text-xs sm:text-sm mb-2 mx-auto sm:mx-0">
                   {st.step}
                 </div>
                 <div>
-                  <h4 className="font-sans font-bold text-xs uppercase text-slate-800 tracking-wide mb-1 leading-normal">{st.title}</h4>
-                  <p className="text-[11px] text-slate-500 leading-normal font-sans">{st.desc}</p>
+                  <h4 className="font-sans font-bold text-[11px] sm:text-xs uppercase text-slate-800 tracking-wide mb-1 leading-normal">{st.title}</h4>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 leading-normal font-sans">{st.desc}</p>
                 </div>
               </div>
             ))}
@@ -751,18 +751,18 @@ export default function HomeViewNew({
       </section>
 
       {/* 7. CONFIANÇA E SEGURANÇA */}
-      <section className="py-10 bg-white border-b border-slate-200 font-sans">
+      <section className="py-6 sm:py-10 bg-white border-b border-slate-200 font-sans">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-6">
-            <h2 className="font-sans text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
+          <div className="text-center max-w-xl mx-auto mb-4 sm:mb-6">
+            <h2 className="font-sans text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
               Confiança e Segurança
             </h2>
-            <p className="text-xs text-slate-500 mt-1 font-sans">
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1 font-sans">
               Catálogo oficial que preza pela segurança jurídica e transparência no faturamento de pneus.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-6">
             {[
               { title: 'Empresa com CNPJ', icon: Building2, desc: 'Registrada e regularizada' },
               { title: 'Atendimento oficial', icon: MessageSquare, desc: 'Equipe especializada' },
@@ -773,10 +773,10 @@ export default function HomeViewNew({
             ].map((card, idx) => {
               const Icon = card.icon;
               return (
-                <div key={idx} className="flex flex-col items-center justify-center text-center p-3 border border-slate-200 rounded-xl bg-slate-50/50">
-                  <Icon className="h-5 w-5 text-orange-655 mb-1.5 shrink-0" />
-                  <h4 className="font-sans font-extrabold text-[10px] uppercase text-slate-800 leading-tight mb-0.5">{card.title}</h4>
-                  <p className="text-[9px] text-slate-450 leading-tight font-sans">{card.desc}</p>
+                <div key={idx} className="flex flex-col items-center justify-center text-center p-2.5 sm:p-3 border border-slate-150 rounded-xl bg-slate-50/50">
+                  <Icon className="h-4.5 w-4.5 text-orange-500 mb-1 shrink-0" />
+                  <h4 className="font-sans font-extrabold text-[9px] sm:text-[10px] uppercase text-slate-800 leading-tight mb-0.5">{card.title}</h4>
+                  <p className="text-[8px] sm:text-[9px] text-slate-450 leading-tight font-sans">{card.desc}</p>
                 </div>
               );
             })}
@@ -836,13 +836,13 @@ export default function HomeViewNew({
       </section>
 
       {/* 8. FAQ CURTO */}
-      <section className="py-10 bg-slate-55/30 border-b border-slate-200">
+      <section className="py-6 sm:py-10 bg-slate-50/50 border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-6">
-            <h2 className="font-sans text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
+          <div className="text-center max-w-xl mx-auto mb-4 sm:mb-6">
+            <h2 className="font-sans text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight">
               Dúvidas frequentes
             </h2>
-            <p className="text-xs text-slate-500 mt-1 font-sans">
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1 font-sans">
               Tudo o que você precisa saber sobre nosso catálogo.
             </p>
           </div>
