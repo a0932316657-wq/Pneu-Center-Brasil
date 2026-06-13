@@ -850,6 +850,105 @@ export default function App() {
     navigateTo('produto', id);
   };
 
+  if (isLoadingProducts) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-950 font-sans text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.06)_0%,transparent_60%)] pointer-events-none" />
+        
+        <div className="relative w-28 h-28 text-orange-500 z-10">
+          <svg viewBox="0 0 100 100" className="w-full h-full animate-spin duration-1000 ease-linear animate-duration-1000">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" strokeWidth="14" />
+            
+            {[...Array(12)].map((_, i) => {
+              const angle = (i * 30 * Math.PI) / 180;
+              const x1 = 50 + 42 * Math.cos(angle);
+              const y1 = 50 + 42 * Math.sin(angle);
+              const x2 = 50 + 49 * Math.cos(angle);
+              const y2 = 50 + 49 * Math.sin(angle);
+              return (
+                <line
+                  key={i}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="#0f172a"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              );
+            })}
+
+            <circle cx="50" cy="50" r="35" fill="none" stroke="#e2e8f0" strokeWidth="2.5" />
+            <circle cx="50" cy="50" r="33.5" fill="none" stroke="#64748b" strokeWidth="1" />
+
+            <circle cx="50" cy="50" r="28" fill="#0f172a" />
+
+            {[...Array(5)].map((_, i) => {
+              const angle = (i * 72 * Math.PI) / 180;
+              const xOuter1 = 50 + 29 * Math.cos(angle - 0.12);
+              const yOuter1 = 50 + 29 * Math.sin(angle - 0.12);
+              const xOuter2 = 50 + 29 * Math.cos(angle + 0.12);
+              const yOuter2 = 50 + 29 * Math.sin(angle + 0.12);
+              const xInner1 = 50 + 10 * Math.cos(angle - 0.25);
+              const yInner1 = 50 + 10 * Math.sin(angle - 0.25);
+              const xInner2 = 50 + 10 * Math.cos(angle + 0.25);
+              const yInner2 = 50 + 10 * Math.sin(angle + 0.25);
+              return (
+                <g key={i}>
+                  <polygon
+                    points={`${xInner1},${yInner1} ${xOuter1},${yOuter1} ${xOuter2},${yOuter2} ${xInner2},${yInner2}`}
+                    fill="url(#alloyspokegrad_global)"
+                  />
+                  <line
+                    x1={50 + 10 * Math.cos(angle)}
+                    y1={50 + 10 * Math.sin(angle)}
+                    x2={50 + 28 * Math.cos(angle)}
+                    y2={50 + 28 * Math.sin(angle)}
+                    stroke="#cbd5e1"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </g>
+              );
+            })}
+
+            <circle cx="50" cy="50" r="11" fill="#1e293b" stroke="#475569" strokeWidth="2" />
+            
+            <circle cx="50" cy="50" r="5" fill="#f97316" stroke="#fff" strokeWidth="1" />
+
+            {[...Array(5)].map((_, i) => {
+              const angle = (i * 72 * Math.PI) / 180;
+              const bx = 50 + 8 * Math.cos(angle + 0.36);
+              const by = 50 + 8 * Math.sin(angle + 0.36);
+              return <circle key={i} cx={bx} cy={by} r="1.2" fill="#cbd5e1" stroke="#475569" strokeWidth="0.5" />;
+            })}
+
+            <defs>
+              <linearGradient id="alloyspokegrad_global" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f3f4f6" />
+                <stop offset="50%" stopColor="#94a3b8" />
+                <stop offset="100%" stopColor="#475569" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-1.5 text-center px-4 z-10">
+          <span className="text-md sm:text-lg font-display font-black uppercase tracking-wider text-orange-500 animate-pulse">
+            Sincronizando Estoque...
+          </span>
+          <span className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+            PNEU CENTER BRASIL
+          </span>
+          <span className="text-[10px] text-slate-500 font-mono tracking-wide max-w-xs mt-1">
+            Buscando as ofertas e medidas mais atualizadas em tempo real
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div id="app-viewport" className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-800 selection:bg-slate-900 selection:text-white">
       
