@@ -344,6 +344,30 @@ export default function App() {
   const [selectedMeasure, setSelectedMeasure] = useState('');
   const [showFilterNotice, setShowFilterNotice] = useState(false);
   const [sortBy, setSortBy] = useState('marca');
+  const [visibleProductsCount, setVisibleProductsCount] = useState(12);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(false);
+
+  // Trigger high quality spinner loader transition each time catalog filters/state update
+  useEffect(() => {
+    if (routeState.path === 'catalogo') {
+      setIsCatalogLoading(true);
+      setVisibleProductsCount(12);
+      const timer = setTimeout(() => {
+        setIsCatalogLoading(false);
+      }, 550); // Generous time to let browser render 12 items buttery smooth on all smartphones
+      return () => clearTimeout(timer);
+    } else {
+      setIsCatalogLoading(false);
+    }
+  }, [
+    routeState.path,
+    searchQuery,
+    selectedRim,
+    selectedBrand,
+    selectedCategory,
+    selectedMeasure,
+    sortBy
+  ]);
 
   // GTM Catalog Search & Filter Tracking
   useEffect(() => {
@@ -2085,31 +2109,132 @@ export default function App() {
               </div>
 
               {/* Catalog Items Listing Grid */}
-              {isLoadingProducts ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                    <div key={n} className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 animate-pulse">
-                      <div className="relative aspect-video w-full bg-slate-100/70 rounded-lg flex items-center justify-center">
-                        <div className="w-10 h-10 rounded-full border-4 border-dashed border-slate-200 animate-[spin_8s_linear_infinite]" />
-                      </div>
-                      <div className="space-y-2.5">
-                        <div className="h-3 bg-slate-100 rounded w-1/3" />
-                        <div className="h-4 bg-slate-100 rounded w-3/4" />
-                        <div className="h-3 bg-slate-100 rounded w-1/2" />
-                      </div>
-                      <div className="h-8 bg-slate-100 rounded-lg w-full mt-4" />
-                    </div>
-                  ))}
+              {isLoadingProducts || isCatalogLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 sm:py-28 w-full min-h-[400px]">
+                  <div className="relative w-24 h-24 text-orange-500">
+                    <svg viewBox="0 0 100 100" className="w-full h-full animate-spin duration-1000 ease-linear">
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" strokeWidth="14" />
+                      
+                      {[...Array(12)].map((_, i) => {
+                        const angle = (i * 30 * Math.PI) / 180;
+                        const x1 = 50 + 42 * Math.cos(angle);
+                        const y1 = 50 + 42 * Math.sin(angle);
+                        const x2 = 50 + 49 * Math.cos(angle);
+                        const y2 = 50 + 49 * Math.sin(angle);
+                        return (
+                          <line
+                            key={i}
+                            x1={x1}
+                            y1={y1}
+                            x2={x2}
+                            y2={y2}
+                            stroke="#0f172a"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                        );
+                      })}
+
+                      <circle cx="50" cy="50" r="35" fill="none" stroke="#e2e8f0" strokeWidth="2.5" />
+                      <circle cx="50" cy="50" r="33.5" fill="none" stroke="#64748b" strokeWidth="1" />
+
+                      <circle cx="50" cy="50" r="28" fill="#0f172a" />
+
+                      {[...Array(5)].map((_, i) => {
+                        const angle = (i * 72 * Math.PI) / 180;
+                        const xOuter1 = 50 + 29 * Math.cos(angle - 0.12);
+                        const yOuter1 = 50 + 29 * Math.sin(angle - 0.12);
+                        const xOuter2 = 50 + 29 * Math.cos(angle + 0.12);
+                        const yOuter2 = 50 + 29 * Math.sin(angle + 0.12);
+                        const xInner1 = 50 + 10 * Math.cos(angle - 0.25);
+                        const yInner1 = 50 + 10 * Math.sin(angle - 0.25);
+                        const xInner2 = 50 + 10 * Math.cos(angle + 0.25);
+                        const yInner2 = 50 + 10 * Math.sin(angle + 0.25);
+                        return (
+                          <g key={i}>
+                            <polygon
+                              points={`${xInner1},${yInner1} ${xOuter1},${yOuter1} ${xOuter2},${yOuter2} ${xInner2},${yInner2}`}
+                              fill="url(#alloyspokegrad_catalog)"
+                            />
+                            <line
+                              x1={50 + 10 * Math.cos(angle)}
+                              y1={50 + 10 * Math.sin(angle)}
+                              x2={50 + 28 * Math.cos(angle)}
+                              y2={50 + 28 * Math.sin(angle)}
+                              stroke="#cbd5e1"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
+                          </g>
+                        );
+                      })}
+
+                      <circle cx="50" cy="50" r="11" fill="#1e293b" stroke="#475569" strokeWidth="2" />
+                      
+                      <circle cx="50" cy="50" r="5" fill="#f97316" stroke="#fff" strokeWidth="1" />
+
+                      {[...Array(5)].map((_, i) => {
+                        const angle = (i * 72 * Math.PI) / 180;
+                        const bx = 50 + 8 * Math.cos(angle + 0.36);
+                        const by = 50 + 8 * Math.sin(angle + 0.36);
+                        return <circle key={i} cx={bx} cy={by} r="1.2" fill="#cbd5e1" stroke="#475569" strokeWidth="0.5" />;
+                      })}
+
+                      <defs>
+                        <linearGradient id="alloyspokegrad_catalog" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#f3f4f6" />
+                          <stop offset="50%" stopColor="#94a3b8" />
+                          <stop offset="100%" stopColor="#475569" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                  
+                  <div className="mt-8 flex flex-col items-center gap-1.5 text-center px-4 animate-pulse">
+                    <span className="text-md font-display font-black uppercase tracking-wider text-orange-500">
+                      Sincronizando Estoque...
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono tracking-wide max-w-xs uppercase font-extrabold">
+                      Pneu Center Brasil
+                    </span>
+                  </div>
                 </div>
               ) : sortedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {sortedProducts.map((prod) => (
-                    <ProductCard
-                      key={prod.id}
-                      product={prod}
-                      onViewDetails={(id) => navigateTo('produto', id)}
-                    />
-                  ))}
+                <div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {sortedProducts.slice(0, visibleProductsCount).map((prod) => (
+                      <ProductCard
+                        key={prod.id}
+                        product={prod}
+                        onViewDetails={(id) => navigateTo('produto', id)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* High Performance Progression Pagination */}
+                  {sortedProducts.length > visibleProductsCount && (
+                    <div className="mt-12 flex flex-col items-center gap-3">
+                      <div className="text-xs text-slate-550 font-sans tracking-wide">
+                        Mostrando <strong className="text-slate-800 font-extrabold">{visibleProductsCount}</strong> de <strong className="text-slate-800 font-extrabold">{sortedProducts.length}</strong> pneus
+                      </div>
+                      
+                      {/* Realistic Visual Loader Meter */}
+                      <div className="w-56 h-2 bg-slate-200/80 rounded-full overflow-hidden border border-slate-300/30">
+                        <div 
+                          className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-300"
+                          style={{ width: `${Math.min(100, (visibleProductsCount / sortedProducts.length) * 100)}%` }}
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => setVisibleProductsCount(prev => prev + 12)}
+                        className="mt-3 bg-emerald-600 hover:bg-emerald-550 text-white font-sans font-black text-xs uppercase tracking-wider px-8 py-3.5 rounded-xl cursor-pointer hover:shadow-lg transition-all active:scale-98 flex items-center justify-center gap-2 border border-emerald-700/20"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        <span>Carregar Mais Pneus</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-slate-250 bg-white p-12 text-center max-w-md mx-auto space-y-4 shadow-sm">
