@@ -603,14 +603,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || !session.user) {
         setIsLoggedIn(false);
-        triggerFeedback('Sessão Supabase ausente. Faça login novamente.', 'error');
+        triggerFeedback('Faça login novamente no painel admin. Sessão Supabase não conectada.', 'error');
         return false;
       }
       return true;
     } catch (e) {
       console.warn('Erro ao verificar sessão do Supabase:', e);
       setIsLoggedIn(false);
-      triggerFeedback('Sessão Supabase ausente. Faça login novamente.', 'error');
+      triggerFeedback('Faça login novamente no painel admin. Sessão Supabase não conectada.', 'error');
       return false;
     }
   };
@@ -765,6 +765,12 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       setIsTestingConnection(false);
     }
   };
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      handleTestConnection();
+    }
+  }, [isLoggedIn]);
 
   // Upload main image to Supabase storage bucket pneu-center under products/ folder
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -6254,6 +6260,7 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                                 onChange={async (e) => {
                                   const files = e.target.files;
                                   if (files && files[0]) {
+                                    if (!(await checkAuth())) return;
                                     setIsUploadingPresellHero(true);
                                     try {
                                       const { publicUrl, mediaType } = await uploadPresellMedia(files[0], 'presell/hero');
@@ -6377,6 +6384,7 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                                 onChange={async (e) => {
                                   const files = e.target.files;
                                   if (files && files[0]) {
+                                    if (!(await checkAuth())) return;
                                     setIsUploadingPresellBg(true);
                                     try {
                                       const { publicUrl } = await uploadPresellMedia(files[0], 'presell/background');
@@ -6634,6 +6642,7 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                                     onChange={async (e) => {
                                       const files = e.target.files;
                                       if (files && files[0]) {
+                                        if (!(await checkAuth())) return;
                                         setIsUploadingRimCardImg(true);
                                         try {
                                           const { publicUrl } = await uploadPresellMedia(files[0], 'presell/rim-cards');
@@ -6924,6 +6933,7 @@ CREATE POLICY "Escrita_Admin_Rim_Media" ON rim_media_settings
                                     onChange={async (e) => {
                                       const files = e.target.files;
                                       if (files && files[0]) {
+                                        if (!(await checkAuth())) return;
                                         setIsUploadingBrandLogo(true);
                                         try {
                                           const { publicUrl } = await uploadPresellMedia(files[0], 'presell/brand-cards');

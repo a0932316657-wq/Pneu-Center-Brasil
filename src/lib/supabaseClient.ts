@@ -165,6 +165,12 @@ export async function uploadFile(bucketName: string, folder: string, file: File)
     throw new Error('Supabase não configurado. Por favor, adicione as credenciais SUPABASE_URL e SUPABASE_KEY.');
   }
 
+  // Verify active auth session before uploading
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session || !session.user) {
+    throw new Error('Faça login novamente no painel admin. Sessão Supabase não conectada.');
+  }
+
   // 1. Validar Tipo (JPG, JPEG, PNG, WEBP + Formatos de Vídeo)
   const isVideo = file.type.toLowerCase().startsWith('video/');
   const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
@@ -249,6 +255,12 @@ export async function uploadMedia(file: File, folder: string): Promise<{ publicU
     throw new Error('Supabase não configurado. Por favor, adicione as credenciais SUPABASE_URL e SUPABASE_KEY.');
   }
 
+  // Verify active auth session before uploading
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session || !session.user) {
+    throw new Error('Faça login novamente no painel admin. Sessão Supabase não conectada.');
+  }
+
   const fileType = file.type.toLowerCase();
   const isVideo = fileType.startsWith('video/') || fileType === 'video/mp4' || fileType === 'video/webm';
   const isImage = fileType.startsWith('image/') || fileType === 'image/jpeg' || fileType === 'image/png' || fileType === 'image/webp' || fileType === 'image/gif';
@@ -329,6 +341,12 @@ export async function uploadMedia(file: File, folder: string): Promise<{ publicU
 export async function uploadPresellMedia(file: File, folder: string): Promise<{ publicUrl: string; mediaType: 'image' | 'video' }> {
   if (isSupabaseUrlAbsent || isSupabaseKeyAbsent) {
     throw new Error('Supabase não configurado. Adicione as credenciais nas configurações.');
+  }
+
+  // Verify active auth session before uploading
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session || !session.user) {
+    throw new Error('Faça login novamente no painel admin. Sessão Supabase não conectada.');
   }
 
   const fileType = file.type.toLowerCase();
