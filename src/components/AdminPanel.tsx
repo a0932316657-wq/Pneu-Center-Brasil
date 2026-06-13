@@ -115,7 +115,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {} }: AdminPanelProps) {
   // Session authentication states
-  const [email, setEmail] = useState('contato@pneucenterbrasil.com.br');
+  const [email, setEmail] = useState('contato.pneucenterbrasil@gmail.com');
   const [password, setPassword] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -382,18 +382,14 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session || localStorage.getItem('pneu_center_admin_session') === 'active') {
+        if (session && session.user) {
           setIsLoggedIn(true);
         } else {
           setIsLoggedIn(false);
         }
       } catch (err) {
-        if (localStorage.getItem('pneu_center_admin_session') === 'active') {
-          setIsLoggedIn(true);
-        } else {
-          console.warn('Erro ao checar sessao do Supabase:', err);
-          setIsLoggedIn(false);
-        }
+        console.warn('Erro ao checar sessao do Supabase:', err);
+        setIsLoggedIn(false);
       }
     };
     checkSession();
@@ -475,19 +471,6 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     
     const emailVal = email.trim();
     const passVal = password.trim();
-    
-    // Check master local passwords bypass first
-    const isMasterPassword = [
-      'admin',
-      'admin123',
-      'pneucenter',
-      'pneucenter123',
-      'pneucenter2026',
-      'pneu',
-      'pneus',
-      'pneus2026',
-      'pneu2026'
-    ].includes(passVal.toLowerCase());
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -496,66 +479,21 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
       });
 
       if (error) {
-        // Fallback 1: Mastercard admin login bypass
-        if (isMasterPassword) {
-          localStorage.setItem('pneu_center_admin_session', 'active');
-          setIsLoggedIn(true);
-          triggerFeedback('Acesso concedido via credencial de administração mestre!');
-          return;
-        }
-
-        // Fallback 2: auto-register this email & password if not already present
-        try {
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: emailVal,
-            password: passVal
-          });
-          
-          if (!signUpError && (signUpData?.user || signUpData?.session)) {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              setIsLoggedIn(true);
-              triggerFeedback('Conta de Administrador criada e conectada com sucesso!');
-              return;
-            } else {
-              localStorage.setItem('pneu_center_admin_session', 'active');
-              setIsLoggedIn(true);
-              triggerFeedback('Conta criada! Acesso concedido para configurar a plataforma.');
-              return;
-            }
-          }
-        } catch (suErr) {
-          console.warn('Erro ao tentar auto-cadastro do admin:', suErr);
-        }
-
-        setLoginError('Senha incorreta para acesso ao painel de administração.');
+        setLoginError(`Erro ao autenticar no Supabase: ${error.message}`);
         return;
       }
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (isMasterPassword) {
-          localStorage.setItem('pneu_center_admin_session', 'active');
-          setIsLoggedIn(true);
-          triggerFeedback('Acesso de administração mestre ativado!');
-          return;
-        }
-        setLoginError('Sessão Supabase ausente. Faça login novamente.');
+      if (!session || !session.user) {
+        setLoginError('Erro ao autenticar no Supabase: Sessão não encontrada ou usuário inválido.');
         return;
       }
 
-      localStorage.setItem('pneu_center_admin_session', 'active');
       setIsLoggedIn(true);
       triggerFeedback('Login efetuado com sucesso via Supabase Auth!');
     } catch (err: any) {
       console.error(err);
-      if (isMasterPassword) {
-        localStorage.setItem('pneu_center_admin_session', 'active');
-        setIsLoggedIn(true);
-        triggerFeedback('Acesso de administração mestre ativado!');
-      } else {
-        setLoginError('Ocorreu um erro ao validar sua senha. Favor tente novamente.');
-      }
+      setLoginError(`Erro ao autenticar no Supabase: ${err.message || err}`);
     } finally {
       setIsLoggingIn(false);
     }
@@ -567,7 +505,6 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
     } catch (e) {
       console.warn('Erro ao sair do Supabase Auth:', e);
     }
-    localStorage.removeItem('pneu_center_admin_session');
     setIsLoggedIn(false);
     setPassword('');
     triggerFeedback('Sessão encerrada com sucesso.');
@@ -664,19 +601,13 @@ export default function AdminPanel({ onBackToHome, onRefreshPublicData = () => {
   const checkAuth = async (): Promise<boolean> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (localStorage.getItem('pneu_center_admin_session') === 'active') {
-          return true;
-        }
+      if (!session || !session.user) {
         setIsLoggedIn(false);
         triggerFeedback('Sessão Supabase ausente. Faça login novamente.', 'error');
         return false;
       }
       return true;
     } catch (e) {
-      if (localStorage.getItem('pneu_center_admin_session') === 'active') {
-        return true;
-      }
       console.warn('Erro ao verificar sessão do Supabase:', e);
       setIsLoggedIn(false);
       triggerFeedback('Sessão Supabase ausente. Faça login novamente.', 'error');
