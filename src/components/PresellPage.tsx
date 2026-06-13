@@ -14,7 +14,11 @@ import {
   FileText,
   HelpCircle,
   CheckCircle,
-  HelpCircle as QuestionIcon
+  HelpCircle as QuestionIcon,
+  SlidersHorizontal,
+  Tag,
+  CircleDot,
+  Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -70,6 +74,56 @@ export default function PresellPage() {
 
   // Policies active accordion state
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
+
+  // Buscador states for Presell Page
+  const [activeSearchTab, setActiveSearchTab] = useState<'medida' | 'marca' | 'aro' | 'rapida'>('medida');
+  const [searchMedidaLargura, setSearchMedidaLargura] = useState('');
+  const [searchMedidaAltura, setSearchMedidaAltura] = useState('');
+  const [searchMedidaAro, setSearchMedidaAro] = useState('');
+  const [searchMarca, setSearchMarca] = useState('');
+  const [searchAro, setSearchAro] = useState('');
+  const [searchRapidaText, setSearchRapidaText] = useState('');
+
+  const handlePresellSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    let message = '';
+    
+    if (activeSearchTab === 'medida') {
+      const w = searchMedidaLargura.trim();
+      const h = searchMedidaAltura.trim();
+      const r = searchMedidaAro.trim();
+      if (!w && !h && !r) {
+        message = 'Olá, gostaria de fazer um orçamento de pneus para o meu carro.';
+      } else {
+        message = `Olá! Gostaria de fazer um orçamento para pneus de medida: ${w}/${h} R${r}. Vocês têm no estoque?`;
+      }
+    } else if (activeSearchTab === 'marca') {
+      const m = searchMarca.trim();
+      if (!m) {
+        message = 'Olá! Gostaria de fazer um orçamento de pneus multimarcas.';
+      } else {
+        message = `Olá! Gostaria de solicitar um orçamento para pneus da marca ${m}. Quais opções de medida vocês têm?`;
+      }
+    } else if (activeSearchTab === 'aro') {
+      const a = searchAro.trim();
+      if (!a) {
+        message = 'Olá! Gostaria de fazer um orçamento de pneus para o meu carro.';
+      } else {
+        message = `Olá! Gostaria de solicitar um orçamento de pneus Aro ${a}. Quais são as opções e medidas disponíveis?`;
+      }
+    } else {
+      const text = searchRapidaText.trim();
+      if (!text) {
+        message = 'Olá! Gostaria de fazer um orçamento de pneus para o meu carro.';
+      } else {
+        message = `Olá! Gostaria de fazer uma cotação para a busca rápida: "${text}". Vocês têm opções e valores de estoque?`;
+      }
+    }
+    
+    const whatsappUrl = generateWhatsAppUrl(message);
+    handleWhatsAppAction(whatsappUrl, 'hero'); // track GTM click
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const getFallbackImageForRim = (rimValue: string): string => {
     const match = DEFAULT_PRESELL_RIM_CARDS.find(c => c.rim === rimValue);
@@ -527,6 +581,222 @@ export default function PresellPage() {
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+
+      {/* 2.5 BUSCADOR PRINCIPAL DE PNEUS DA PRESELL (VIA WHATSAPP) */}
+      <section className="py-12 bg-slate-950 border-b border-slate-900 font-sans relative">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.03)_0%,transparent_70%)] pointer-events-none" />
+        
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-xl mx-auto mb-6 sm:mb-8">
+            <h2 className="font-sans text-xl sm:text-3xl font-black text-white uppercase tracking-tight">
+              Encontre seu pneu
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1 font-sans">
+              Busque por medida, aro ou marca e receba a cotação imediata no WhatsApp.
+            </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto bg-slate-900 rounded-3xl border border-slate-850 shadow-2xl p-4 sm:p-7 relative overflow-hidden">
+            {/* Top design accent */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 animate-pulse" />
+
+            {/* Tabs */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-slate-850 pb-4 mb-6">
+              {[
+                { id: 'medida', label: 'Por medida', icon: SlidersHorizontal },
+                { id: 'marca', label: 'Por marca', icon: Tag },
+                { id: 'aro', label: 'Por aro', icon: CircleDot },
+                { id: 'rapida', label: 'Busca rápida', icon: Search },
+              ].map((tab) => {
+                const IconComponent = tab.icon;
+                const isSelected = activeSearchTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveSearchTab(tab.id as any)}
+                    className={`py-2 px-2.5 rounded-xl text-[10px] sm:text-xs font-sans font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-orange-600 text-slate-950 shadow-lg shadow-orange-600/20 scale-[1.03]'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <IconComponent className="h-3.5 w-3.5 shrink-0" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <form onSubmit={handlePresellSearch} className="space-y-6">
+              {activeSearchTab === 'medida' && (
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
+                    <span className="block text-[10px] font-mono font-bold tracking-widest text-orange-400 uppercase text-center mb-4">
+                      INSIRA A MEDIDA EXATA DO SEU PNEU
+                    </span>
+                    
+                    <div className="flex items-center justify-center gap-1.5 sm:gap-4 max-w-md mx-auto">
+                      {/* Largura */}
+                      <div className="flex-1">
+                        <label className="block text-[9px] uppercase font-mono font-extrabold text-slate-400 text-center mb-1">Largura</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="205"
+                          value={searchMedidaLargura}
+                          onChange={(e) => setSearchMedidaLargura(e.target.value)}
+                          className="w-full text-center py-2.5 sm:py-3 px-2 bg-slate-900 border border-slate-755 hover:border-slate-650 focus:border-orange-500 rounded-xl font-display font-black text-sm sm:text-base text-white focus:outline-none transition-all placeholder:text-slate-600"
+                        />
+                      </div>
+                      
+                      {/* Slash 1 */}
+                      <span className="text-slate-600 font-display font-black text-lg py-4 self-end">/</span>
+                      
+                      {/* Altura */}
+                      <div className="flex-1">
+                        <label className="block text-[9px] uppercase font-mono font-extrabold text-slate-400 text-center mb-1">Perfil</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="55"
+                          value={searchMedidaAltura}
+                          onChange={(e) => setSearchMedidaAltura(e.target.value)}
+                          className="w-full text-center py-2.5 sm:py-3 px-2 bg-slate-900 border border-slate-755 hover:border-slate-650 focus:border-orange-500 rounded-xl font-display font-black text-sm sm:text-base text-white focus:outline-none transition-all placeholder:text-slate-600"
+                        />
+                      </div>
+                      
+                      {/* Slash 2 */}
+                      <span className="text-slate-600 font-display font-black text-lg py-4 self-end">R</span>
+                      
+                      {/* Aro */}
+                      <div className="flex-1">
+                        <label className="block text-[9px] uppercase font-mono font-extrabold text-slate-400 text-center mb-1">Aro</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="16"
+                          value={searchMedidaAro}
+                          onChange={(e) => setSearchMedidaAro(e.target.value)}
+                          className="w-full text-center py-2.5 sm:py-3 px-2 bg-slate-900 border border-slate-755 hover:border-slate-650 focus:border-orange-500 rounded-xl font-display font-black text-sm sm:text-base text-white focus:outline-none transition-all placeholder:text-slate-600"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-center font-mono text-[10px] sm:text-xs text-slate-400 bg-slate-950/40 py-1.5 px-3 rounded-full inline-block mx-auto w-full">
+                    Geralmente gravado na lateral do pneu como: <strong className="text-orange-400 font-mono">205/55R16</strong>
+                  </p>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-emerald-600 hover:bg-emerald-550 text-white font-sans font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4.5 rounded-2xl cursor-pointer transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-98"
+                  >
+                    <WhatsAppIcon className="h-4.5 w-4.5 text-white animate-pulse" />
+                    <span>Orçar Pneu por Medida no WhatsApp</span>
+                  </button>
+                </div>
+              )}
+
+              {activeSearchTab === 'marca' && (
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
+                    <label className="block text-[10px] font-mono font-bold tracking-widest text-orange-400 uppercase text-center mb-2">
+                      SELECIONE A MARCA DO CATÁLOGO
+                    </label>
+                    <select
+                      value={searchMarca}
+                      onChange={(e) => setSearchMarca(e.target.value)}
+                      className="w-full py-3.5 px-4 bg-slate-900 border border-slate-755 hover:border-orange-500 text-white rounded-xl font-sans font-bold text-sm focus:outline-none cursor-pointer transition-all"
+                    >
+                      <option value="" className="text-slate-500">Selecione uma marca...</option>
+                      {brandCards && brandCards.length > 0 ? (
+                        brandCards.map((b, idx) => (
+                          <option key={idx} value={b.brand_name} className="bg-slate-900 text-white">{b.brand_name}</option>
+                        ))
+                      ) : (
+                        ['Pirelli', 'Michelin', 'Goodyear', 'Firestone', 'Continental', 'Bridgestone', 'Dunlop'].map((b, idx) => (
+                          <option key={idx} value={b} className="bg-slate-900 text-white">{b}</option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4.5 rounded-2xl cursor-pointer transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-98"
+                  >
+                    <WhatsAppIcon className="h-4.5 w-4.5 text-white" />
+                    <span>Orçar Marca no WhatsApp</span>
+                  </button>
+                </div>
+              )}
+
+              {activeSearchTab === 'aro' && (
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
+                    <label className="block text-[10px] font-mono font-bold tracking-widest text-orange-400 uppercase text-center mb-3">
+                      ESCOLHA O TAMANHO DO ARO
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {['13', '14', '15', '16', '17', '18'].map((aroVal) => {
+                        const isAroSelected = searchAro === aroVal;
+                        return (
+                          <button
+                            key={aroVal}
+                            type="button"
+                            onClick={() => setSearchAro(aroVal)}
+                            className={`py-3 rounded-xl border-2 font-display font-black text-xs sm:text-sm uppercase transition-all duration-150 cursor-pointer ${
+                              isAroSelected
+                                ? 'border-orange-500 bg-orange-600/10 text-orange-400'
+                                : 'border-slate-800 hover:border-slate-750 text-slate-350 hover:bg-slate-900'
+                            }`}
+                          >
+                            Aro {aroVal}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4.5 rounded-2xl cursor-pointer transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-98"
+                  >
+                    <WhatsAppIcon className="h-4.5 w-4.5 text-white" />
+                    <span>Orçar Aro {searchAro || 'Selecionado'} no WhatsApp</span>
+                  </button>
+                </div>
+              )}
+
+              {activeSearchTab === 'rapida' && (
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
+                    <label className="block text-[10px] font-mono font-bold tracking-widest text-orange-400 uppercase text-center mb-2">
+                      DIGITE O QUE VOCÊ BUSCA
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 205/55 R16, Pirelli, Aro 15..."
+                      value={searchRapidaText}
+                      onChange={(e) => setSearchRapidaText(e.target.value)}
+                      className="w-full py-3.5 px-4 bg-slate-900 border border-slate-755 hover:border-orange-500 text-white rounded-xl font-sans font-bold text-sm focus:outline-none transition-all placeholder:text-slate-600"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4.5 rounded-2xl cursor-pointer transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-98"
+                  >
+                    <WhatsAppIcon className="h-4.5 w-4.5 text-white" />
+                    <span>Solicitar Cotação Inteligente no WhatsApp</span>
+                  </button>
+                </div>
+              )}
+            </form>
           </div>
         </div>
       </section>

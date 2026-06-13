@@ -16,7 +16,10 @@ import {
   ChevronUp,
   FileText,
   ShieldAlert,
-  HelpCircle
+  HelpCircle,
+  SlidersHorizontal,
+  Tag,
+  CircleDot
 } from 'lucide-react';
 import { Product } from '../types';
 import { Brand, RimCard } from '../lib/appStore';
@@ -172,6 +175,58 @@ export default function HomeViewNew({
             
             {/* HERO CONTENT */}
             <div className="lg:col-span-7 flex flex-col space-y-4 sm:space-y-6 lg:items-start lg:text-left">
+              {/* Mobile Hero Image - Centered and visible only under lg breakpoint */}
+              <div className="block lg:hidden w-full max-w-xs mx-auto mb-2 overflow-visible relative flex items-center justify-center">
+                {/* Background glow */}
+                <div className="absolute h-32 w-32 rounded-full bg-orange-500/15 blur-2xl z-0" />
+                
+                {(() => {
+                  const borderClr = siteSettings?.heroBorderColor || '#f97316';
+                  const glowClr = siteSettings?.heroGlowColor || '#f97316';
+                  const bRad = `${siteSettings?.heroBorderRadius || 24}px`;
+                  const gIntensity = parseFloat(siteSettings?.heroGlowIntensity || '0.4');
+                  const hasCustomHero = siteSettings?.heroImageUrl && siteSettings?.heroImageUrl.trim() !== '';
+                  const activeHeroUrl = hasCustomHero ? siteSettings.heroImageUrl : heroTiresImage;
+                  const isCustomVideo = hasCustomHero && (siteSettings.heroMediaType === 'video' || isVideoUrl(siteSettings.heroImageUrl));
+
+                  return (
+                    <motion.div
+                      animate={{
+                        y: [0, -6, 0],
+                      }}
+                      transition={{
+                        duration: 5,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      className="z-10 bg-slate-950/70 backdrop-blur-md inline-block relative shrink-0 transition-all p-3"
+                      style={{
+                        borderRadius: bRad,
+                        border: `1px solid ${borderClr}`,
+                        boxShadow: `0 0 ${12 * gIntensity}px ${borderClr}, inset 0 0 ${6 * gIntensity}px ${borderClr}, 0 0 ${20 * gIntensity}px ${glowClr}`
+                      }}
+                    >
+                      {isCustomVideo ? (
+                        <video
+                          src={activeHeroUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="h-32 sm:h-40 w-auto object-contain select-none pointer-events-none block rounded-xl"
+                        />
+                      ) : (
+                        <img
+                          src={activeHeroUrl}
+                          alt="Destaque Pneu"
+                          className="h-32 sm:h-40 w-auto object-contain select-none pointer-events-none block rounded-xl"
+                        />
+                      )}
+                    </motion.div>
+                  );
+                })()}
+              </div>
+
               <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3.5 py-1 text-[10px] sm:text-xs font-mono font-medium text-orange-400 border border-orange-500/15 mx-auto lg:mx-0">
                 <Sparkles className="h-3.5 w-3.5" />
                 <span>Catálogo Oficial Multimarcas</span>
@@ -207,7 +262,7 @@ export default function HomeViewNew({
             </div>
 
             {/* FLOATING TIRE ON THE RIGHT */}
-            <div className="hidden md:flex lg:col-span-5 flex-col items-center justify-center relative mt-6 lg:mt-0">
+            <div className="hidden lg:flex lg:col-span-5 flex-col items-center justify-center relative mt-6 lg:mt-0">
                <div className="relative w-full max-w-sm sm:max-w-md h-72 sm:h-96 flex items-center justify-center overflow-visible">
                 
                 {/* Background glow */}
@@ -357,149 +412,194 @@ export default function HomeViewNew({
             </p>
           </div>
 
-          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl p-4 sm:p-7 relative overflow-hidden">
+            {/* Top design accent */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-orange-600 to-amber-500 animate-pulse" />
+
             {/* Tabs */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-1 sm:gap-1.5 border-b border-slate-100 pb-2.5 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-b border-slate-800 pb-4 mb-6">
               {[
-                { id: 'medida', label: 'Por medida' },
-                { id: 'marca', label: 'Por marca' },
-                { id: 'aro', label: 'Por aro' },
-                { id: 'rapida', label: 'Busca rápida' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveSearchTab(tab.id as any)}
-                  className={`py-1.5 sm:py-2 px-1.5 sm:px-3 rounded-lg text-[10px] sm:text-xs font-sans font-black uppercase tracking-wider transition-all cursor-pointer ${
-                    activeSearchTab === tab.id
-                      ? 'bg-orange-600 text-slate-950 shadow-xs'
-                      : 'text-slate-500 hover:bg-slate-50'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                { id: 'medida', label: 'Por medida', icon: SlidersHorizontal },
+                { id: 'marca', label: 'Por marca', icon: Tag },
+                { id: 'aro', label: 'Por aro', icon: CircleDot },
+                { id: 'rapida', label: 'Busca rápida', icon: Search },
+              ].map((tab) => {
+                const IconComponent = tab.icon;
+                const isSelected = activeSearchTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveSearchTab(tab.id as any)}
+                    className={`py-2 px-2.5 rounded-xl text-[10px] sm:text-xs font-sans font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-orange-600 text-slate-950 shadow-lg shadow-orange-600/20 scale-[1.03]'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <IconComponent className="h-3.5 w-3.5 shrink-0" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
-            <form onSubmit={handleHomeSearch}>
+            <form onSubmit={handleHomeSearch} className="space-y-6">
               {activeSearchTab === 'medida' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[9px] uppercase font-mono font-black text-slate-500 mb-1">Largura</label>
-                      <input
-                        type="text"
-                        placeholder="205"
-                        value={searchMedidaLargura}
-                        onChange={(e) => setSearchMedidaLargura(e.target.value)}
-                        className="w-full text-center py-2 px-1.5 sm:py-2.5 border border-slate-200 rounded-lg font-display font-black text-xs sm:text-sm focus:border-orange-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] uppercase font-mono font-black text-slate-500 mb-1">Altura</label>
-                      <input
-                        type="text"
-                        placeholder="55"
-                        value={searchMedidaAltura}
-                        onChange={(e) => setSearchMedidaAltura(e.target.value)}
-                        className="w-full text-center py-2 px-1.5 sm:py-2.5 border border-slate-200 rounded-lg font-display font-black text-xs sm:text-sm focus:border-orange-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] uppercase font-mono font-black text-slate-500 mb-1">Aro</label>
-                      <input
-                        type="text"
-                        placeholder="16"
-                        value={searchMedidaAro}
-                        onChange={(e) => setSearchMedidaAro(e.target.value)}
-                        className="w-full text-center py-2 px-1.5 sm:py-2.5 border border-slate-200 rounded-lg font-display font-black text-xs sm:text-sm focus:border-orange-500 focus:outline-none"
-                      />
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
+                    <span className="block text-[10px] font-mono font-bold tracking-widest text-orange-400 uppercase text-center mb-4">
+                      INSIRA A MEDIDA EXATA DO SEU PNEU
+                    </span>
+                    
+                    <div className="flex items-center justify-center gap-1.5 sm:gap-4 max-w-md mx-auto">
+                      {/* Largura */}
+                      <div className="flex-1">
+                        <label className="block text-[9px] uppercase font-mono font-extrabold text-slate-400 text-center mb-1">Largura</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="205"
+                          value={searchMedidaLargura}
+                          onChange={(e) => setSearchMedidaLargura(e.target.value)}
+                          className="w-full text-center py-2.5 sm:py-3 px-2 bg-slate-900 border border-slate-750 hover:border-slate-650 focus:border-orange-500 rounded-xl font-display font-black text-sm sm:text-base text-white focus:outline-none transition-all placeholder:text-slate-600"
+                        />
+                      </div>
+                      
+                      {/* Slash 1 */}
+                      <span className="text-slate-600 font-display font-black text-lg py-4 self-end">/</span>
+                      
+                      {/* Altura */}
+                      <div className="flex-1">
+                        <label className="block text-[9px] uppercase font-mono font-extrabold text-slate-400 text-center mb-1">Perfil</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="55"
+                          value={searchMedidaAltura}
+                          onChange={(e) => setSearchMedidaAltura(e.target.value)}
+                          className="w-full text-center py-2.5 sm:py-3 px-2 bg-slate-900 border border-slate-750 hover:border-slate-650 focus:border-orange-500 rounded-xl font-display font-black text-sm sm:text-base text-white focus:outline-none transition-all placeholder:text-slate-600"
+                        />
+                      </div>
+                      
+                      {/* Slash 2 */}
+                      <span className="text-slate-600 font-display font-black text-lg py-4 self-end">R</span>
+                      
+                      {/* Aro */}
+                      <div className="flex-1">
+                        <label className="block text-[9px] uppercase font-mono font-extrabold text-slate-400 text-center mb-1">Aro</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="16"
+                          value={searchMedidaAro}
+                          onChange={(e) => setSearchMedidaAro(e.target.value)}
+                          className="w-full text-center py-2.5 sm:py-3 px-2 bg-slate-900 border border-slate-750 hover:border-slate-650 focus:border-orange-500 rounded-xl font-display font-black text-sm sm:text-base text-white focus:outline-none transition-all placeholder:text-slate-600"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <p className="text-center font-mono text-[9px] sm:text-[10px] text-slate-400">Ex: 205 / 55 / 16</p>
+                  
+                  <p className="text-center font-mono text-[10px] sm:text-xs text-slate-400 bg-slate-950/40 py-1.5 px-3 rounded-full inline-block mx-auto w-full">
+                    Geralmente gravado na lateral do pneu como: <strong className="text-orange-400 font-mono">205/55R16</strong>
+                  </p>
+
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-[11px] sm:text-xs uppercase tracking-wider py-2.5 sm:py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-1.5"
+                    className="w-full bg-emerald-600 hover:bg-emerald-550 text-white font-sans font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4.5 rounded-2xl cursor-pointer transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-98"
                   >
-                    <Search className="h-3.5 w-3.5" />
-                    <span>Buscar pneu por medida</span>
+                    <Search className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
+                    <span>Buscar Pneu por Medida</span>
                   </button>
                 </div>
               )}
 
               {activeSearchTab === 'marca' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[9px] uppercase font-mono font-black text-slate-500 mb-1">Escolha a marca do pneu</label>
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
+                    <label className="block text-[10px] font-mono font-bold tracking-widest text-orange-400 uppercase text-center mb-2">
+                      SELECIONE A MARCA DO CATÁLOGO
+                    </label>
                     <select
                       value={searchMarca}
                       onChange={(e) => setSearchMarca(e.target.value)}
-                      className="w-full py-2 sm:py-2.5 px-3 border border-slate-200 rounded-lg font-sans font-bold text-xs sm:text-sm text-slate-800 bg-white focus:border-orange-500 focus:outline-none cursor-pointer"
+                      className="w-full py-3.5 px-4 bg-slate-900 border border-slate-750 hover:border-orange-500 text-white rounded-xl font-sans font-bold text-sm focus:outline-none cursor-pointer transition-all"
                     >
-                      <option value="">Selecione uma marca...</option>
+                      <option value="" className="text-slate-500">Selecione uma marca...</option>
                       {Array.from(new Set(products.map(p => p.brand))).filter(Boolean).map((br, idx) => (
-                        <option key={idx} value={br}>{br}</option>
+                        <option key={idx} value={br} className="bg-slate-900 text-white">{br}</option>
                       ))}
                     </select>
                   </div>
+
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-[11px] sm:text-xs uppercase tracking-wider py-2.5 sm:py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-1.5"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4.5 rounded-2xl cursor-pointer transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-98"
                   >
-                    <Search className="h-3.5 w-3.5" />
-                    <span>Buscar por Marca</span>
+                    <Search className="h-4 w-4" />
+                    <span>Buscar Pneus desta Marca</span>
                   </button>
                 </div>
               )}
 
               {activeSearchTab === 'aro' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[9px] uppercase font-mono font-black text-slate-500 mb-1.5">Escolha as opções rápidas</label>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                      {['13', '14', '15', '16', '17', '18'].map((aroVal) => (
-                        <button
-                          key={aroVal}
-                          type="button"
-                          onClick={() => setSearchAro(aroVal)}
-                          className={`py-1.5 sm:py-2 rounded-lg border font-display font-black text-[11px] sm:text-xs uppercase transition-all cursor-pointer ${
-                            searchAro === aroVal
-                              ? 'border-orange-500 bg-orange-50/70 text-orange-600'
-                              : 'border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          Aro {aroVal}
-                        </button>
-                      ))}
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
+                    <label className="block text-[10px] font-mono font-bold tracking-widest text-orange-400 uppercase text-center mb-3">
+                      ESCOLHA O TAMANHO DO ARO
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {['13', '14', '15', '16', '17', '18'].map((aroVal) => {
+                        const isAroSelected = searchAro === aroVal;
+                        return (
+                          <button
+                            key={aroVal}
+                            type="button"
+                            onClick={() => setSearchAro(aroVal)}
+                            className={`py-3 rounded-xl border-2 font-display font-black text-xs sm:text-sm uppercase transition-all duration-150 cursor-pointer ${
+                              isAroSelected
+                                ? 'border-orange-500 bg-orange-600/10 text-orange-400'
+                                : 'border-slate-800 hover:border-slate-750 text-slate-350 hover:bg-slate-900'
+                            }`}
+                          >
+                            Aro {aroVal}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
+
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-[11px] sm:text-xs uppercase tracking-wider py-2.5 sm:py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-1.5"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4.5 rounded-2xl cursor-pointer transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-98"
                   >
-                    <Search className="h-3.5 w-3.5" />
-                    <span>Buscar Aro</span>
+                    <Search className="h-4 w-4" />
+                    <span>Buscar Pneus Aro {searchAro || 'Selecionado'}</span>
                   </button>
                 </div>
               )}
 
               {activeSearchTab === 'rapida' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-[9px] uppercase font-mono font-black text-slate-500 mb-1">Digite medida, aro ou marca</label>
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="bg-slate-950 border border-slate-850 p-4 rounded-2xl">
+                    <label className="block text-[10px] font-mono font-bold tracking-widest text-orange-400 uppercase text-center mb-2">
+                      DIGITE O QUE VOCÊ BUSCA
+                    </label>
                     <input
                       type="text"
                       placeholder="Ex: 205/55 R16, Pirelli, Aro 15..."
                       value={searchRapidaText}
                       onChange={(e) => setSearchRapidaText(e.target.value)}
-                      className="w-full py-2.5 px-3 border border-slate-200 rounded-lg font-sans font-medium text-xs focus:border-orange-500 focus:outline-none"
+                      className="w-full py-3.5 px-4 bg-slate-900 border border-slate-750 hover:border-orange-500 text-white rounded-xl font-sans font-bold text-sm focus:outline-none transition-all placeholder:text-slate-600"
                     />
                   </div>
+
                   <button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-[11px] sm:text-xs uppercase tracking-wider py-2.5 sm:py-3.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center justify-center gap-1.5"
+                    className="w-full bg-emerald-600 hover:bg-emerald-555 text-white font-sans font-black text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4.5 rounded-2xl cursor-pointer transition-all shadow-lg hover:shadow-emerald-500/20 flex items-center justify-center gap-2 transform active:scale-98"
                   >
-                    <Search className="h-3.5 w-3.5" />
-                    <span>Buscar</span>
+                    <Search className="h-4 w-4" />
+                    <span>Realizar Busca Inteligente</span>
                   </button>
                 </div>
               )}
