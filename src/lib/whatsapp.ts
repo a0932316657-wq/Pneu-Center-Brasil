@@ -7,8 +7,8 @@ import { getSettings } from './appStore';
  */
 export function openWhatsAppChat(message: string) {
   const settings = getSettings();
-  // Using the requested number 551195796840, falling back to database setting if customized
-  const phone = settings.whatsappRaw || '551195796840';
+  // Using the requested number 5511995945993, falling back to database setting if customized
+  const phone = settings.whatsappRaw || '5511995945993';
   const encodedText = encodeURIComponent(message);
   const webUrl = `https://wa.me/${phone}?text=${encodedText}`;
 
